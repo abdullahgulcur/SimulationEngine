@@ -16,22 +16,12 @@ class EditorGUI {
 private:
 
 	Editor* editor;
-
-public:
-
-	/*
-	* TEXTURE IDs
-	*/
-	unsigned int openFolderTextureID;
-	unsigned int closedFolderTextureID;
-	unsigned int plusTextureID;
-	unsigned int greaterTextureID;
+	std::map<int, FileNode>* files;
 
 	/*
 	* INDEX VARIABLES
 	*/
 	int indexForFolder;
-	int lastClickedItemID = 1;
 	int lastSelectedItemID = -1;
 	int temp_lastClickedItemID = 1;
 	int lastRightClickedItemID = -1;
@@ -39,6 +29,8 @@ public:
 
 	ImVec2 cursorPosWhenFirstClickedItem;
 	ImVec4 textColor;
+	ImVec4 textSelectedColor;
+	ImVec4 textUnselectedColor;
 
 	/*
 	* FLAG VARIABLES
@@ -55,10 +47,33 @@ public:
 	* UI VARIABLES
 	*/
 	float foldersPanelLeftPartWidth = 260.f;
+	float itemSpacingRightPanel = 15.f;
+
+	/*
+	* TEMP VAR
+	*/
+	ImVec2 mousePos;
+
+public:
+
+	/*
+	* INDEX VARIABLES
+	*/
+	int lastClickedItemID = 1;
+
+	/*
+	* TEXTURE IDs
+	*/
+	unsigned int openFolderTextureID;
+	unsigned int closedFolderTextureID;
+	unsigned int plusTextureID;
+	unsigned int greaterTextureID;
 
 	EditorGUI();
 
 	void initImGui();
+
+	void loadTextures();
 
 	void newFrameImGui();
 
@@ -70,7 +85,7 @@ public:
 
 	void createPanels();
 
-	void ShowExampleAppDockSpace();
+	void updateStateMachine();
 
 	void createScenePanel();
 
@@ -89,6 +104,10 @@ public:
 	void showCurrentDirectoryText();
 
 	void setEditor(Editor* editor);
+
+	void setFiles(std::map<int, FileNode>* files);
+
+	std::map<int, FileNode>* getFiles();
 
 	Editor* getEditor();
 

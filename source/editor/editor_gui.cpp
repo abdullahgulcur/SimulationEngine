@@ -2,8 +2,6 @@
 #include "editor_gui.hpp"
 
 EditorGUI::EditorGUI() {
-	
-	textColor = ImVec4(1, 1, 1, 1);
 }
 
 void EditorGUI::initImGui() {
@@ -23,11 +21,44 @@ void EditorGUI::initImGui() {
 	ImGui_ImplGlfw_InitForOpenGL(editor->getWindow().getGLFWwindow(), true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	Texture texture;
-	openFolderTextureID = texture.loadDDS("resource/icons/folder_open.DDS");
-	closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
-	plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
-	greaterTextureID = texture.loadDDS("resource/icons/greater.DDS");
+	EditorGUI::loadTextures();
+}
+
+void EditorGUI::newFrameImGui() {
+
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+}
+
+void EditorGUI::renderImGui() {
+
+	ImGui::Render();
+
+	int display_w, display_h;
+	glfwGetFramebufferSize(editor->getWindow().getGLFWwindow(), &display_w, &display_h);
+	glViewport(0, 0, display_w, display_h);
+	//glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+	//glClear(GL_COLOR_BUFFER_BIT);
+
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		GLFWwindow* backup_current_context = glfwGetCurrentContext();
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+		glfwMakeContextCurrent(backup_current_context);
+	}
+}
+
+void EditorGUI::destroyImGui() {
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }
 
 void EditorGUI::setTheme()
@@ -98,12 +129,12 @@ void EditorGUI::setTheme()
 	style.TouchExtraPadding = ImVec2(0.00f, 0.00f);
 	style.ScrollbarSize = 15;
 	style.GrabMinSize = 10;
-	style.WindowBorderSize = 1;
+	style.WindowBorderSize = 0;
 	style.ChildBorderSize = 1;
 	style.PopupBorderSize = 1;
 	style.FrameBorderSize = 1;
 	style.TabBorderSize = 1;
-	style.WindowRounding = 7;
+	style.WindowRounding = 0;
 	style.ChildRounding = 4;
 	style.FrameRounding = 4;
 	style.PopupRounding = 2;
@@ -112,81 +143,100 @@ void EditorGUI::setTheme()
 	style.LogSliderDeadzone = 4;
 	style.TabRounding = 4;
 	style.IndentSpacing = 20;
+
+	textSelectedColor = ImVec4(0.2f, 0.72f, 0.95f, 1.f);
+	textUnselectedColor = ImVec4(1.f, 1.f, 1.f, 1.f);
+	textColor = textUnselectedColor;
 }
 
-void EditorGUI::newFrameImGui() {
+void EditorGUI::loadTextures() {
 
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-	//scenePanelSize = ImGui::GetContentRegionAvail();
-
+	Texture texture;
+	openFolderTextureID = texture.loadDDS("resource/icons/folder_open.DDS");
+	closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
+	plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
+	greaterTextureID = texture.loadDDS("resource/icons/greater.DDS");
 }
 
-void EditorGUI::renderImGui() {
+void EditorGUI::updateStateMachine() {
 
-	ImGui::Render();
+	if (ImGui::IsMouseDoubleClicked(ImGuiPopupFlags_MouseButtonLeft)) {
 
-	int display_w, display_h;
-	glfwGetFramebufferSize(editor->getWindow().getGLFWwindow(), &display_w, &display_h);
-	glViewport(0, 0, display_w, display_h);
-	//glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-	//glClear(GL_COLOR_BUFFER_BIT);
+		entered = true;
 
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		if (EditorGUI::mouseDistanceControl()) {
 
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+			if ((*files)[temp_lastClickedItemID].type == FileType::folder) {
 
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		GLFWwindow* backup_current_context = glfwGetCurrentContext();
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault();
-		glfwMakeContextCurrent(backup_current_context);
+				lastClickedItemID = temp_lastClickedItemID;
+				subfolderCheckFlag = false;
+			}
+			else
+				ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[temp_lastClickedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
+		}
 	}
-}
 
-void EditorGUI::destroyImGui() {
+	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonLeft)) {
 
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
+		if (entered) {
+
+			mouseLeftPressed = false;
+			entered = false;
+			panelRightItemClicked = false;
+			return;
+		}
+
+		if (EditorGUI::mouseDistanceControl() && !toggleClicked && !panelRightItemClicked)
+			lastClickedItemID = temp_lastClickedItemID;
+
+		folderLineClicked = false;
+		ImGui::ResetMouseDragDelta();
+		mouseLeftPressed = false;
+		toggleClicked = false;
+		panelRightItemClicked = false;
+		fileTreeClicked = false;
+	}
+
+	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonRight)) {
+
+		if (!panelRightItemClicked)
+			lastSelectedItemID = -1;
+	}
+
+	if (ImGui::IsMouseClicked(ImGuiPopupFlags_MouseButtonLeft)) {
+
+		mouseLeftPressed = true;
+
+		if (!panelRightItemTab)
+			lastSelectedItemID = -1;
+
+		panelRightItemTab = false;
+	}
 }
 
 void EditorGUI::createPanels() {
 
-	EditorGUI::ShowExampleAppDockSpace();
-
-	// general controls...
-}
-
-void EditorGUI::ShowExampleAppDockSpace()
-{
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 
 	const ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);//
+	ImGui::SetNextWindowSize(viewport->WorkSize);
 	ImGui::SetNextWindowViewport(viewport->ID);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
 	bool p_open = true;
 
-	ImGui::Begin("MyDockSpace", &p_open, window_flags);
-	ImGui::PopStyleVar(3);
+	ImGui::Begin("EditorDockSpace", &p_open, window_flags);
+	ImGui::PopStyleVar(1);
 
 	ImGuiIO& io = ImGui::GetIO();
 
 	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
 	{
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+		ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 	}
 
@@ -196,93 +246,22 @@ void EditorGUI::ShowExampleAppDockSpace()
 	EditorGUI::createScenePanel();
 	EditorGUI::createConsolePanel();
 
-	int mouse_button_left = ImGuiPopupFlags_MouseButtonLeft;
-	int mouse_button_right = ImGuiPopupFlags_MouseButtonRight;
-
-	if (ImGui::IsMouseDoubleClicked(mouse_button_left)) {
-
-		entered = true;
-
-		if (EditorGUI::mouseDistanceControl()) {
-
-			if (editor->fileSystem.files[temp_lastClickedItemID].type == FileType::folder) {
-
-				lastClickedItemID = temp_lastClickedItemID;
-				subfolderCheckFlag = false;
-			}
-			else {
-
-				ShellExecute(NULL, L"open", std::filesystem::absolute(editor->fileSystem.files[temp_lastClickedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
-			}
-		}
-	}
-
-	if (ImGui::IsMouseReleased(mouse_button_left)) {
-
-		if (entered) {
-
-			mouseLeftPressed = false;
-			entered = false;
-			panelRightItemClicked = false;
-			ImGui::End();
-			return;
-		}
-
-		if (EditorGUI::mouseDistanceControl() && !toggleClicked && !panelRightItemClicked) {
-			lastClickedItemID = temp_lastClickedItemID;
-		}
-		folderLineClicked = false;
-		ImGui::ResetMouseDragDelta();
-		mouseLeftPressed = false;
-		toggleClicked = false;
-		panelRightItemClicked = false;
-		fileTreeClicked = false;
-	}
-
-	if (ImGui::IsMouseReleased(mouse_button_right)) {
-
-		if(!panelRightItemClicked)
-			lastSelectedItemID = -1;
-	}
-
-	if (ImGui::IsMouseClicked(mouse_button_left)) {
-
-		mouseLeftPressed = true;
-		
-		if (!panelRightItemTab)
-			lastSelectedItemID = -1;
-
-		panelRightItemTab = false;
-	}
+	EditorGUI::updateStateMachine();
 
 	ImGui::End();
 }
+
+//----- SCENE VIEWPORT -----
 
 void EditorGUI::createScenePanel() {
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::Begin("Scene");
 
-	ImVec2 temp = ImGui::GetContentRegionAvail();
-	ImVec2 windowSize(temp.x, temp.y);
+	ImVec2 region = ImGui::GetContentRegionAvail();
+	ImVec2 windowSize(region.x, region.y);
 
-	//EditorCamera am = editor->getEditorCamera();
-
-	editor->getEditorCamera().setAspectRatio(temp.x, temp.y);
-
-	//editor->getEditorCamera().setAspectRatio(1920, 1080); //(temp.x, temp.y);
-
-	//static bool resizeFlag = false;
-
-	//if (!resizeFlag) {
-	//	scenePanelSize = temp;
-	//	resizeFlag = true;
-	//}
-
-	//if (this->scenePanelSize.x != temp.x || this->scenePanelSize.y != temp.y) {
-
-	//	resizeFlag = false;
-	//}
+	editor->getEditorCamera().setAspectRatio(region.x, region.y);
 
 	ImTextureID textureId = (ImTextureID)(editor->getWindow().textureColorbuffer);
 	ImGui::Image(textureId, windowSize, ImVec2(0, 1), ImVec2(1, 0));
@@ -291,6 +270,8 @@ void EditorGUI::createScenePanel() {
 	ImGui::PopStyleVar();
 }
 
+//----- CONSOLE MENU -----
+
 void EditorGUI::createConsolePanel() {
 
 	ImGui::Begin("Console");
@@ -298,14 +279,19 @@ void EditorGUI::createConsolePanel() {
 	ImGui::End();
 }
 
+//----- INSPECTOR MENU -----
+
 void EditorGUI::createInspectorPanel() {
 
 	ImGui::Begin("Inspector");
 
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGui::Text("Mouse x: %.1f y: %.1f", ImGui::GetMousePos().x, ImGui::GetMousePos().y);
 
 	ImGui::End();
 }
+
+//----- HIERARCHY MENU -----
 
 void EditorGUI::createHierarchyPanel() {
 
@@ -314,386 +300,7 @@ void EditorGUI::createHierarchyPanel() {
 	ImGui::End();	
 }
 
-void EditorGUI::createFoldersRecursively(File* file) {
-
-	for (int i = 0; i < file->subfiles.size(); i++) {
-
-		if (editor->fileSystem.files[file->subfiles[i]->id].type != FileType::folder)
-			continue;
-
-		ImGui::Indent(ImGui::GetStyle().IndentSpacing);
-
-		static ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
-		ImGuiTreeNodeFlags node_flags = base_flags;
-
-		bool hasSubFolder = editor->fileSystem.hasSubFolder(file->subfiles[i]);
-		if (!hasSubFolder)
-			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-		else
-			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-		if (editor->fileSystem.subfolderCheck(editor->fileSystem.files[lastClickedItemID].addr, file->subfiles[i])) {
-
-			if (!subfolderCheckFlag)
-				ImGui::SetNextItemOpen(true);
-		}
-
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)file->subfiles[i]->id, node_flags, ""); // , "%d ", file->subfiles[i]->id
-
-		if (ImGui::IsItemClicked()) {
-
-			fileTreeClicked = true;
-			subfolderCheckFlag = true;
-			cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
-
-			if (!ImGui::IsItemToggledOpen())
-				temp_lastClickedItemID = file->subfiles[i]->id;
-			else
-				toggleClicked = true;
-		}
-
-		if (ImGui::BeginDragDropSource())
-		{
-			ImGui::SetDragDropPayload("_TREENODE_FILE", &file->subfiles[i]->id, sizeof(int));
-			ImGui::Text(editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-			ImGui::EndDragDropSource();
-		}
-
-		if (ImGui::BeginDragDropTarget())
-		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
-			{
-				IM_ASSERT(payload->DataSize == sizeof(int));
-				int payload_n = *(const int*)payload->Data;
-				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
-				return;
-			}
-
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_FILE"))
-			{
-				IM_ASSERT(payload->DataSize == sizeof(int));
-				int payload_n = *(const int*)payload->Data;
-				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
-				return;
-			}
-			ImGui::EndDragDropTarget();
-		}
-		ImGui::SameLine();
-
-		ImVec2 size = ImVec2(16.0f, 16.0f);
-		ImVec2 uv0 = ImVec2(0.0f, 0.0f);
-		ImVec2 uv1 = ImVec2(1.0f, 1.0f);
-		ImVec4 bg_col = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
-		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
-
-		if (nodeOpen && hasSubFolder)
-			ImGui::Image((ImTextureID)openFolderTextureID, size, uv0, uv1, tint_col, border_col);
-		else
-			ImGui::Image((ImTextureID)closedFolderTextureID, size, uv0, uv1, tint_col, border_col);
-
-		ImGui::SameLine();
-
-		if(lastClickedItemID == file->subfiles[i]->id)
-			ImGui::TextColored(ImVec4(0.2f, 0.72f, 0.95, 1), editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-		else
-			ImGui::Text(editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-
-		indexForFolder++;
-
-		if (nodeOpen && editor->fileSystem.files[file->subfiles[i]->id].type == FileType::folder)
-			EditorGUI::createFoldersRecursively(file->subfiles[i]);
-
-		ImGui::Unindent(ImGui::GetStyle().IndentSpacing);
-	}
-}
-
-void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
-
-	int maxElementsInRow = (int)(area.x / 75);
-
-	if (lastClickedItemID == -1 || maxElementsInRow == 0)
-		return;
-
-	File* file = NULL;
-
-	if (editor->fileSystem.files[lastClickedItemID].type == FileType::folder)
-		file = editor->fileSystem.files[lastClickedItemID].addr;
-	else
-		file = editor->fileSystem.files[lastClickedItemID].addr->parent;
-
-	int frame_padding = 1;
-	ImVec2 size = ImVec2(64.0f, 64.0f);
-	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
-	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
-	ImVec4 bg_col = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
-	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-	for (int i = 0; i < file->subfiles.size(); i++) {
-
-		ImGui::BeginGroup();
-		{
-			ImGui::PushID(i);
-
-			if(lastSelectedItemID == file->subfiles[i]->id)
-				tint_col = ImVec4(0.7f, 0.7f, 1.0f, 1.0f);
-			else
-				tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-			
-			if (ImGui::ImageButton((ImTextureID)editor->fileSystem.files[file->subfiles[i]->id].textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-				
-				cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
-				temp_lastClickedItemID = file->subfiles[i]->id;
-				panelRightItemClicked = true;
-			}
-
-			if (ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-
-				lastSelectedItemID = file->subfiles[i]->id;
-				panelRightItemTab = true;
-			}
-
-			ImGui::SetNextWindowSize(ImVec2(210, 120));
-			if (ImGui::BeginPopupContextItem("context_menu_item_popup"))
-			{
-				cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
-				lastSelectedItemID = file->subfiles[i]->id;
-				panelRightItemClicked = true;
-
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
-
-				if (ImGui::Selectable("   Open")) {
-
-					if (editor->fileSystem.files[lastSelectedItemID].type == FileType::folder)
-						lastClickedItemID = lastSelectedItemID;
-					else
-						ShellExecute(NULL, L"open", std::filesystem::absolute(editor->fileSystem.files[lastSelectedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
-
-					// include all the necessary end codes...
-					ImGui::PopStyleColor();
-					ImGui::EndPopup();
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-
-				ImVec2 p = ImGui::GetCursorScreenPos();
-				ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
-				ImGui::Dummy(ImVec2(0, 1));
-
-				if (ImGui::Selectable("   Delete")) {
-
-					editor->fileSystem.deleteFileCompletely(lastSelectedItemID);
-
-					// include all the necessary end codes...
-					ImGui::PopStyleColor();
-					ImGui::EndPopup();
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-
-				if (ImGui::Selectable("   Duplicate")) {
-
-					editor->fileSystem.duplicateFile(lastSelectedItemID);
-
-					// include all the necessary end codes...
-					ImGui::PopStyleColor();
-					ImGui::EndPopup();
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-
-				if (ImGui::Selectable("   Rename")) {
-
-					renameItemID = file->subfiles[i]->id;
-
-					// include all the necessary end codes...
-					//ImGui::PopStyleColor();
-					//ImGui::EndPopup();
-					//ImGui::PopID();
-					//ImGui::EndGroup();
-					//return;
-				}
-
-				p = ImGui::GetCursorScreenPos();
-				ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
-				ImGui::Dummy(ImVec2(0, 1));
-
-				if (ImGui::Selectable("   Show in Explorer")) {
-
-					ShellExecute(NULL, L"open", std::filesystem::absolute(editor->fileSystem.files[editor->fileSystem.files[lastSelectedItemID].addr->parent->id].path).c_str(), NULL, NULL, SW_RESTORE);
-
-					// include all the necessary end codes...
-					ImGui::PopStyleColor();
-					ImGui::EndPopup();
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-				ImGui::PopStyleColor();
-				ImGui::EndPopup();
-			}
-			
-			if (ImGui::BeginDragDropSource())
-			{
-				ImGui::SetDragDropPayload("_FILE", &file->subfiles[i]->id, sizeof(int));
-				ImGui::Text(editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-				ImGui::EndDragDropSource();
-			}
-
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
-				{
-					IM_ASSERT(payload->DataSize == sizeof(int));
-					int payload_n = *(const int*)payload->Data;
-					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
-
-					// include all the necessary end codes...
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_FILE"))
-				{
-					IM_ASSERT(payload->DataSize == sizeof(int));
-					int payload_n = *(const int*)payload->Data;
-					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
-
-					// include all the necessary end codes...
-					ImGui::PopID();
-					ImGui::EndGroup();
-					return;
-				}
-				ImGui::EndDragDropTarget();
-			}
-			ImGui::PopID();
-			ImGui::PushItemWidth(64.0f);
-
-			if (lastSelectedItemID == file->subfiles[i]->id)
-				textColor = ImVec4(0.2f, 0.72f, 0.95, 1);
-			else
-				textColor = ImVec4(1, 1, 1, 1);
-
-			if (renameItemID == file->subfiles[i]->id) {
-
-				char temp[3];
-				temp[0] = '#';
-				temp[1] = '#';
-				temp[2] = '\0';
-				char str0[128] = "";
-				strcat(str0, (char*)editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-				ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
-				ImGui::SetKeyboardFocusHere(0);
-				if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
-
-					if(strlen(str0) != 0) 
-						editor->fileSystem.rename(file->subfiles[i]->id, str0);
-					renameItemID = -1;
-				}
-			}
-			else {
-
-				ImGui::Indent(5);
-				int len = editor->fileSystem.files[file->subfiles[i]->id].name.length();
-
-				if (len > 9) {
-
-					std::string name = "";
-					name = editor->fileSystem.files[file->subfiles[i]->id].name.substr(0, 7) + "..";
-					ImGui::TextColored(textColor, name.c_str());
-				}
-				else
-					ImGui::TextColored(textColor, editor->fileSystem.files[file->subfiles[i]->id].name.c_str());
-
-				ImGui::Unindent(5);
-
-			}
-			ImGui::EndGroup();
-		}
-		if ((i + 1) % maxElementsInRow != 0)
-			ImGui::SameLine();
-	}
-
-	tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-	if (ImGui::ImageButton((ImTextureID)plusTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) 
-		editor->fileSystem.newFolder(file->id, "NewFolder");
-	
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
-		{
-			IM_ASSERT(payload->DataSize == sizeof(int));
-			int payload_n = *(const int*)payload->Data;
-			editor->fileSystem.moveFile(payload_n, file->id);
-
-			// include all the necessary end codes...
-			return;
-		}
-		ImGui::EndDragDropTarget();
-	}
-}
-
-void EditorGUI::showCurrentDirectoryText() {
-
-	if (lastClickedItemID == -1)
-		return;
-
-	std::stack<File*>fileStack;
-	File* iter = editor->fileSystem.files[lastClickedItemID].addr;
-
-	if (editor->fileSystem.files[iter->id].type != FileType::folder)
-		iter = iter->parent;
-
-	while (iter->parent != NULL) {
-
-		fileStack.push(editor->fileSystem.files[iter->id].addr);
-		iter = iter->parent;
-	}
-	while (fileStack.size() > 1) {
-
-		File* popped = fileStack.top();
-		fileStack.pop();
-
-		if(temp_lastClickedItemID == popped->id && mouseLeftPressed && !fileTreeClicked)
-			textColor = ImVec4(0.2f, 0.72f, 0.95, 1);
-		else
-			textColor = ImVec4(1, 1, 1, 1);
-
-		ImGui::TextColored(textColor, editor->fileSystem.files[popped->id].name.c_str());
-		if (ImGui::IsItemClicked()) {
-			cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
-			temp_lastClickedItemID = popped->id;
-		}
-		ImGui::SameLine(0,0);
-
-		ImVec2 uv_min = ImVec2(0.0f, 0.0f);
-		ImVec2 uv_max = ImVec2(1.0f, 1.0f);
-		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-		ImVec4 border_col = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-		ImGui::Image((ImTextureID)greaterTextureID, ImVec2(16.f, 16.f), uv_min, uv_max, tint_col, border_col);
-
-		ImGui::SameLine(0,0);
-	}
-	File* popped = fileStack.top();
-	fileStack.pop();
-
-	ImGui::Text(editor->fileSystem.files[popped->id].name.c_str());
-	if (ImGui::IsItemClicked()) {
-		cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
-		temp_lastClickedItemID = popped->id;
-	}
-
-	if (editor->fileSystem.files[lastSelectedItemID].type != FileType::folder) {
-
-		ImGui::SameLine();
-		std::string temp = " | " + editor->fileSystem.files[lastSelectedItemID].name + editor->fileSystem.files[lastSelectedItemID].extension;
-		ImGui::Text(temp.c_str());
-	}
-}
+//----- FILE MENU -----
 
 void EditorGUI::createFilesPanel() {
 
@@ -765,7 +372,6 @@ void EditorGUI::createFilesPanel() {
 
 	ImGui::SameLine();
 	ImVec2 scrolling_child_size_r = ImVec2(size.x - scrolling_child_size.x - 26, ImGui::GetWindowSize().y - 54);
-	int maxElementsInRow = (int)(scrolling_child_size_r.x / 75);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.f);
 	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.f);
@@ -782,12 +388,396 @@ void EditorGUI::createFilesPanel() {
 	ImGui::End();
 }
 
-void EditorGUI::setEditor(Editor* editor) {
-	this->editor = editor; 
-	EditorGUI::initImGui();
+void EditorGUI::showCurrentDirectoryText() {
+
+	if (lastClickedItemID == -1)
+		return;
+
+	std::stack<File*>fileStack;
+	File* iter = (*files)[lastClickedItemID].addr;
+
+	if ((*files)[iter->id].type != FileType::folder)
+		iter = iter->parent;
+
+	while (iter->parent != NULL) {
+
+		fileStack.push((*files)[iter->id].addr);
+		iter = iter->parent;
+	}
+	while (fileStack.size() > 1) {
+
+		File* popped = fileStack.top();
+		fileStack.pop();
+
+		if (temp_lastClickedItemID == popped->id && mouseLeftPressed && !fileTreeClicked)
+			textColor = textSelectedColor;
+		else
+			textColor = textUnselectedColor;
+
+		ImGui::TextColored(textColor, (*files)[popped->id].name.c_str());
+		if (ImGui::IsItemClicked()) {
+			cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
+			temp_lastClickedItemID = popped->id;
+		}
+		ImGui::SameLine(0, 0);
+
+		ImVec2 uv_min = ImVec2(0.0f, 0.0f);
+		ImVec2 uv_max = ImVec2(1.0f, 1.0f);
+		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+		ImVec4 border_col = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+		ImGui::Image((ImTextureID)greaterTextureID, ImVec2(16.f, 16.f), uv_min, uv_max, tint_col, border_col);
+
+		ImGui::SameLine(0, 0);
+	}
+	File* popped = fileStack.top();
+	fileStack.pop();
+
+	ImGui::Text((*files)[popped->id].name.c_str());
+	if (ImGui::IsItemClicked()) {
+		cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
+		temp_lastClickedItemID = popped->id;
+	}
+
+	if ((*files)[lastSelectedItemID].type != FileType::folder) {
+
+		ImGui::SameLine();
+		char line[] = " | \0";
+		char fileName[32];
+		strcpy(fileName, line);
+		strcat(fileName, (*files)[lastSelectedItemID].name.c_str());
+		strcat(fileName, (*files)[lastSelectedItemID].extension.c_str());
+		ImGui::Text(fileName);
+	}
 }
 
-Editor* EditorGUI::getEditor() { return editor; }
+void EditorGUI::createFoldersRecursively(File* file) {
+
+	for (int i = 0; i < file->subfiles.size(); i++) {
+
+		if ((*files)[file->subfiles[i]->id].type != FileType::folder)
+			continue;
+
+		ImGui::Indent(ImGui::GetStyle().IndentSpacing);
+
+		ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+		bool hasSubFolder = editor->fileSystem.hasSubFolder(file->subfiles[i]);
+		if (!hasSubFolder)
+			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+		else
+			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+		if (editor->fileSystem.subfolderCheck((*files)[lastClickedItemID].addr, file->subfiles[i])) {
+
+			if (!subfolderCheckFlag)
+				ImGui::SetNextItemOpen(true);
+		}
+
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)file->subfiles[i]->id, node_flags, "");
+
+		if (ImGui::IsItemClicked()) {
+
+			fileTreeClicked = true;
+			subfolderCheckFlag = true;
+			cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
+
+			if (!ImGui::IsItemToggledOpen())
+				temp_lastClickedItemID = file->subfiles[i]->id;
+			else
+				toggleClicked = true;
+		}
+
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("_TREENODE_FILE", &file->subfiles[i]->id, sizeof(int));
+			ImGui::Text((*files)[file->subfiles[i]->id].name.c_str());
+			ImGui::EndDragDropSource();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+				return;
+			}
+
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_FILE"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+				return;
+			}
+			ImGui::EndDragDropTarget();
+		}
+		ImGui::SameLine();
+
+		ImVec2 size = ImVec2(16.0f, 16.0f);
+		ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+		ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+
+		if (nodeOpen && hasSubFolder)
+			ImGui::Image((ImTextureID)openFolderTextureID, size, uv0, uv1, tint_col, border_col);
+		else
+			ImGui::Image((ImTextureID)closedFolderTextureID, size, uv0, uv1, tint_col, border_col);
+
+		ImGui::SameLine();
+
+		if (lastClickedItemID == file->subfiles[i]->id)
+			ImGui::TextColored(textSelectedColor, (*files)[file->subfiles[i]->id].name.c_str());
+		else
+			ImGui::Text((*files)[file->subfiles[i]->id].name.c_str());
+
+		indexForFolder++;
+
+		if (nodeOpen && (*files)[file->subfiles[i]->id].type == FileType::folder)
+			EditorGUI::createFoldersRecursively(file->subfiles[i]);
+
+		ImGui::Unindent(ImGui::GetStyle().IndentSpacing);
+	}
+}
+
+void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
+
+	int maxElementsInRow = (int)((area.x + 26) / 100);
+
+	if (lastClickedItemID == -1 || maxElementsInRow == 0)
+		return;
+
+	File* file = NULL;
+
+	if ((*files)[lastClickedItemID].type == FileType::folder)
+		file = (*files)[lastClickedItemID].addr;
+	else
+		file = (*files)[lastClickedItemID].addr->parent;
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(64.0f, 64.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 bg_col = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	for (int i = 0; i < file->subfiles.size(); i++) {
+
+		//ImGui::Dummy(ImVec2(0, 30));
+
+		ImGui::BeginGroup();
+		{
+			ImGui::PushID(i);
+
+			if (lastSelectedItemID == file->subfiles[i]->id)
+				tint_col = ImVec4(0.7f, 0.7f, 1.0f, 1.0f);
+			else
+				tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+			ImVec2 pos = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(pos.x + (100.f - 64.f) / 2, pos.y));
+
+			if (ImGui::ImageButton((ImTextureID)(*files)[file->subfiles[i]->id].textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+				cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
+				temp_lastClickedItemID = file->subfiles[i]->id;
+				panelRightItemClicked = true;
+			}
+
+			if (ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+
+				lastSelectedItemID = file->subfiles[i]->id;
+				panelRightItemTab = true;
+			}
+
+			ImGui::SetNextWindowSize(ImVec2(210, 120));
+			if (ImGui::BeginPopupContextItem("context_menu_item_popup"))
+			{
+				cursorPosWhenFirstClickedItem = ImGui::GetMousePos();
+				lastSelectedItemID = file->subfiles[i]->id;
+				panelRightItemClicked = true;
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
+
+				if (ImGui::Selectable("   Open")) {
+
+					if ((*files)[lastSelectedItemID].type == FileType::folder)
+						lastClickedItemID = lastSelectedItemID;
+					else
+						ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[lastSelectedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
+
+					// include all the necessary end codes...
+					ImGui::PopStyleColor();
+					ImGui::EndPopup();
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+
+				ImVec2 p = ImGui::GetCursorScreenPos();
+				ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
+				ImGui::Dummy(ImVec2(0, 1));
+
+				if (ImGui::Selectable("   Delete")) {
+
+					editor->fileSystem.deleteFileCompletely(lastSelectedItemID);
+
+					// include all the necessary end codes...
+					ImGui::PopStyleColor();
+					ImGui::EndPopup();
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+
+				if (ImGui::Selectable("   Duplicate")) {
+
+					editor->fileSystem.duplicateFile(lastSelectedItemID);
+
+					// include all the necessary end codes...
+					ImGui::PopStyleColor();
+					ImGui::EndPopup();
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+
+				if (ImGui::Selectable("   Rename"))
+					renameItemID = file->subfiles[i]->id;
+
+				p = ImGui::GetCursorScreenPos();
+				ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
+				ImGui::Dummy(ImVec2(0, 1));
+
+				if (ImGui::Selectable("   Show in Explorer")) {
+
+					ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[(*files)[lastSelectedItemID].addr->parent->id].path).c_str(), NULL, NULL, SW_RESTORE);
+
+					// include all the necessary end codes...
+					ImGui::PopStyleColor();
+					ImGui::EndPopup();
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+				ImGui::PopStyleColor();
+				ImGui::EndPopup();
+			}
+
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload("_FILE", &file->subfiles[i]->id, sizeof(int));
+				ImGui::Text((*files)[file->subfiles[i]->id].name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
+				{
+					IM_ASSERT(payload->DataSize == sizeof(int));
+					int payload_n = *(const int*)payload->Data;
+					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+
+					// include all the necessary end codes...
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_FILE"))
+				{
+					IM_ASSERT(payload->DataSize == sizeof(int));
+					int payload_n = *(const int*)payload->Data;
+					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+
+					// include all the necessary end codes...
+					ImGui::PopID();
+					ImGui::EndGroup();
+					return;
+				}
+				ImGui::EndDragDropTarget();
+			}
+			ImGui::PopID();
+			ImGui::PushItemWidth(64.0f);
+
+			if (lastSelectedItemID == file->subfiles[i]->id)
+				textColor = textSelectedColor;
+			else
+				textColor = textUnselectedColor;
+
+			if (renameItemID == file->subfiles[i]->id) {
+
+				char temp[3];
+				temp[0] = '#';
+				temp[1] = '#';
+				temp[2] = '\0';
+				char str0[32] = "";
+				strcat(str0, (char*)(*files)[file->subfiles[i]->id].name.c_str());
+				ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
+				ImGui::SetKeyboardFocusHere(0);
+				if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
+
+					if (strlen(str0) != 0)
+						editor->fileSystem.rename(file->subfiles[i]->id, str0);
+					renameItemID = -1;
+				}
+			}
+			else {
+
+				//ImGui::Indent(5);
+				int len = (*files)[file->subfiles[i]->id].name.length();
+				ImVec2 pos = ImGui::GetCursorPos();
+
+				if (len > 11) {
+
+					char dots[] = "..\0";
+					char fileName[10];
+					strcpy(fileName, (*files)[file->subfiles[i]->id].name.substr(0, 7).c_str());
+					strcat(fileName, dots);
+
+					ImVec2 textSize = ImGui::CalcTextSize(fileName);
+					ImGui::SetCursorPos(ImVec2(pos.x + (100.f - textSize.x) / 2, pos.y));
+
+					ImGui::TextColored(textColor, fileName);
+				}
+				else {
+
+					ImVec2 textSize = ImGui::CalcTextSize((*files)[file->subfiles[i]->id].name.c_str());
+					ImGui::SetCursorPos(ImVec2(pos.x + (100.f - textSize.x) / 2, pos.y));
+
+					ImGui::TextColored(textColor, (*files)[file->subfiles[i]->id].name.c_str());
+				}
+
+				//ImGui::Unindent(5);
+
+			}
+			ImGui::EndGroup();
+		}
+		if ((i + 1) % maxElementsInRow != 0)
+			ImGui::SameLine(0);
+	}
+
+	if (ImGui::ImageButton((ImTextureID)plusTextureID, size, uv0, uv1, frame_padding, bg_col, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)))
+		editor->fileSystem.newFolder(file->id, "NewFolder");
+
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_FILE"))
+		{
+			IM_ASSERT(payload->DataSize == sizeof(int));
+			int payload_n = *(const int*)payload->Data;
+			editor->fileSystem.moveFile(payload_n, file->id);
+
+			// include all the necessary end codes...
+			return;
+		}
+		ImGui::EndDragDropTarget();
+	}
+}
+
+//----- UTILITY FUNCTIONS -----
 
 bool EditorGUI::mouseDistanceControl() {
 
@@ -796,6 +786,18 @@ bool EditorGUI::mouseDistanceControl() {
 
 	if (sqrt(dx * dx + dy * dy) < 5.0f)
 		return true;
-	
+
 	return false;
 }
+
+//----- GET / SET FUNCTIONS -----
+
+void EditorGUI::setEditor(Editor* editor) { this->editor = editor; }
+
+Editor* EditorGUI::getEditor() { return editor; }
+
+void EditorGUI::setFiles(std::map<int, FileNode>* files) { this->files = files; }
+
+std::map<int, FileNode>* EditorGUI::getFiles() { return files; }
+
+

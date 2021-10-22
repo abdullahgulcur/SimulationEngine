@@ -5,7 +5,7 @@ Editor::Editor() {
 
 void Editor::startEditorScreen() {
 
-	window.setTitle("Engine");
+	window.setTitle("Fury");
 	window.startGLFW();
 	render.startGLEW();
 	window.startGLOptions();
@@ -14,7 +14,8 @@ void Editor::startEditorScreen() {
 	window.setEditor(this);
 	render.setEditor(this);
 	editorGUI.setEditor(this);
-	//editorGUI.initImGui();
+	editorGUI.setFiles(&fileSystem.files);
+	editorGUI.initImGui();
 	editorCamera.setWindow(window.getGLFWwindow());
 	editorCamera.setMode(window.getGLFWvidmode());
 	window.renderToTexture();

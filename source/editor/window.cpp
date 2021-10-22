@@ -120,11 +120,8 @@ void Window::renderToTexture() {
 
 void Window::drop_callback(GLFWwindow* window, int count, const char** paths)
 {
-	std::cout << "Drag and Drop count - " << count << std::endl;
 	for (unsigned int i = 0; i < count; ++i)
-	{
 		dragAndDropFiles.push_back(std::string(paths[i]));
-	}
 
 	dragAndDropFromOutside = true;
 }
