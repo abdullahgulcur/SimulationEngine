@@ -17,15 +17,21 @@ private:
 
 	Editor* editor;
 	std::map<int, FileNode>* files;
+	//std::vector<Scene>* sceneList;
 
 	/*
 	* INDEX VARIABLES
 	*/
-	int indexForFolder;
 	int lastSelectedItemID = -1;
 	int temp_lastClickedItemID = 1;
 	int lastRightClickedItemID = -1;
 	int renameItemID = -1;
+
+	int indexForEntity;
+	int lastSelectedEntityID = -1;
+	int temp_lastClickedEntityID = 1;
+	int lastRightClickedEntityID = -1;
+	int renameEntityID = -1;
 
 	ImVec2 cursorPosWhenFirstClickedItem;
 	ImVec4 textColor;
@@ -43,6 +49,8 @@ private:
 	bool panelRightItemTab = false; // tiklar tiklamaz
 	bool subfolderCheckFlag = false;
 	bool fileTreeClicked = false;
+
+	bool entityClicked = false;
 	/*
 	* UI VARIABLES
 	*/
@@ -60,6 +68,7 @@ public:
 	* INDEX VARIABLES
 	*/
 	int lastClickedItemID = 1;
+	int lastClickedEntityID = 1;
 
 	/*
 	* TEXTURE IDs
@@ -68,24 +77,25 @@ public:
 	unsigned int closedFolderTextureID;
 	unsigned int plusTextureID;
 	unsigned int greaterTextureID;
+	unsigned int gameObjectTextureID;
 
 	EditorGUI();
 
 	void initImGui();
 
-	void loadTextures();
-
 	void newFrameImGui();
-
-	void setTheme();
 
 	void renderImGui();
 
 	void destroyImGui();
 
-	void createPanels();
+	void setTheme();
+
+	void loadTextures();
 
 	void updateStateMachine();
+
+	void createPanels();
 
 	void createScenePanel();
 
@@ -95,22 +105,30 @@ public:
 
 	void createHierarchyPanel();
 
-	void createFoldersRecursively(File * file);
+	void createSceneGraphRecursively(Entity* sceneGraph);
 
-	void createFilesPanelRightPart(ImVec2 area);
+	void hiearchyCreateButton();
 
 	void createFilesPanel();
 
 	void showCurrentDirectoryText();
 
+	void createFoldersRecursively(File * file);
+
+	void createFilesPanelRightPart(ImVec2 area);
+
+	bool mouseDistanceControl();
+
 	void setEditor(Editor* editor);
+
+	Editor* getEditor();
 
 	void setFiles(std::map<int, FileNode>* files);
 
 	std::map<int, FileNode>* getFiles();
 
-	Editor* getEditor();
+	//void setSceneList(std::vector<Scene>* sceneList);
 
-	bool mouseDistanceControl();
+	//std::vector<Scene>* getSceneList();
 
 };

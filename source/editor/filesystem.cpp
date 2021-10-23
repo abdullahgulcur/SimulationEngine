@@ -81,7 +81,7 @@ void FileSystem::generateFileStructure(File* file) {
 
 		FileNode fileNode;
 		fileNode.path = entry.string();
-		fileNode.name = entry.stem().string();//entry.string().substr(files[file->id].path.length() + 1, entry.string().length() - files[file->id].path.length() - 1);
+		fileNode.name = entry.stem().string();
 		fileNode.extension = entry.extension().string();
 		fileNode.type = FileSystem::getFileType(entry.extension().string());
 		fileNode.addr = subfile;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <api/scene.hpp>
 #include "filesystem.hpp"
 #include "render.hpp"
 #include "window.hpp"
@@ -36,6 +37,8 @@ public:
 
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
+	//std::vector<Scene> sceneList;
+	Scene scene;
 
 
 	Editor();
@@ -57,4 +60,6 @@ public:
 	void setEditorCamera(EditorCamera editorCamera);
 
 	EditorCamera& getEditorCamera();
+
+	void addScene(Scene scene);
 };

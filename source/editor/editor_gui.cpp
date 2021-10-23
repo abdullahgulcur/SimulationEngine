@@ -156,6 +156,7 @@ void EditorGUI::loadTextures() {
 	closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
 	plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
 	greaterTextureID = texture.loadDDS("resource/icons/greater.DDS");
+	gameObjectTextureID = texture.loadDDS("resource/icons/gameobject.DDS");
 }
 
 void EditorGUI::updateStateMachine() {
@@ -173,6 +174,10 @@ void EditorGUI::updateStateMachine() {
 			}
 			else
 				ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[temp_lastClickedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
+
+
+			////
+			//lastClickedEntityID = temp_lastClickedEntityID;
 		}
 	}
 
@@ -195,12 +200,21 @@ void EditorGUI::updateStateMachine() {
 		toggleClicked = false;
 		panelRightItemClicked = false;
 		fileTreeClicked = false;
+
+		////
+		if (EditorGUI::mouseDistanceControl() && !toggleClicked)
+			lastClickedEntityID = temp_lastClickedEntityID;
+
+		entityClicked = false;
+
 	}
 
 	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonRight)) {
 
 		if (!panelRightItemClicked)
 			lastSelectedItemID = -1;
+
+		//lastSelectedEntityID = -1;
 	}
 
 	if (ImGui::IsMouseClicked(ImGuiPopupFlags_MouseButtonLeft)) {
@@ -211,6 +225,16 @@ void EditorGUI::updateStateMachine() {
 			lastSelectedItemID = -1;
 
 		panelRightItemTab = false;
+
+		////
+
+		if (!entityClicked) {
+
+			lastClickedEntityID = -1;
+			temp_lastClickedEntityID = -1;
+		}
+
+
 	}
 }
 
@@ -295,9 +319,210 @@ void EditorGUI::createInspectorPanel() {
 
 void EditorGUI::createHierarchyPanel() {
 
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
 	ImGui::Begin("Hierarchy");
+	ImGui::PopStyleVar();
+
+	EditorGUI::hiearchyCreateButton();
+	
+	ImVec2 size = ImGui::GetWindowSize();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.f);
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.f);
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.14f, 0.14f, 0.14f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.10f, 0.10f, 1.0f));
+
+	ImVec2 scrolling_child_size = ImVec2(size.x - 10, size.y - 54);
+	ImGui::BeginChild("scrolling", scrolling_child_size, true, ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::PopStyleVar(2);
+	ImGui::PopStyleColor(2);
+
+	ImGui::SetNextItemOpen(true);
+
+	if (ImGui::TreeNode(editor->scene.name.c_str()))
+	{
+		ImGui::Unindent(15);
+
+		EditorGUI::createSceneGraphRecursively(editor->scene.sceneGraph);
+
+		ImGui::TreePop();
+	}
+
+
+	ImGui::EndChild();
 
 	ImGui::End();	
+}
+
+void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
+
+	for (int i = 0; i < sceneGraph->childs.size(); i++) {
+
+		ImGui::Indent(15);
+
+		ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+		bool hasChildren = sceneGraph->childs[i]->childs.size() > 0;
+		if (!hasChildren)
+			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+		else
+			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)sceneGraph->childs[i]->id, node_flags, " %d", sceneGraph->childs[i]->id);
+
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+
+			entityClicked = true;
+
+			if (!ImGui::IsItemToggledOpen())
+				temp_lastClickedEntityID = sceneGraph->childs[i]->id;
+			else
+				toggleClicked = true;
+		}
+
+		ImGui::PushID(sceneGraph->childs[i]->id);
+		ImGui::SetNextWindowSize(ImVec2(210, 95));
+
+		if (ImGui::BeginPopupContextItem("scene_graph_popup"))
+		{
+			entityClicked = true;
+			temp_lastClickedEntityID = sceneGraph->childs[i]->id;
+
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
+
+			if (ImGui::Selectable("   Create Empty")) {
+
+			}
+
+			ImVec2 p = ImGui::GetCursorScreenPos();
+			ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
+			ImGui::Dummy(ImVec2(0, 1));
+
+			if (ImGui::Selectable("   Rename")) {
+
+			}
+
+			
+
+			if (ImGui::Selectable("   Duplicate")) {
+
+			}
+
+			if (ImGui::Selectable("   Delete")) {
+
+				editor->scene.deleteEntityCompletely(temp_lastClickedEntityID);
+
+				ImGui::PopStyleColor();
+				ImGui::EndPopup();
+				ImGui::PopID();
+				return;
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+		}
+		ImGui::PopID();
+
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &sceneGraph->childs[i]->id, sizeof(int));
+			ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			ImGui::EndDragDropSource();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+				editor->scene.moveEntity(payload_n, sceneGraph->childs[i]->id);
+				return;
+			}
+			ImGui::EndDragDropTarget();
+		}
+		ImGui::SameLine();
+
+		ImVec2 size = ImVec2(16.0f, 16.0f);
+		ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+		ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+
+		ImGui::Image((ImTextureID)gameObjectTextureID, size, uv0, uv1, tint_col, border_col);
+
+		ImGui::SameLine();
+
+		if (temp_lastClickedEntityID == sceneGraph->childs[i]->id)
+			ImGui::TextColored(textSelectedColor, editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+		else
+			ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+
+		if (nodeOpen && hasChildren)
+			EditorGUI::createSceneGraphRecursively(sceneGraph->childs[i]);
+
+		ImGui::Unindent(15);
+	}
+}
+
+void EditorGUI::hiearchyCreateButton() {
+
+	if (ImGui::Button("Create", ImVec2(60, 20)))
+		ImGui::OpenPopup("context_menu_scene_hierarchy_popup");
+
+	ImGui::SetNextWindowSize(ImVec2(210, 100));
+
+	if (ImGui::BeginPopup("context_menu_scene_hierarchy_popup"))
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
+
+		if (ImGui::Selectable("   Scene Object")) {
+
+			//editor->addScene(Scene());
+			// include all the necessary end codes...
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+			return;
+		}
+
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
+		ImGui::Dummy(ImVec2(0, 1));
+
+		if (ImGui::Selectable("   Directional Light")) {
+
+			// include all the necessary end codes...
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+			return;
+		}
+
+		if (ImGui::Selectable("   Point Light")) {
+
+			// include all the necessary end codes...
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+			return;
+		}
+
+		p = ImGui::GetCursorScreenPos();
+		ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
+		ImGui::Dummy(ImVec2(0, 1));
+
+		if (ImGui::Selectable("   Scene")) {
+
+			//editor->addScene(Scene());
+
+			// include all the necessary end codes...
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+			return;
+		}
+
+		ImGui::PopStyleColor();
+		ImGui::EndPopup();
+	}
+
 }
 
 //----- FILE MENU -----
@@ -339,7 +564,6 @@ void EditorGUI::createFilesPanel() {
 	if (ImGui::TreeNode("MyProject"))
 	{
 		ImGui::Unindent(ImGui::GetStyle().IndentSpacing);
-		indexForFolder = 1;
 		EditorGUI::createFoldersRecursively(editor->fileSystem.file);
 		ImGui::TreePop();
 	}
@@ -533,8 +757,6 @@ void EditorGUI::createFoldersRecursively(File* file) {
 		else
 			ImGui::Text((*files)[file->subfiles[i]->id].name.c_str());
 
-		indexForFolder++;
-
 		if (nodeOpen && (*files)[file->subfiles[i]->id].type == FileType::folder)
 			EditorGUI::createFoldersRecursively(file->subfiles[i]);
 
@@ -707,6 +929,8 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 			else
 				textColor = textUnselectedColor;
 
+			pos = ImGui::GetCursorPos();
+
 			if (renameItemID == file->subfiles[i]->id) {
 
 				char temp[3];
@@ -717,6 +941,9 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 				strcat(str0, (char*)(*files)[file->subfiles[i]->id].name.c_str());
 				ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
 				ImGui::SetKeyboardFocusHere(0);
+				ImVec2 textSize = ImGui::CalcTextSize(str0);
+				ImGui::SetCursorPos(ImVec2(pos.x + (100.f - textSize.x) / 2 - 5, pos.y - 2));
+
 				if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 					if (strlen(str0) != 0)
@@ -726,9 +953,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 			}
 			else {
 
-				//ImGui::Indent(5);
 				int len = (*files)[file->subfiles[i]->id].name.length();
-				ImVec2 pos = ImGui::GetCursorPos();
 
 				if (len > 11) {
 
@@ -749,9 +974,6 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 
 					ImGui::TextColored(textColor, (*files)[file->subfiles[i]->id].name.c_str());
 				}
-
-				//ImGui::Unindent(5);
-
 			}
 			ImGui::EndGroup();
 		}
@@ -799,5 +1021,9 @@ Editor* EditorGUI::getEditor() { return editor; }
 void EditorGUI::setFiles(std::map<int, FileNode>* files) { this->files = files; }
 
 std::map<int, FileNode>* EditorGUI::getFiles() { return files; }
+
+//void EditorGUI::setSceneList(std::vector<Scene>* sceneList) { this->sceneList = sceneList; }
+//
+//std::vector<Scene>* EditorGUI::getSceneList() { return sceneList; }
 
 

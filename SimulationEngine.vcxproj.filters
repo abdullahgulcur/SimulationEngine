@@ -75,18 +75,24 @@
     <ClCompile Include="source\api\utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\api\scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\api\scene_object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\api\SceneObject.hpp">
+    <ClInclude Include="source\api\scene_object.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\transform.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\api\GameScene.hpp">
+    <ClInclude Include="source\api\scene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\Material.hpp">
@@ -150,6 +156,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\utility.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\common\rapidxml.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\common\rapidxml_iterators.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\common\rapidxml_print.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\common\rapidxml_utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

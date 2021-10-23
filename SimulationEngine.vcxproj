@@ -96,7 +96,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -114,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -157,6 +157,8 @@
   <ItemGroup>
     <ClCompile Include="source\api\mesh_renderer.cpp" />
     <ClCompile Include="source\api\model.cpp" />
+    <ClCompile Include="source\api\scene.cpp" />
+    <ClCompile Include="source\api\scene_object.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
     <ClCompile Include="source\api\utility.cpp" />
@@ -177,15 +179,19 @@
     <ClCompile Include="source\include\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\api\GameScene.hpp" />
+    <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\Material.hpp" />
     <ClInclude Include="source\api\mesh_renderer.hpp" />
     <ClInclude Include="source\api\model.hpp" />
-    <ClInclude Include="source\api\SceneObject.hpp" />
+    <ClInclude Include="source\api\scene_object.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
     <ClInclude Include="source\api\utility.hpp" />
     <ClInclude Include="Source\App\application.hpp" />
+    <ClInclude Include="source\common\rapidxml.hpp" />
+    <ClInclude Include="source\common\rapidxml_iterators.hpp" />
+    <ClInclude Include="source\common\rapidxml_print.hpp" />
+    <ClInclude Include="source\common\rapidxml_utils.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
     <ClInclude Include="source\editor\editor_camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />

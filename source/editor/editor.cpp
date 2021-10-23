@@ -10,11 +10,14 @@ void Editor::startEditorScreen() {
 	render.startGLEW();
 	window.startGLOptions();
 	fileSystem.initFileSystem();
+	scene.initSceneGraph();
 
 	window.setEditor(this);
 	render.setEditor(this);
 	editorGUI.setEditor(this);
 	editorGUI.setFiles(&fileSystem.files);
+
+	//editorGUI.setSceneList(sceneList[0]);
 	editorGUI.initImGui();
 	editorCamera.setWindow(window.getGLFWwindow());
 	editorCamera.setMode(window.getGLFWvidmode());
@@ -35,6 +38,7 @@ void Editor::startEditorScreen() {
 	//viewMatrixID = glGetUniformLocation(programID, "V");
 	//modelMatrixID = glGetUniformLocation(programID, "M");
 	mvpMatrixID = glGetUniformLocation(programID, "MVP");
+
 
 	
 }
@@ -117,3 +121,5 @@ Window Editor::getWindow() { return window; }
 void Editor::setEditorCamera(EditorCamera editorCamera) { this->editorCamera = editorCamera; }
 
 EditorCamera& Editor::getEditorCamera() { return editorCamera; }
+
+//void Editor::addScene(Scene scene) { sceneList.push_back(scene); }
