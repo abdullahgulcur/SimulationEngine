@@ -313,6 +313,15 @@ void EditorGUI::createInspectorPanel() {
 	ImGui::Text("Mouse x: %.1f y: %.1f", ImGui::GetMousePos().x, ImGui::GetMousePos().y);
 
 	ImGui::End();
+
+	ImGui::Begin("Temp");
+	
+	if (ImGui::Button("Save", ImVec2(60, 20))) {
+
+		editor->scene.saveSceneGraph();
+	}
+
+	ImGui::End();
 }
 
 //----- HIERARCHY MENU -----
@@ -341,13 +350,21 @@ void EditorGUI::createHierarchyPanel() {
 
 	if (ImGui::TreeNode(editor->scene.name.c_str()))
 	{
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+				editor->scene.moveEntity(payload_n, editor->scene.sceneGraph->id);
+			}
+			ImGui::EndDragDropTarget();
+		}
+
 		ImGui::Unindent(15);
-
 		EditorGUI::createSceneGraphRecursively(editor->scene.sceneGraph);
-
 		ImGui::TreePop();
 	}
-
 
 	ImGui::EndChild();
 
@@ -368,7 +385,7 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 		else
 			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)sceneGraph->childs[i]->id, node_flags, " %d", sceneGraph->childs[i]->id);
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)sceneGraph->childs[i]->id, node_flags, "");//" %d", sceneGraph->childs[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
@@ -392,20 +409,29 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 
 			if (ImGui::Selectable("   Create Empty")) {
 
+				editor->scene.newEntity(sceneGraph->childs[i]->id, "Empty Entity");
+
+				ImGui::PopStyleColor();
+				ImGui::EndPopup();
+				ImGui::PopID();
+				return;
 			}
 
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
 			ImGui::Dummy(ImVec2(0, 1));
 
-			if (ImGui::Selectable("   Rename")) {
-
-			}
-
-			
+			if (ImGui::Selectable("   Rename"))
+				renameEntityID = sceneGraph->childs[i]->id;
 
 			if (ImGui::Selectable("   Duplicate")) {
 
+				editor->scene.duplicateEntity(sceneGraph->childs[i]->id);
+
+				ImGui::PopStyleColor();
+				ImGui::EndPopup();
+				ImGui::PopID();
+				return;
 			}
 
 			if (ImGui::Selectable("   Delete")) {
@@ -453,10 +479,40 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 
 		ImGui::SameLine();
 
-		if (temp_lastClickedEntityID == sceneGraph->childs[i]->id)
-			ImGui::TextColored(textSelectedColor, editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+		if (lastSelectedItemID == sceneGraph->childs[i]->id)
+			textColor = textSelectedColor;
 		else
-			ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			textColor = textUnselectedColor;
+
+		ImVec2 pos = ImGui::GetCursorPos();
+
+		if (renameEntityID == sceneGraph->childs[i]->id) {
+
+			char temp[3];
+			temp[0] = '#';
+			temp[1] = '#';
+			temp[2] = '\0';
+			char str0[32] = "";
+			strcat(str0, (char*)editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
+			ImGui::SetKeyboardFocusHere(0);
+			ImVec2 textSize = ImGui::CalcTextSize(str0);
+			ImGui::SetCursorPos(ImVec2(pos.x - 5, pos.y - 2));
+
+			if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
+
+				if (strlen(str0) != 0)
+					editor->scene.renameEntity(sceneGraph->childs[i]->id, str0);
+				renameEntityID = -1;
+			}
+		}
+		else {
+
+			if (temp_lastClickedEntityID == sceneGraph->childs[i]->id)
+				ImGui::TextColored(textSelectedColor, editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			else
+				ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+		}
 
 		if (nodeOpen && hasChildren)
 			EditorGUI::createSceneGraphRecursively(sceneGraph->childs[i]);
@@ -478,7 +534,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Scene Object")) {
 
-			//editor->addScene(Scene());
+			editor->scene.newEntity(editor->scene.sceneGraph->id, "SceneObject");
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();

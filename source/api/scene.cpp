@@ -7,12 +7,19 @@ Scene::Scene() {
 
 void Scene::initSceneGraph() {
 
-	Scene::readAllEntities();
-
 	sceneGraph = new Entity;
+
+	if (!Scene::readAllEntities()) {
+
+		SceneObject obj;
+		obj.name = "Root";
+		obj.addr = sceneGraph;
+		entities[0] = obj;
+	}
+
+	entities[entities.begin()->first].addr = sceneGraph;
 	sceneGraph->id = entities.begin()->first;
 	sceneGraph->parent = NULL;
-	entities[entities.begin()->first].addr = sceneGraph;
 
 	Scene::generateSceneGraph();
 	Scene::generateSceneStructure(sceneGraph);
@@ -35,7 +42,7 @@ void Scene::generateSceneStructure(Entity* sceneGraph) {
 
 void Scene::generateSceneGraph() {
 
-	std::ifstream file("resource/backup/scenegraph.txt");
+	std::ifstream file("resource/backup/temp_scene_graph.txt");
 
 	std::string nodeIDs;
 	while (std::getline(file, nodeIDs)) {
@@ -56,13 +63,17 @@ void Scene::generateSceneGraph() {
 	file.close();
 }
 
-void Scene::readAllEntities() {
+bool Scene::readAllEntities() {
+
+	std::ifstream theFile("resource/backup/temp_entities.xml");
+
+	if (theFile.fail())
+		return false;
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
 
 	// Read the sample.xml file
-	std::ifstream theFile("resource/backup/entities.xml");
 	std::vector<char> buffer((std::istreambuf_iterator<char>(theFile)), std::istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
@@ -78,6 +89,8 @@ void Scene::readAllEntities() {
 		obj.name = entity_node->first_node("Name")->value();
 		entities[atoi(entity_node->first_node("ID")->value())] = obj;
 	}
+
+	return true;
 }
 
 bool Scene::subEntityCheck(Entity* entityToMove, Entity* entityToBeMoved) {
@@ -124,17 +137,120 @@ void Scene::deleteEntityCompletely(int id) {
 
 void Scene::duplicateEntity(int id) {
 
+	Entity* entity = new Entity;
+	entity->id = std::prev(entities.end())->first + 1;
+	entity->parent = entities[id].addr->parent;
+	(entity->parent->childs).push_back(entity);
+
+	SceneObject obj;
+	obj.name = entities[id].name + "_copy";
+	obj.addr = entity;
+	entities[entity->id] = obj;
+
+	cloneEntityRecursively(entities[id].addr, entity);
+}
+
+void Scene::cloneEntityRecursively(Entity* base, Entity* copied) {
+
+	for (int i = 0; i < base->childs.size(); i++) {
+
+		Entity* entity = new Entity;
+		entity->id = std::prev(entities.end())->first + 1;
+		entity->parent = copied;
+		(entity->parent->childs).push_back(entity);
+
+		SceneObject obj;
+		obj.name = entities[base->childs[i]->id].name;
+		obj.addr = entity;
+		entities[entity->id] = obj;
+
+		Scene::cloneEntityRecursively(base->childs[i], entity);
+	}
 }
 
 void Scene::newEntity(int currentEntityID, const char* entityName){
 
+	Entity* entity = new Entity;
+	entity->id = std::prev(entities.end())->first + 1;
+	entity->parent = entities[currentEntityID].addr;
+	(entity->parent->childs).push_back(entity);
+
+	SceneObject obj;
+	obj.name = entityName;
+	obj.addr = entity;
+	entities[entity->id] = obj;
 }
 
 void Scene::renameEntity(int id, const char* newName) {
 
+	entities[id].name = newName;
 }
 
-bool Scene::hasChild(Entity* entity) {
-	return false;
+void Scene::saveSceneGraph() {
 
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* entitiesNode = doc.allocate_node(rapidxml::node_element, "Entities");
+	doc.append_node(entitiesNode);
+	int count = 0;
+	for (std::map<int, SceneObject>::iterator it = entities.begin(); it != entities.end(); ++it) {
+
+		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
+		entitiesNode->append_node(entity);
+
+		rapidxml::xml_node<>* ent_prop_name = doc.allocate_node(rapidxml::node_element, "Name");
+		rapidxml::xml_node<>* ent_prop_id = doc.allocate_node(rapidxml::node_element, "ID");
+
+		std::string temp = std::to_string(it->second.addr->id);
+		const char* node_name = doc.allocate_string(temp.c_str());
+
+		ent_prop_id->value(node_name);
+		entity->append_node(ent_prop_id);
+
+		ent_prop_name->value(it->second.name.c_str());
+		entity->append_node(ent_prop_name);
+		count++;
+	}
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored("resource/backup/temp_entities.xml");
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+
+	std::ofstream MyFile("resource/backup/temp_scene_graph.txt");
+
+	std::ostringstream fileTextStream;
+
+	std::queue<Entity*> entQueue;
+	entQueue.push(sceneGraph);
+	Scene::writeSceneGraphFileRecursively(entQueue, fileTextStream);
+
+	MyFile << fileTextStream.str();
+	MyFile.close();
+} 
+
+void Scene::writeSceneGraphFileRecursively(std::queue<Entity*> entQueue, std::ostringstream& fileTextStream) {
+
+	if (entQueue.size() == 0)
+		return;
+
+	Entity* entity = entQueue.front();
+	entQueue.pop();
+
+	fileTextStream << entity->id << ' ';
+
+	for (int i = 0; i < entity->childs.size(); i++) {
+
+		fileTextStream << entity->childs[i]->id << ' ';
+		entQueue.push(entity->childs[i]);
+	}
+	fileTextStream << '\n';
+	Scene::writeSceneGraphFileRecursively(entQueue, fileTextStream);
 }

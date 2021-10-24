@@ -3,12 +3,14 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <queue>
 
 #include "scene_object.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
 //using namespace std;
@@ -46,7 +48,7 @@ public:
 
 	void generateSceneGraph();
 
-	void readAllEntities();
+	bool readAllEntities();
 
 	bool subEntityCheck(Entity* entityToMove, Entity* entityToBeMoved);
 
@@ -58,10 +60,14 @@ public:
 
 	void duplicateEntity(int id);
 
+	void cloneEntityRecursively(Entity* base, Entity* copied);
+
 	void newEntity(int currentEntityID, const char* entityName);
 
 	void renameEntity(int id, const char* newName);
 
-	bool hasChild(Entity* entity);
+	void saveSceneGraph();
+
+	void writeSceneGraphFileRecursively(std::queue<Entity*> entQueue, std::ostringstream& fileTextStream);
 
 };
