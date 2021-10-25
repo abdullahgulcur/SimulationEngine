@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <api/scene.hpp>
 #include "filesystem.hpp"
 #include "render.hpp"
@@ -7,10 +9,7 @@
 #include "editor_camera.hpp"
 #include "editor_gui.hpp"
 #include "api/model.hpp"
-#include <source/api/texture.hpp>
-
-#include <iostream>
-
+#include "source/api/texture.hpp"
 
 class Editor {
 

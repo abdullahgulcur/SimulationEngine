@@ -1,15 +1,15 @@
 #pragma once
 
-#include <api/model.hpp>
-#include <api/texture.hpp>
-#include <api/utility.hpp>
-
 #include <string>
 #include <filesystem>
 #include <iostream>
 #include <map>
 #include <stack>
 #include <shlobj.h>
+
+#include "api/model.hpp"
+#include "api/texture.hpp"
+#include "api/utility.hpp"
 
 enum class FileType {folder, object, texture, audio, script, undefined};
 

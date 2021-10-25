@@ -1,8 +1,14 @@
 #pragma once
 
+#include <vector>
+
 class Transform {
 
 public:
+
+	int id;
+	Transform* parent;
+	std::vector<Transform*> children;
 
 	struct position
 	{
@@ -23,5 +29,4 @@ public:
 	rotation rotation;
 	scale scale;
 
-	Transform();
 };

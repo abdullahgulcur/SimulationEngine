@@ -174,14 +174,11 @@ void EditorGUI::updateStateMachine() {
 			}
 			else
 				ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[temp_lastClickedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
-
-
-			////
-			//lastClickedEntityID = temp_lastClickedEntityID;
 		}
 	}
 
 	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonLeft)) {
+
 
 		if (entered) {
 
@@ -201,10 +198,6 @@ void EditorGUI::updateStateMachine() {
 		panelRightItemClicked = false;
 		fileTreeClicked = false;
 
-		////
-		if (EditorGUI::mouseDistanceControl() && !toggleClicked)
-			lastClickedEntityID = temp_lastClickedEntityID;
-
 		entityClicked = false;
 
 	}
@@ -213,11 +206,10 @@ void EditorGUI::updateStateMachine() {
 
 		if (!panelRightItemClicked)
 			lastSelectedItemID = -1;
-
-		//lastSelectedEntityID = -1;
 	}
 
 	if (ImGui::IsMouseClicked(ImGuiPopupFlags_MouseButtonLeft)) {
+
 
 		mouseLeftPressed = true;
 
@@ -228,12 +220,8 @@ void EditorGUI::updateStateMachine() {
 
 		////
 
-		if (!entityClicked) {
-
-			lastClickedEntityID = -1;
-			temp_lastClickedEntityID = -1;
-		}
-
+		if (!entityClicked) 
+			lastSelectedEntityID = -1;
 
 	}
 }
@@ -356,13 +344,13 @@ void EditorGUI::createHierarchyPanel() {
 			{
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
-				editor->scene.moveEntity(payload_n, editor->scene.sceneGraph->id);
+				editor->scene.moveEntity(payload_n, editor->scene.rootTransform->id);
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::Unindent(15);
-		EditorGUI::createSceneGraphRecursively(editor->scene.sceneGraph);
+		EditorGUI::createSceneGraphRecursively(editor->scene.rootTransform);
 		ImGui::TreePop();
 	}
 
@@ -371,45 +359,52 @@ void EditorGUI::createHierarchyPanel() {
 	ImGui::End();	
 }
 
-void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
+void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
-	for (int i = 0; i < sceneGraph->childs.size(); i++) {
+	for (int i = 0; i < transform->children.size(); i++) {
 
 		ImGui::Indent(15);
 
 		ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-		bool hasChildren = sceneGraph->childs[i]->childs.size() > 0;
+		bool hasChildren = transform->children[i]->children.size() > 0;
 		if (!hasChildren)
 			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 		else
 			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)sceneGraph->childs[i]->id, node_flags, "");//" %d", sceneGraph->childs[i]->id
+		if (lastSelectedEntityID != -1 && editor->scene.subEntityCheck(editor->scene.entities[lastSelectedEntityID].transform, transform->children[i])) {
+
+			if (childrenCheckFlag)
+				ImGui::SetNextItemOpen(true);
+		}
+
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, "");//" %d", sceneGraph->childs[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
+			childrenCheckFlag = false;
 			entityClicked = true;
 
 			if (!ImGui::IsItemToggledOpen())
-				temp_lastClickedEntityID = sceneGraph->childs[i]->id;
+				lastSelectedEntityID = transform->children[i]->id;
 			else
 				toggleClicked = true;
 		}
 
-		ImGui::PushID(sceneGraph->childs[i]->id);
+		ImGui::PushID(transform->children[i]->id);
 		ImGui::SetNextWindowSize(ImVec2(210, 95));
 
 		if (ImGui::BeginPopupContextItem("scene_graph_popup"))
 		{
 			entityClicked = true;
-			temp_lastClickedEntityID = sceneGraph->childs[i]->id;
+			lastSelectedEntityID = transform->children[i]->id;
 
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
 
 			if (ImGui::Selectable("   Create Empty")) {
 
-				editor->scene.newEntity(sceneGraph->childs[i]->id, "Empty Entity");
+				editor->scene.newEntity(transform->children[i]->id, "Empty Entity");
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -422,11 +417,11 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 			ImGui::Dummy(ImVec2(0, 1));
 
 			if (ImGui::Selectable("   Rename"))
-				renameEntityID = sceneGraph->childs[i]->id;
+				renameEntityID = transform->children[i]->id;
 
 			if (ImGui::Selectable("   Duplicate")) {
 
-				editor->scene.duplicateEntity(sceneGraph->childs[i]->id);
+				editor->scene.duplicateEntity(transform->children[i]->id);
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -436,7 +431,7 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 
 			if (ImGui::Selectable("   Delete")) {
 
-				editor->scene.deleteEntityCompletely(temp_lastClickedEntityID);
+				editor->scene.deleteEntityCompletely(lastSelectedEntityID);
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -451,8 +446,8 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 
 		if (ImGui::BeginDragDropSource())
 		{
-			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &sceneGraph->childs[i]->id, sizeof(int));
-			ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &transform->children[i]->id, sizeof(int));
+			ImGui::Text(editor->scene.entities[transform->children[i]->id].name.c_str());
 			ImGui::EndDragDropSource();
 		}
 
@@ -460,9 +455,10 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
 			{
+				childrenCheckFlag = true;
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
-				editor->scene.moveEntity(payload_n, sceneGraph->childs[i]->id);
+				editor->scene.moveEntity(payload_n, transform->children[i]->id);
 				return;
 			}
 			ImGui::EndDragDropTarget();
@@ -479,21 +475,21 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 
 		ImGui::SameLine();
 
-		if (lastSelectedItemID == sceneGraph->childs[i]->id)
+		if (lastSelectedItemID == transform->children[i]->id)
 			textColor = textSelectedColor;
 		else
 			textColor = textUnselectedColor;
 
 		ImVec2 pos = ImGui::GetCursorPos();
 
-		if (renameEntityID == sceneGraph->childs[i]->id) {
+		if (renameEntityID == transform->children[i]->id) {
 
 			char temp[3];
 			temp[0] = '#';
 			temp[1] = '#';
 			temp[2] = '\0';
 			char str0[32] = "";
-			strcat(str0, (char*)editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			strcat(str0, (char*)editor->scene.entities[transform->children[i]->id].name.c_str());
 			ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
 			ImGui::SetKeyboardFocusHere(0);
 			ImVec2 textSize = ImGui::CalcTextSize(str0);
@@ -502,20 +498,20 @@ void EditorGUI::createSceneGraphRecursively(Entity* sceneGraph) {
 			if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 				if (strlen(str0) != 0)
-					editor->scene.renameEntity(sceneGraph->childs[i]->id, str0);
+					editor->scene.renameEntity(transform->children[i]->id, str0);
 				renameEntityID = -1;
 			}
 		}
 		else {
 
-			if (temp_lastClickedEntityID == sceneGraph->childs[i]->id)
-				ImGui::TextColored(textSelectedColor, editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+			if (lastSelectedEntityID == transform->children[i]->id)
+				ImGui::TextColored(textSelectedColor, editor->scene.entities[transform->children[i]->id].name.c_str());
 			else
-				ImGui::Text(editor->scene.entities[sceneGraph->childs[i]->id].name.c_str());
+				ImGui::Text(editor->scene.entities[transform->children[i]->id].name.c_str());
 		}
 
 		if (nodeOpen && hasChildren)
-			EditorGUI::createSceneGraphRecursively(sceneGraph->childs[i]);
+			EditorGUI::createSceneGraphRecursively(transform->children[i]);
 
 		ImGui::Unindent(15);
 	}
@@ -534,7 +530,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Scene Object")) {
 
-			editor->scene.newEntity(editor->scene.sceneGraph->id, "SceneObject");
+			editor->scene.newEntity(editor->scene.rootTransform->id, "SceneObject");
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();

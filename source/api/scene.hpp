@@ -1,73 +1,60 @@
 #pragma once
 
-#include <vector>
 #include <string>
 #include <map>
 #include <queue>
-
-#include "scene_object.hpp"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
-//using namespace std;
-//using namespace rapidxml;
-
-
-
-
-struct Entity {
-
-	int id;
-	Entity* parent;
-	std::vector<Entity*> childs;
-};
+#include "transform.hpp"
+#include "entity.hpp"
 
 class Scene {
 
 private:
 
-	int index = 0;
-
 public:
 
 	std::string name;
 
-	Entity* sceneGraph;
-	std::map<int, SceneObject> entities;
-	std::map<int, std::vector<int>> initialGraph;
+	Transform* rootTransform;
+	std::map<int, Entity> entities;
+	std::map<int, std::vector<int>> initialSceneGraph;
 
 	Scene();
 
 	void initSceneGraph();
 
-	void generateSceneStructure(Entity* sceneGraph);
+	void generateSceneStructure(Transform* transform);
 
 	void generateSceneGraph();
 
 	bool readAllEntities();
 
-	bool subEntityCheck(Entity* entityToMove, Entity* entityToBeMoved);
+	bool subEntityCheck(Transform* child, Transform* parent);
+
+	bool subEntityAndItselfCheck(Transform* child, Transform* parent);
 
 	void moveEntity(int toBeMoved, int moveTo);
 
-	void deleteEntityFromTree(Entity* parent, int id);
+	void deleteEntityFromTree(Transform* parent, int id);
 
 	void deleteEntityCompletely(int id);
 
 	void duplicateEntity(int id);
 
-	void cloneEntityRecursively(Entity* base, Entity* copied);
+	void cloneEntityRecursively(Transform* base, Transform* copied);
 
-	void newEntity(int currentEntityID, const char* entityName);
+	void newEntity(int parentID, const char* name);
 
 	void renameEntity(int id, const char* newName);
 
 	void saveSceneGraph();
 
-	void writeSceneGraphFileRecursively(std::queue<Entity*> entQueue, std::ostringstream& fileTextStream);
+	void writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream);
 
 };

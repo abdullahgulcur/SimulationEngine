@@ -158,7 +158,7 @@
     <ClCompile Include="source\api\mesh_renderer.cpp" />
     <ClCompile Include="source\api\model.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
-    <ClCompile Include="source\api\scene_object.cpp" />
+    <ClCompile Include="source\api\entity.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
     <ClCompile Include="source\api\utility.cpp" />
@@ -183,7 +183,7 @@
     <ClInclude Include="source\api\Material.hpp" />
     <ClInclude Include="source\api\mesh_renderer.hpp" />
     <ClInclude Include="source\api\model.hpp" />
-    <ClInclude Include="source\api\scene_object.hpp" />
+    <ClInclude Include="source\api\entity.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
     <ClInclude Include="source\api\utility.hpp" />

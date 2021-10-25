@@ -2,12 +2,11 @@
 
 #include <string>
 
-class Scene;
-class Entity;
+#include "transform.hpp"
 
 enum class EntityType { sceneObj, pointLight, directionalLight };
 
-class SceneObject {
+class Entity {
 
 private:
 
@@ -15,8 +14,8 @@ public:
 
 	std::string name;
 	EntityType type;
-	Entity* addr;
+	Transform* transform;
 
-	SceneObject();
+	Entity();
 
 };

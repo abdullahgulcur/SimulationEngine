@@ -1,13 +1,13 @@
 #pragma once
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
-
 #include <windows.h>
 #include <shellapi.h>
 #include <string>
 #include <stack>
+
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 class Editor;
 
@@ -22,15 +22,15 @@ private:
 	/*
 	* INDEX VARIABLES
 	*/
+
+	// File System
 	int lastSelectedItemID = -1;
 	int temp_lastClickedItemID = 1;
 	int lastRightClickedItemID = -1;
 	int renameItemID = -1;
 
-	int indexForEntity;
-	int lastSelectedEntityID = -1;
-	int temp_lastClickedEntityID = 1;
-	int lastRightClickedEntityID = -1;
+	// Scene Graph
+	int lastSelectedEntityID = 1;
 	int renameEntityID = -1;
 
 	ImVec2 cursorPosWhenFirstClickedItem;
@@ -41,6 +41,8 @@ private:
 	/*
 	* FLAG VARIABLES
 	*/
+
+	// File System
 	bool folderLineClicked = false;
 	bool mouseLeftPressed = false;
 	bool toggleClicked = false;
@@ -50,7 +52,10 @@ private:
 	bool subfolderCheckFlag = false;
 	bool fileTreeClicked = false;
 
+	// Scene Graph
+	bool childrenCheckFlag = true;
 	bool entityClicked = false;
+
 	/*
 	* UI VARIABLES
 	*/
@@ -67,8 +72,9 @@ public:
 	/*
 	* INDEX VARIABLES
 	*/
+
+	// File System
 	int lastClickedItemID = 1;
-	int lastClickedEntityID = 1;
 
 	/*
 	* TEXTURE IDs
@@ -105,7 +111,7 @@ public:
 
 	void createHierarchyPanel();
 
-	void createSceneGraphRecursively(Entity* sceneGraph);
+	void createSceneGraphRecursively(Transform* sceneGraph);
 
 	void hiearchyCreateButton();
 

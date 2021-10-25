@@ -78,7 +78,7 @@
     <ClCompile Include="source\api\scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\api\scene_object.cpp">
+    <ClCompile Include="source\api\entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -86,7 +86,7 @@
     <ClInclude Include="Source\App\application.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\api\scene_object.hpp">
+    <ClInclude Include="source\api\entity.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\transform.hpp">
