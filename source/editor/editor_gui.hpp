@@ -30,7 +30,7 @@ private:
 	int renameItemID = -1;
 
 	// Scene Graph
-	int lastSelectedEntityID = 1;
+	int lastSelectedEntityID = -1;
 	int renameEntityID = -1;
 
 	ImVec2 cursorPosWhenFirstClickedItem;
@@ -65,7 +65,8 @@ private:
 	/*
 	* TEMP VAR
 	*/
-	ImVec2 mousePos;
+
+	bool inspectorHovered = false;
 
 public:
 
@@ -84,6 +85,8 @@ public:
 	unsigned int plusTextureID;
 	unsigned int greaterTextureID;
 	unsigned int gameObjectTextureID;
+	unsigned int transformTextureID;
+	unsigned int meshrendererTextureID;
 
 	EditorGUI();
 
@@ -108,6 +111,14 @@ public:
 	void createConsolePanel();
 
 	void createInspectorPanel();
+
+	void showEntityName();
+
+	void showTransformComponent();
+
+	void showMeshRendererComponent();
+
+	void createAppPanel();
 
 	void createHierarchyPanel();
 

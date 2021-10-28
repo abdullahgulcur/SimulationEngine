@@ -416,9 +416,17 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	}
 	case FileType::object: {
 
+		//Model model;
+		//model.loadModel(fileNode.path.c_str());
+		//models.push_back(model);
+
 		Model model;
 		model.loadModel(fileNode.path.c_str());
-		models.push_back(model);
+		//models.push_back(model);
+
+		for (MeshRenderer renderer : model.meshes)
+			meshes.push_back(renderer);
+
 		fileNode.textureID = editorTextures.objectBigTextureID;
 		break;
 	}

@@ -12,10 +12,15 @@
 
 #include "transform.hpp"
 #include "entity.hpp"
+#include "component.hpp"
+
+class Editor;
 
 class Scene {
 
 private:
+
+	Editor* editor;
 
 public:
 
@@ -23,17 +28,32 @@ public:
 
 	Transform* rootTransform;
 	std::map<int, Entity> entities;
+	std::map<int, Transform> transforms;
 	std::map<int, std::vector<int>> initialSceneGraph;
+
+	std::map<int, AnimationComponent> animationComponents;
+	std::map<int, AnimatorComponent> animatorComponents;
+	std::map<int, ColliderComponent> colliderComponents;
+	std::map<int, LightComponent> lightComponents;
+	std::map<int, MeshRendererComponent> meshRendererComponents;
+	std::map<int, RigidBodyComponent> rigidBodyComponents;
+	std::map<int, ScriptComponent> scriptComponents;
+	std::map<int, TransformComponent> transformComponents;
+
 
 	Scene();
 
 	void initSceneGraph();
 
-	void generateSceneStructure(Transform* transform);
+	void generateSceneGraph(Transform* transform);
 
-	void generateSceneGraph();
+	bool readSceneGraph();
 
-	bool readAllEntities();
+	void loadEntities();
+
+	void loadTransforms();
+
+	void loadMeshRenderers();
 
 	bool subEntityCheck(Transform* child, Transform* parent);
 
@@ -49,12 +69,26 @@ public:
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
 
-	void newEntity(int parentID, const char* name);
+	Transform* newEntity(int parentID, const char* name);
+
+	void newPointLight(int parentID, const char* name);
+
+	void newDirectionalLight(int parentID, const char* name);
 
 	void renameEntity(int id, const char* newName);
+
+	void saveEditorProperties();
+
+	void saveEntities();
+
+	void saveMeshRenderers();
+
+	void saveTransforms();
 
 	void saveSceneGraph();
 
 	void writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream);
+
+	void setEditor(Editor* editor);
 
 };

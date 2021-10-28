@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\api\component.cpp" />
     <ClCompile Include="source\api\mesh_renderer.cpp" />
     <ClCompile Include="source\api\model.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
@@ -168,8 +169,10 @@
     <ClCompile Include="source\editor\editor_camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
+    <ClCompile Include="source\editor\loadsystem.cpp" />
     <ClCompile Include="source\editor\log.cpp" />
     <ClCompile Include="source\editor\render.cpp" />
+    <ClCompile Include="source\editor\savingsystem.cpp" />
     <ClCompile Include="source\editor\window.cpp" />
     <ClCompile Include="source\include\imgui\imgui.cpp" />
     <ClCompile Include="source\include\imgui\imgui_draw.cpp" />
@@ -179,6 +182,7 @@
     <ClCompile Include="source\include\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\Material.hpp" />
     <ClInclude Include="source\api\mesh_renderer.hpp" />
@@ -196,8 +200,10 @@
     <ClInclude Include="source\editor\editor_camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />
+    <ClInclude Include="source\editor\loadsystem.hpp" />
     <ClInclude Include="source\editor\log.hpp" />
     <ClInclude Include="source\editor\render.hpp" />
+    <ClInclude Include="source\editor\savingsystem.hpp" />
     <ClInclude Include="source\editor\window.hpp" />
     <ClInclude Include="source\include\imgui\imconfig.h" />
     <ClInclude Include="source\include\imgui\imgui.h" />

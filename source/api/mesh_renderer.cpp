@@ -1,9 +1,10 @@
 #include "api/mesh_renderer.hpp"
 
-MeshRenderer::MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
+MeshRenderer::MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
 
     this->vertices = vertices;
     this->indices = indices;
+    this->name = name;
 
     MeshRenderer::initBuffers();
 }

@@ -69,6 +69,7 @@ public:
 	File* file;
 	std::map<int, FileNode> files;
 	std::vector<Model> models;
+	std::vector<MeshRenderer> meshes;
 	std::vector<unsigned int> textures;
 	EditorTextures editorTextures;
 

@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <stddef.h>
+#include <string>
 
 struct Vertex {
 
@@ -22,6 +23,8 @@ private:
 
 public:
 
+    std::string name;
+
     unsigned int VAO;
     unsigned int VBO;
     unsigned int EBO;
@@ -29,7 +32,7 @@ public:
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
-    MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices);
+    MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
 
     void initBuffers();
 };
