@@ -20,9 +20,11 @@ public:
 
 	Entity();
 
-	void addComponent(ComponentType type);
-
 	void setScene(Scene* scene);
+
+	/*
+	* Add Components
+	*/
 
 	void addAnimationComponent();
 
@@ -32,10 +34,30 @@ public:
 
 	void addLightComponent();
 
-	void addMeshRendererComponent(std::string name);
+	void addMeshRendererComponent();
 
 	void addRigidBodyComponent();
 
 	void addScriptComponent();
+
+	/*
+	* Remove Components
+	*/
+
+	void removeComponent(ComponentType type);
+
+	//void removeAnimationComponent();
+
+	//void removeAnimatorComponent();
+
+	//void removeColliderComponent();
+
+	//void removeLightComponent();
+
+	//void removeMeshRendererComponent();
+
+	//void removeRigidBodyComponent();
+
+	//void removeScriptComponent();
 
 };

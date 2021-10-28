@@ -32,6 +32,7 @@ struct LightComponent {
 	int id;
 	LightType type;
 	float power;
+	Transform* transform;
 	glm::vec3 color;
 };
 

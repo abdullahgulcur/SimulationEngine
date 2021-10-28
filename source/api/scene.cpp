@@ -28,9 +28,13 @@ void Scene::initSceneGraph() {
 		Scene::loadEntities();
 		Scene::loadTransforms();
 		Scene::loadMeshRenderers();
+		Scene::loadLights();
 
 		Scene::generateSceneGraph(rootTransform);
+		Scene::setTransformComponents();
 		entities[rootTransform->id].transform = rootTransform;
+
+		transforms.clear();
 	}
 }
 
@@ -50,17 +54,42 @@ void Scene::generateSceneGraph(Transform* parent) {
 
 		entities[transform->id].transform = transform;
 
-		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+		//for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
 
-			if (strcmp(meshRendererComponents[transform->id].meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0) {
+		//	if (strcmp(meshRendererComponents[transform->id].meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0) {
 
-				meshRendererComponents[transform->id].renderer = &editor->fileSystem.meshes[i];
-				meshRendererComponents[transform->id].transform = transform;
-			}
-		}
+		//		meshRendererComponents[transform->id].renderer = &editor->fileSystem.meshes[i];
+		//		meshRendererComponents[transform->id].transform = transform;
+		//	}
+		//}
+
+		//if(lightComponents)
 
 		Scene::generateSceneGraph(transform);
 	}
+}
+
+void Scene::draw() {
+
+}
+
+void Scene::setTransformComponents() {
+
+	for (auto const& [key, val] : meshRendererComponents)
+	{
+		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+
+			if (strcmp(val.meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0) {
+
+				meshRendererComponents[key].renderer = &editor->fileSystem.meshes[i];
+				meshRendererComponents[key].transform = entities[key].transform;
+			}
+		}
+	}
+
+	for (auto const& [key, val] : lightComponents)
+		lightComponents[key].transform = entities[key].transform;
+
 }
 
 bool Scene::readSceneGraph() {
@@ -190,6 +219,40 @@ void Scene::loadMeshRenderers() {
 	}
 }
 
+void Scene::loadLights() {
+
+	std::ifstream file("resource/backup/lights.xml");
+
+	if (file.fail())
+		return;
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("Lights");
+
+	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
+
+		LightComponent comp;
+		comp.id = atoi(light_node->first_attribute("ID")->value());
+		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
+		comp.power = atof(light_node->first_attribute("Power")->value());
+
+		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
+		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
+		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
+		//comp.transform = entities[comp.id].transform;
+		lightComponents[comp.id] = comp;
+		entities[comp.id].components.push_back(ComponentType::Light);
+
+	}
+}
+
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {
 
 	while (child->parent != NULL) {
@@ -237,11 +300,51 @@ void Scene::deleteEntityFromTree(Transform* parent, int id) {
 	}
 }
 
+void Scene::deleteEntityFromTreeAlternatively(Transform* transform, Transform* parent) {
+
+	for (int i = 0; i < parent->children.size(); i++) {
+
+		if (parent->children[i] == transform) {
+
+			parent->children.erase(parent->children.begin() + i);
+			break;
+		}
+	}
+}
+
 void Scene::deleteEntityCompletely(int id) {
 
-	Transform* parent = entities[id].transform->parent;
-	Scene::deleteEntityFromTree(parent, id);
-	entities.erase(id);
+	Transform* transform = entities[id].transform;
+	Transform* parent = transform->parent;
+
+	Scene::deleteEntityCompletelyRecursively(transform);
+	Scene::deleteEntityFromTreeAlternatively(transform, parent);
+}
+
+void Scene::deleteEntityCompletelyRecursively(Transform* transform) {
+
+	for (int i = 0; i < transform->children.size(); i++) 
+		Scene::deleteEntityCompletelyRecursively(transform->children[i]);
+
+	for (int i = 0; i < entities[transform->id].components.size(); i++) {
+
+		switch (entities[transform->id].components[i]) {
+
+		case ComponentType::Light: {
+
+			lightComponents.erase(transform->id);
+			break;
+		}
+		case ComponentType::MeshRenderer: {
+
+			meshRendererComponents.erase(transform->id);
+			break;
+		}
+		}
+	}
+	entities.erase(transform->id);
+
+	delete transform;	
 }
 
 void Scene::duplicateEntity(int id) {
@@ -256,6 +359,34 @@ void Scene::duplicateEntity(int id) {
 	obj.name = entities[id].name + "_copy";
 	obj.transform = entity;
 	entities[entity->id] = obj;
+
+	for (int i = 0; i < entities[id].components.size(); i++) {
+
+		switch (entities[id].components[i]) {
+
+		case ComponentType::Light: {
+
+			LightComponent comp = lightComponents[id];
+			comp.transform = entity;
+			comp.id = entity->id;
+			lightComponents[comp.id] = comp;
+			entities[entity->id].components.push_back(ComponentType::Light);
+			break;
+		}
+			
+			
+		case ComponentType::MeshRenderer: {
+
+			MeshRendererComponent comp = meshRendererComponents[id];
+			comp.transform = entity;
+			comp.id = entity->id;
+			meshRendererComponents[comp.id] = comp;
+			entities[entity->id].components.push_back(ComponentType::MeshRenderer);
+			break;
+		}
+			
+		}
+	}
 
 	cloneEntityRecursively(entities[id].transform, entity);
 }
@@ -274,6 +405,34 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 		obj.name = entities[base->children[i]->id].name;
 		obj.transform = entity;
 		entities[entity->id] = obj;
+
+		for (int j = 0; j < entities[base->children[i]->id].components.size(); j++) {
+
+			switch (entities[base->children[i]->id].components[j]) {
+
+			case ComponentType::Light: {
+
+				LightComponent comp = lightComponents[base->children[i]->id];
+				comp.transform = entity;
+				comp.id = entity->id;
+				lightComponents[comp.id] = comp;
+				entities[entity->id].components.push_back(ComponentType::Light);
+				break;
+			}
+
+
+			case ComponentType::MeshRenderer: {
+
+				MeshRendererComponent comp = meshRendererComponents[base->children[i]->id];
+				comp.transform = entity;
+				comp.id = entity->id;
+				meshRendererComponents[comp.id] = comp;
+				entities[entity->id].components.push_back(ComponentType::MeshRenderer);
+				break;
+			}
+
+			}
+		}
 
 		Scene::cloneEntityRecursively(base->children[i], entity);
 	}
@@ -320,6 +479,7 @@ void Scene::saveEditorProperties() {
 	Scene::saveEntities();
 	Scene::saveTransforms();
 	Scene::saveMeshRenderers();
+	Scene::saveLights();
 } 
 
 void Scene::saveEntities() {
@@ -395,6 +555,90 @@ void Scene::saveMeshRenderers() {
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
+}
+
+void Scene::saveLights() {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
+	doc.append_node(lightsNode);
+	for (std::map<int, LightComponent>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
+
+		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
+
+		std::string temp_str = std::to_string(it->second.id);
+		const char* temp_val = doc.allocate_string(temp_str.c_str());
+
+		lightNode->append_attribute(doc.allocate_attribute("ID", temp_val));
+
+		std::string type = Scene::getLightType(lightComponents[it->second.id].type);
+		temp_val = doc.allocate_string(type.c_str());
+
+		lightNode->append_attribute(doc.allocate_attribute("Type", temp_val));
+
+		temp_str = std::to_string(it->second.power);
+		temp_val = doc.allocate_string(temp_str.c_str());
+
+		lightNode->append_attribute(doc.allocate_attribute("Power", temp_val));
+
+		//rapidxml::xml_node<>* directionNode = doc.allocate_node(rapidxml::node_element, "Direction");
+
+		//temp_str = std::to_string(it->second.direction.x);
+		//temp_val = doc.allocate_string(temp_str.c_str());
+		//directionNode->append_attribute(doc.allocate_attribute("X", temp_val));
+
+		//temp_str = std::to_string(it->second.direction.y);
+		//temp_val = doc.allocate_string(temp_str.c_str());
+		//directionNode->append_attribute(doc.allocate_attribute("Y", temp_val));
+
+		//temp_str = std::to_string(it->second.direction.z);
+		//temp_val = doc.allocate_string(temp_str.c_str());
+		//directionNode->append_attribute(doc.allocate_attribute("Z", temp_val));
+
+		//lightNode->append_node(directionNode);
+
+		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
+
+		temp_str = std::to_string(it->second.color.x);
+		temp_val = doc.allocate_string(temp_str.c_str());
+		colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
+
+		temp_str = std::to_string(it->second.color.y);
+		temp_val = doc.allocate_string(temp_str.c_str());
+		colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
+
+		temp_str = std::to_string(it->second.color.z);
+		temp_val = doc.allocate_string(temp_str.c_str());
+		colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
+
+		lightNode->append_node(colorNode);
+
+		lightsNode->append_node(lightNode);
+	}
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored("resource/backup/lights.xml");
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+}
+
+std::string Scene::getLightType(LightType type) {
+
+	switch (type) {
+
+	case LightType::PointLight:
+		return "Point";
+	case LightType::DirectionalLight:
+		return "Directional";
+	}
 }
 
 void Scene::saveTransforms() {

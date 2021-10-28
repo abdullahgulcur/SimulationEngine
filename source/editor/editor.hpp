@@ -19,16 +19,16 @@ private:
 	Window window;
 	EditorCamera editorCamera;
 
-	GLuint programID;
-	GLuint viewMatrixID;
-	GLuint modelMatrixID;
-	GLuint mvpMatrixID;
-	GLuint projectionMatrixID;
+	//GLuint programID;
+	//GLuint viewMatrixID;
+	//GLuint modelMatrixID;
+	//GLuint mvpMatrixID;
+	//GLuint projectionMatrixID;
 
 	//GLuint VertexArrayID;
 	//GLuint vertexbuffer;
 
-	Model model;
+	//Model model;
 
 	//Material mat;
 

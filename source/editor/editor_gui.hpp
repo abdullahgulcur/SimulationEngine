@@ -87,6 +87,8 @@ public:
 	unsigned int gameObjectTextureID;
 	unsigned int transformTextureID;
 	unsigned int meshrendererTextureID;
+	unsigned int lightTextureID;
+	unsigned int contextMenuTextureID;
 
 	EditorGUI();
 
@@ -112,11 +114,17 @@ public:
 
 	void createInspectorPanel();
 
+	void addComponentButton();
+
 	void showEntityName();
 
 	void showTransformComponent();
 
 	void showMeshRendererComponent();
+
+	void showLightComponent();
+
+	bool contextMenuPopup(ComponentType type);
 
 	void createAppPanel();
 

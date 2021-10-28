@@ -47,6 +47,10 @@ public:
 
 	void generateSceneGraph(Transform* transform);
 
+	void draw();
+
+	void setTransformComponents();
+
 	bool readSceneGraph();
 
 	void loadEntities();
@@ -54,6 +58,8 @@ public:
 	void loadTransforms();
 
 	void loadMeshRenderers();
+
+	void loadLights();
 
 	bool subEntityCheck(Transform* child, Transform* parent);
 
@@ -63,7 +69,11 @@ public:
 
 	void deleteEntityFromTree(Transform* parent, int id);
 
+	void deleteEntityFromTreeAlternatively(Transform* transform, Transform* parent);
+
 	void deleteEntityCompletely(int id);
+
+	void deleteEntityCompletelyRecursively(Transform* transform);
 
 	void duplicateEntity(int id);
 
@@ -82,6 +92,10 @@ public:
 	void saveEntities();
 
 	void saveMeshRenderers();
+
+	void saveLights();
+
+	std::string getLightType(LightType type);
 
 	void saveTransforms();
 

@@ -24,7 +24,7 @@ void Editor::startEditorScreen() {
 	editorCamera.setMode(window.getGLFWvidmode());
 	window.renderToTexture();
 
-	model.loadModel("assets/3d/swat.obj");
+	//model.loadModel("assets/3d/swat.obj");
 
 	/// <summary>
 	/// ///////
@@ -33,12 +33,12 @@ void Editor::startEditorScreen() {
 	/// 
 	/// 
 
-	Material mat;
-	programID = mat.LoadShaders("source/shader/tri.vs", "source/shader/tri.fs");
-	//projectionMatrixID = glGetUniformLocation(programID, "P");
-	//viewMatrixID = glGetUniformLocation(programID, "V");
-	//modelMatrixID = glGetUniformLocation(programID, "M");
-	mvpMatrixID = glGetUniformLocation(programID, "MVP");
+	//Material mat;
+	//programID = mat.LoadShaders("source/shader/tri.vs", "source/shader/tri.fs");
+	////projectionMatrixID = glGetUniformLocation(programID, "P");
+	////viewMatrixID = glGetUniformLocation(programID, "V");
+	////modelMatrixID = glGetUniformLocation(programID, "M");
+	//mvpMatrixID = glGetUniformLocation(programID, "MVP");
 
 
 	
@@ -58,19 +58,21 @@ void Editor::stayOpen() {
 
 	editorGUI.newFrameImGui();
 
-	glUseProgram(programID);
-	glm::mat4 ProjectionMatrix = editorCamera.ProjectionMatrix;
-	glm::mat4 ViewMatrix = editorCamera.ViewMatrix;
-	glm::mat4 ModelMatrix = glm::mat4(1.0);
-	glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-	glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &MVP[0][0]);
+	scene.draw();
 
-	for (int i = 0; i < model.meshes.size(); i++) {
+	//glUseProgram(programID);
+	//glm::mat4 ProjectionMatrix = editorCamera.ProjectionMatrix;
+	//glm::mat4 ViewMatrix = editorCamera.ViewMatrix;
+	//glm::mat4 ModelMatrix = glm::mat4(1.0);
+	//glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+	//glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &MVP[0][0]);
 
-		glBindVertexArray(model.meshes[i].VAO);
-		glDrawElements(GL_TRIANGLES, model.meshes[i].indices.size(), GL_UNSIGNED_INT, (void*)0);
-		glBindVertexArray(0);
-	}
+	//for (int i = 0; i < model.meshes.size(); i++) {
+
+	//	glBindVertexArray(model.meshes[i].VAO);
+	//	glDrawElements(GL_TRIANGLES, model.meshes[i].indices.size(), GL_UNSIGNED_INT, (void*)0);
+	//	glBindVertexArray(0);
+	//}
 
 	//drawAllAxis();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
