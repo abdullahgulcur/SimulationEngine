@@ -117,4 +117,6 @@ public:
 
 	void detectFilesChangedOutside(File* file, std::string fileToCompare);
 
+	void loadDefaultAssets();
+
 };

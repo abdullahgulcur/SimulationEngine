@@ -88,39 +88,16 @@ void Entity::removeComponent(ComponentType type) {
 
 }
 
-//void Entity::removeAnimationComponent() {
-//
-//
-//}
-//
-//void Entity::removeAnimatorComponent() {
-//
-//
-//}
-//
-//void Entity::removeColliderComponent() {
-//
-//
-//}
-//
-//void Entity::removeLightComponent() {
-//
-//
-//}
-//
-//void Entity::removeMeshRendererComponent() {
-//
-//
-//}
-//
-//void Entity::removeRigidBodyComponent() {
-//
-//
-//}
-//
-//void Entity::removeScriptComponent() {
-//
-//
-//}
+void Entity::updateLightComponent() {
+
+}
+
+void Entity::updateMeshRendererComponent(MeshRenderer* renderer) {
+
+	scene->meshRendererComponents[transform->id].meshName = renderer->name;
+	scene->meshRendererComponents[transform->id].renderer = renderer;
+
+	
+}
 
 void Entity::setScene(Scene* scene) { this->scene = scene; }

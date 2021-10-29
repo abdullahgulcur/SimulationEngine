@@ -6,7 +6,10 @@ MeshRenderer::MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned in
     this->indices = indices;
     this->name = name;
 
-    MeshRenderer::initBuffers();
+    if (vertices.size() != 0)
+        MeshRenderer::initBuffers();
+    else
+        MeshRenderer::initEmtyBuffers();
 }
 
 void MeshRenderer::initBuffers() {
@@ -43,5 +46,12 @@ void MeshRenderer::initBuffers() {
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
 
+    glBindVertexArray(0);
+}
+
+void MeshRenderer::initEmtyBuffers() {
+
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
     glBindVertexArray(0);
 }

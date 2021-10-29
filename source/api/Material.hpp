@@ -14,7 +14,7 @@ public:
 
 	Material() {
 
-		programID = LoadShaders("source/shader/PBR.vs", "source/shader/PBR.fs");
+		//programID = LoadShaders("source/shader/PBR.vs", "source/shader/PBR.fs");
 	}
 
 	GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {

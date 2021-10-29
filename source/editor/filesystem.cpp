@@ -6,6 +6,8 @@ FileSystem::FileSystem() {
 
 void FileSystem::initFileSystem() {
 
+	FileSystem::loadDefaultAssets();
+
 	FileSystem::initEditorTextures();
 	FileSystem::checkAssetsFolder();
 
@@ -416,13 +418,8 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	}
 	case FileType::object: {
 
-		//Model model;
-		//model.loadModel(fileNode.path.c_str());
-		//models.push_back(model);
-
 		Model model;
 		model.loadModel(fileNode.path.c_str());
-		//models.push_back(model);
 
 		for (MeshRenderer renderer : model.meshes)
 			meshes.push_back(renderer);
@@ -548,4 +545,13 @@ void FileSystem::detectFilesChangedOutside(File* file, std::string fileToCompare
 
 		count++;
 	}
+}
+
+void FileSystem::loadDefaultAssets() {
+
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	std::string name = "Null";
+	MeshRenderer nullMesh(vertices, indices, name);
+	meshes.push_back(nullMesh);
 }

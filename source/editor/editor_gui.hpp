@@ -89,6 +89,7 @@ public:
 	unsigned int meshrendererTextureID;
 	unsigned int lightTextureID;
 	unsigned int contextMenuTextureID;
+	unsigned int eyeTextureID;
 
 	EditorGUI();
 

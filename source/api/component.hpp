@@ -8,10 +8,6 @@ enum class ComponentType{Light, MeshRenderer, RigidBody, Collider, Transform, Sc
 
 enum LightType{ PointLight, DirectionalLight };
 
-/*
-* All these id's transform's id's actually...
-*/
-
 struct AnimationComponent {
 
 	int id;

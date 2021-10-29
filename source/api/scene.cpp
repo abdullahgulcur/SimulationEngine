@@ -4,10 +4,10 @@
 Scene::Scene() {
 
 	name = "MyScene";
+	
 }
 
 void Scene::initSceneGraph() {
-
 
 	rootTransform = new Transform;
 
@@ -24,14 +24,13 @@ void Scene::initSceneGraph() {
 	}
 	else {
 
-		/* LOAD ALL THE COMPONENTS */
 		Scene::loadEntities();
 		Scene::loadTransforms();
 		Scene::loadMeshRenderers();
 		Scene::loadLights();
 
 		Scene::generateSceneGraph(rootTransform);
-		Scene::setTransformComponents();
+		Scene::setTransformsOfComponents();
 		entities[rootTransform->id].transform = rootTransform;
 
 		transforms.clear();
@@ -54,47 +53,52 @@ void Scene::generateSceneGraph(Transform* parent) {
 
 		entities[transform->id].transform = transform;
 
-		//for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
-
-		//	if (strcmp(meshRendererComponents[transform->id].meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0) {
-
-		//		meshRendererComponents[transform->id].renderer = &editor->fileSystem.meshes[i];
-		//		meshRendererComponents[transform->id].transform = transform;
-		//	}
-		//}
-
-		//if(lightComponents)
-
 		Scene::generateSceneGraph(transform);
 	}
 }
 
-void Scene::draw() {
+void Scene::start() {
 
+	Material mat;
+	programID = mat.LoadShaders("source/shader/tri.vs", "source/shader/tri.fs");
+	mvpMatrixID = glGetUniformLocation(programID, "MVP");
+	glUseProgram(programID);
 }
 
-void Scene::setTransformComponents() {
+void Scene::update() {
+
+
 
 	for (auto const& [key, val] : meshRendererComponents)
 	{
-		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
 
-			if (strcmp(val.meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0) {
+		glm::mat4 view = editor->editorCamera.ViewMatrix;
+		glm::mat4 model = glm::mat4(1.0);
+		model = glm::translate(model, val.transform->position);
+		glm::mat4 mvp = projection * view * model;
 
-				meshRendererComponents[key].renderer = &editor->fileSystem.meshes[i];
-				meshRendererComponents[key].transform = entities[key].transform;
-			}
-		}
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+		glBindVertexArray(val.renderer->VAO);
+		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
+		glBindVertexArray(0);
 	}
+
+}
+
+void Scene::setTransformsOfComponents() {
+
+	for (auto const& [key, val] : meshRendererComponents)
+		meshRendererComponents[key].transform = entities[key].transform;
 
 	for (auto const& [key, val] : lightComponents)
 		lightComponents[key].transform = entities[key].transform;
-
 }
 
 bool Scene::readSceneGraph() {
 
-	std::ifstream file("resource/backup/temp_scene_graph.txt");
+	std::ifstream file("resource/backup/scenegraph_db.txt");
 
 	if (file.fail())
 		return false;
@@ -120,53 +124,43 @@ bool Scene::readSceneGraph() {
 
 void Scene::loadEntities() {
 
-	std::ifstream file("resource/backup/temp_entities.xml");
+	std::ifstream file("resource/backup/entity_db.xml");
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
 
-	// Read the sample.xml file
 	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
-	// Parse the buffer
 	doc.parse<0>(&buffer[0]);
 
-	// Find out the root node
 	root_node = doc.first_node("Entities");
 
-	// Iterate over the entity nodes
 	for (rapidxml::xml_node<>* entity_node = root_node->first_node("Entity"); entity_node; entity_node = entity_node->next_sibling()) {
 		Entity obj;
 		obj.setScene(this);
-		obj.name = entity_node->first_node("Name")->value();
-		entities[atoi(entity_node->first_node("ID")->value())] = obj;
+		obj.name = entity_node->first_attribute("Name")->value();
+		entities[atoi(entity_node->first_attribute("ID")->value())] = obj;
 	}
 }
 
 void Scene::loadTransforms() {
 
-	std::ifstream file("resource/backup/temp_transforms.xml");
+	std::ifstream file("resource/backup/transform_db.xml");
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
 
-	// Read the sample.xml file
 	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
-	// Parse the buffer
 	doc.parse<0>(&buffer[0]);
 
-	// Find out the root node
 	root_node = doc.first_node("Transforms");
 
-	// Iterate over the entity nodes
 	for (rapidxml::xml_node<>* transform_node = root_node->first_node("Transform"); transform_node; transform_node = transform_node->next_sibling()) {
 		
 		Transform transform;
-
-		//transform.id = atoi(transform_node->first_attribute("ID")->value());
 
 		transform.position.x = atof(transform_node->first_node("Position")->first_attribute("X")->value());
 		transform.position.y = atof(transform_node->first_node("Position")->first_attribute("Y")->value());
@@ -186,7 +180,7 @@ void Scene::loadTransforms() {
 
 void Scene::loadMeshRenderers() {
 
-	std::ifstream file("resource/backup/mesh_renderers.xml");
+	std::ifstream file("resource/backup/meshrenderer_db.xml");
 
 	if (file.fail())
 		return;
@@ -194,34 +188,32 @@ void Scene::loadMeshRenderers() {
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
 
-	// Read the sample.xml file
 	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
-	// Parse the buffer
 	doc.parse<0>(&buffer[0]);
 
-	// Find out the root node
 	root_node = doc.first_node("MeshRenderers");
 
-	// Iterate over the entity nodes
 	for (rapidxml::xml_node<>* mesh_node = root_node->first_node("Mesh"); mesh_node; mesh_node = mesh_node->next_sibling()) {
 
 		MeshRendererComponent comp;
 		comp.id = atoi(mesh_node->first_attribute("ID")->value());
 		comp.meshName = mesh_node->first_attribute("Name")->value();
-		//comp.transform = entities[comp.id].transform;
 		meshRendererComponents[comp.id] = comp;
 		entities[comp.id].components.push_back(ComponentType::MeshRenderer);
 
-		//entities[atoi(mesh_node->first_attribute("ID")->value())].addMeshRendererComponent(mesh_node->first_attribute("Name")->value());
-		
+		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+
+			if (strcmp(comp.meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0)
+				meshRendererComponents[comp.id].renderer = &editor->fileSystem.meshes[i];
+		}
 	}
 }
 
 void Scene::loadLights() {
 
-	std::ifstream file("resource/backup/lights.xml");
+	std::ifstream file("resource/backup/light_db.xml");
 
 	if (file.fail())
 		return;
@@ -246,10 +238,9 @@ void Scene::loadLights() {
 		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
 		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
 		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
-		//comp.transform = entities[comp.id].transform;
+
 		lightComponents[comp.id] = comp;
 		entities[comp.id].components.push_back(ComponentType::Light);
-
 	}
 }
 
@@ -356,7 +347,7 @@ void Scene::duplicateEntity(int id) {
 
 	Entity obj;
 	obj.setScene(this);
-	obj.name = entities[id].name + "_copy";
+	obj.name = entities[id].name + "_cpy";
 	obj.transform = entity;
 	entities[entity->id] = obj;
 
@@ -373,8 +364,6 @@ void Scene::duplicateEntity(int id) {
 			entities[entity->id].components.push_back(ComponentType::Light);
 			break;
 		}
-			
-			
 		case ComponentType::MeshRenderer: {
 
 			MeshRendererComponent comp = meshRendererComponents[id];
@@ -383,8 +372,7 @@ void Scene::duplicateEntity(int id) {
 			meshRendererComponents[comp.id] = comp;
 			entities[entity->id].components.push_back(ComponentType::MeshRenderer);
 			break;
-		}
-			
+		}	
 		}
 	}
 
@@ -419,8 +407,6 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 				entities[entity->id].components.push_back(ComponentType::Light);
 				break;
 			}
-
-
 			case ComponentType::MeshRenderer: {
 
 				MeshRendererComponent comp = meshRendererComponents[base->children[i]->id];
@@ -430,10 +416,8 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 				entities[entity->id].components.push_back(ComponentType::MeshRenderer);
 				break;
 			}
-
 			}
 		}
-
 		Scene::cloneEntityRecursively(base->children[i], entity);
 	}
 }
@@ -457,15 +441,15 @@ Transform* Scene::newEntity(int parentID, const char* name){
 void Scene::newPointLight(int parentID, const char* name) {
 
 	Transform* entity = Scene::newEntity(parentID, name);
-
-	//entity.addComponent(PointLight);
+	entities[entity->id].addLightComponent();
+	lightComponents[entity->id].type = LightType::PointLight;
 }
 
 void Scene::newDirectionalLight(int parentID, const char* name) {
 
 	Transform* entity = Scene::newEntity(parentID, name);
-
-	//entity.addComponent(DirectionalLight);
+	entities[entity->id].addLightComponent();
+	lightComponents[entity->id].type = LightType::DirectionalLight;
 }
 
 void Scene::renameEntity(int id, const char* newName) {
@@ -499,25 +483,23 @@ void Scene::saveEntities() {
 			continue;
 
 		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
-		entitiesNode->append_node(entity);
-
-		rapidxml::xml_node<>* ent_prop_name = doc.allocate_node(rapidxml::node_element, "Name");
-		rapidxml::xml_node<>* ent_prop_id = doc.allocate_node(rapidxml::node_element, "ID");
 
 		std::string temp = std::to_string(it->second.transform->id);
-		const char* node_name = doc.allocate_string(temp.c_str());
+		const char* temp_val = doc.allocate_string(temp.c_str());
 
-		ent_prop_id->value(node_name);
-		entity->append_node(ent_prop_id);
+		entity->append_attribute(doc.allocate_attribute("ID", temp_val));
 
-		ent_prop_name->value(it->second.name.c_str());
-		entity->append_node(ent_prop_name);
+		temp_val = doc.allocate_string(it->second.name.c_str());
+
+		entity->append_attribute(doc.allocate_attribute("Name", temp_val));
+
+		entitiesNode->append_node(entity);
 	}
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/temp_entities.xml");
+	std::ofstream file_stored("resource/backup/entity_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -551,7 +533,7 @@ void Scene::saveMeshRenderers() {
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/mesh_renderers.xml");
+	std::ofstream file_stored("resource/backup/meshrenderer_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -586,22 +568,6 @@ void Scene::saveLights() {
 
 		lightNode->append_attribute(doc.allocate_attribute("Power", temp_val));
 
-		//rapidxml::xml_node<>* directionNode = doc.allocate_node(rapidxml::node_element, "Direction");
-
-		//temp_str = std::to_string(it->second.direction.x);
-		//temp_val = doc.allocate_string(temp_str.c_str());
-		//directionNode->append_attribute(doc.allocate_attribute("X", temp_val));
-
-		//temp_str = std::to_string(it->second.direction.y);
-		//temp_val = doc.allocate_string(temp_str.c_str());
-		//directionNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-
-		//temp_str = std::to_string(it->second.direction.z);
-		//temp_val = doc.allocate_string(temp_str.c_str());
-		//directionNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-
-		//lightNode->append_node(directionNode);
-
 		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
 
 		temp_str = std::to_string(it->second.color.x);
@@ -624,7 +590,7 @@ void Scene::saveLights() {
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/lights.xml");
+	std::ofstream file_stored("resource/backup/light_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -732,7 +698,7 @@ void Scene::saveTransforms() {
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/temp_transforms.xml");
+	std::ofstream file_stored("resource/backup/transform_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -740,7 +706,7 @@ void Scene::saveTransforms() {
 
 void Scene::saveSceneGraph() {
 
-	std::ofstream MyFile("resource/backup/temp_scene_graph.txt");
+	std::ofstream MyFile("resource/backup/scenegraph_db.txt");
 
 	std::ostringstream fileTextStream;
 

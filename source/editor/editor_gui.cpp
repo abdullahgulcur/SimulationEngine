@@ -73,10 +73,10 @@ void EditorGUI::setTheme()
 	colors[ImGuiCol_FrameBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
 	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
 	colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
-	colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+	colors[ImGuiCol_TitleBgActive] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-	colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_MenuBarBg] = ImVec4(0.13f, 0.13f, 0.13f, 1.00f);
 	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
 	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
 	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
@@ -161,6 +161,7 @@ void EditorGUI::loadTextures() {
 	meshrendererTextureID = texture.loadDDS("resource/icons/meshrenderer.DDS");
 	lightTextureID = texture.loadDDS("resource/icons/light.DDS");
 	contextMenuTextureID = texture.loadDDS("resource/icons/contextMenu.DDS");
+	eyeTextureID = texture.loadDDS("resource/icons/eye.DDS");
 }
 
 void EditorGUI::updateStateMachine() {
@@ -393,6 +394,7 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
 			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent();
+			editor->scene.meshRendererComponents[lastSelectedEntityID].renderer = &editor->fileSystem.meshes[0];
 		}
 		ImGui::Separator();
 
@@ -632,13 +634,11 @@ void EditorGUI::showMeshRendererComponent() {
 		int item = -1;
 		const char* mName = editor->scene.meshRendererComponents[lastSelectedEntityID].meshName.c_str();
 
-		const char** items = new const char*[editor->fileSystem.meshes.size() + 1];
-
-		items[0] = "Null";
+		const char** items = new const char*[editor->fileSystem.meshes.size()];
 
 		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
 
-			items[i + 1] = editor->fileSystem.meshes[i].name.c_str();
+			items[i] = editor->fileSystem.meshes[i].name.c_str();
 
 			if (strcmp(mName, items[i]) == 0)
 				item = i;
@@ -649,7 +649,14 @@ void EditorGUI::showMeshRendererComponent() {
 		ImGui::SetNextItemWidth(width - 130);
 		if (ImGui::Combo("##0", &item, items, editor->fileSystem.meshes.size())) {
 
-			editor->scene.meshRendererComponents[lastSelectedEntityID].meshName = items[item];
+			for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+
+				if (strcmp(items[item], editor->fileSystem.meshes[i].name.c_str()) == 0) {
+
+					editor->scene.entities[lastSelectedEntityID].updateMeshRendererComponent(&editor->fileSystem.meshes[i]);
+					break;
+				}
+			}
 		}
 
 		delete items;
@@ -843,7 +850,20 @@ void EditorGUI::createHierarchyPanel() {
 
 	ImGui::SetNextItemOpen(true);
 
-	if (ImGui::TreeNode(editor->scene.name.c_str()))
+	bool treeNodeOpen = ImGui::TreeNode("##0");
+
+	ImVec2 imgsize = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+
+	ImGui::SameLine(20);
+	ImGui::Image((ImTextureID)eyeTextureID, imgsize, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text(editor->scene.name.c_str());
+
+	if (treeNodeOpen)
 	{
 		if (ImGui::BeginDragDropTarget())
 		{

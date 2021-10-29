@@ -13,6 +13,7 @@
 #include "transform.hpp"
 #include "entity.hpp"
 #include "component.hpp"
+//#include "Material.hpp"
 
 class Editor;
 
@@ -21,6 +22,9 @@ class Scene {
 private:
 
 	Editor* editor;
+
+	unsigned int programID;
+	GLuint mvpMatrixID;
 
 public:
 
@@ -47,9 +51,11 @@ public:
 
 	void generateSceneGraph(Transform* transform);
 
-	void draw();
+	void start();
 
-	void setTransformComponents();
+	void update();
+
+	void setTransformsOfComponents();
 
 	bool readSceneGraph();
 

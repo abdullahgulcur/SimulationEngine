@@ -6,6 +6,7 @@
 #include "component.hpp"
 
 class Scene;
+class Editor;
 
 class Entity {
 
@@ -14,6 +15,7 @@ private:
 public:
 
 	Scene* scene;
+	Editor* editor;
 	std::string name;
 	Transform* transform;
 	std::vector<ComponentType> components;
@@ -46,18 +48,12 @@ public:
 
 	void removeComponent(ComponentType type);
 
-	//void removeAnimationComponent();
+	/*
+	* Update Components
+	*/
 
-	//void removeAnimatorComponent();
+	void updateLightComponent();
 
-	//void removeColliderComponent();
-
-	//void removeLightComponent();
-
-	//void removeMeshRendererComponent();
-
-	//void removeRigidBodyComponent();
-
-	//void removeScriptComponent();
+	void updateMeshRendererComponent(MeshRenderer* renderer);
 
 };
