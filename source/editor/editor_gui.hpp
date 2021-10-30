@@ -90,6 +90,8 @@ public:
 	unsigned int lightTextureID;
 	unsigned int contextMenuTextureID;
 	unsigned int eyeTextureID;
+	unsigned int materialTextureID;
+	unsigned int materialSmallTextureID;
 
 	EditorGUI();
 
@@ -124,6 +126,10 @@ public:
 	void showMeshRendererComponent();
 
 	void showLightComponent();
+
+	void showMaterialProperties();
+
+	void textureMenuPopup(Material& material, TextureType type, bool& flag);
 
 	bool contextMenuPopup(ComponentType type);
 

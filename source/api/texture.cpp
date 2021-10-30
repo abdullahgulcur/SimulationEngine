@@ -94,3 +94,10 @@ unsigned int Texture::loadDDS(const char* imagepath) {
 
 	return textureID;
 }
+
+GLuint Texture::getEmptyTexture() {
+
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	return textureID;
+}

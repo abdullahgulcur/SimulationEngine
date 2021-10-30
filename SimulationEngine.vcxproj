@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\api\component.cpp" />
+    <ClCompile Include="source\api\material.cpp" />
     <ClCompile Include="source\api\mesh_renderer.cpp" />
     <ClCompile Include="source\api\model.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
@@ -184,7 +185,7 @@
   <ItemGroup>
     <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\scene.hpp" />
-    <ClInclude Include="source\api\Material.hpp" />
+    <ClInclude Include="source\api\material.hpp" />
     <ClInclude Include="source\api\mesh_renderer.hpp" />
     <ClInclude Include="source\api\model.hpp" />
     <ClInclude Include="source\api\entity.hpp" />

@@ -67,8 +67,6 @@ void Scene::start() {
 
 void Scene::update() {
 
-
-
 	for (auto const& [key, val] : meshRendererComponents)
 	{
 		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
@@ -84,7 +82,6 @@ void Scene::update() {
 		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
 		glBindVertexArray(0);
 	}
-
 }
 
 void Scene::setTransformsOfComponents() {

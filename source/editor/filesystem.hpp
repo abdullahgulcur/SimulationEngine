@@ -6,12 +6,17 @@
 #include <map>
 #include <stack>
 #include <shlobj.h>
+#include <fstream>
 
-#include "api/model.hpp"
-#include "api/texture.hpp"
-#include "api/utility.hpp"
+#include "rapidxml_print.hpp"
+#include "rapidxml.hpp"
 
-enum class FileType {folder, object, texture, audio, script, undefined};
+#include "model.hpp"
+#include "texture.hpp"
+#include "utility.hpp"
+#include "material.hpp"
+
+enum class FileType {folder, object, material, texture, audio, script, undefined};
 
 enum class AddType { fromMove, fromRename, fromNewFolder, fromImport, fromDuplicate };
 
@@ -27,6 +32,7 @@ struct EditorTextures {
 	unsigned int documentTextureID;
 	unsigned int folderBigTextureID;
 	unsigned int plusTextureID;
+	unsigned int materialTextureID;
 };
 
 struct File {
@@ -68,6 +74,7 @@ public:
 
 	File* file;
 	std::map<int, FileNode> files;
+	std::map<int, Material> materials;
 	std::vector<Model> models;
 	std::vector<MeshRenderer> meshes;
 	std::vector<unsigned int> textures;
@@ -102,6 +109,10 @@ public:
 	FileType getFileType(std::string extension);
 
 	void newFolder(int currentDirID, const char* fileName);
+
+	void newMaterial(int currentDirID, const char* fileName);
+
+	void writeMaterial(Material& material);
 
 	void rename(int id, const char* newName);
 

@@ -13,7 +13,7 @@
 #include "transform.hpp"
 #include "entity.hpp"
 #include "component.hpp"
-//#include "Material.hpp"
+#include "material.hpp"
 
 class Editor;
 

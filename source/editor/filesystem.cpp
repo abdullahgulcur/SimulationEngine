@@ -71,6 +71,7 @@ void FileSystem::initEditorTextures() {
 	editorTextures.documentTextureID = texture.loadDDS("resource/icons/icon_document.DDS");
 	editorTextures.folderBigTextureID = texture.loadDDS("resource/icons/folder_closed_big.DDS");
 	editorTextures.plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
+	editorTextures.materialTextureID = texture.loadDDS("resource/icons/material.DDS");
 }
 
 void FileSystem::generateFileStructure(File* file) {
@@ -241,6 +242,108 @@ void FileSystem::newFolder(int currentDirID, const char* fileName) {
 	loadFileToEngine(files[subFile->id]);
 }
 
+void FileSystem::newMaterial(int currentDirID, const char* fileName) {
+
+	File* subFile = new File;
+	subFile->id = index;
+	subFile->parent = files[currentDirID].addr;
+
+	// called this temp becasuse its properties can be changed afterwards 
+	FileNode tempFileNode;
+	std::string temp = fileName;
+	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".mat";
+	tempFileNode.name = temp;
+	tempFileNode.extension = ".mat";
+	tempFileNode.type = FileType::material;
+	tempFileNode.addr = subFile;
+	files[index] = tempFileNode;
+	index++;
+
+	(files[currentDirID].addr->subfiles).push_back(subFile);
+
+	Material material;
+	materials[subFile->id] = material;
+
+	FileSystem::writeMaterial(material);
+
+	loadFileToEngine(files[subFile->id]);
+}
+
+void FileSystem::writeMaterial(Material& material) {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
+
+	const char* temp_val = doc.allocate_string("PBR");
+
+	rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
+	typeNode->value(temp_val);
+	materialNode->append_node(typeNode);
+
+	temp_val = doc.allocate_string("Null");
+
+	//if(material.useAlbedo)
+
+	rapidxml::xml_node<>* albedoPathNode = doc.allocate_node(rapidxml::node_element, "AlbedoMap");
+	albedoPathNode->value(temp_val);
+	materialNode->append_node(albedoPathNode);
+
+	rapidxml::xml_node<>* normalPathNode = doc.allocate_node(rapidxml::node_element, "NormalMap");
+	normalPathNode->value(temp_val);
+	materialNode->append_node(normalPathNode);
+
+	rapidxml::xml_node<>* metallicPathNode = doc.allocate_node(rapidxml::node_element, "MetallicMap");
+	metallicPathNode->value(temp_val);
+	materialNode->append_node(metallicPathNode);
+
+	rapidxml::xml_node<>* roughnessPathNode = doc.allocate_node(rapidxml::node_element, "RoughnessMap");
+	roughnessPathNode->value(temp_val);
+	materialNode->append_node(roughnessPathNode);
+
+	rapidxml::xml_node<>* aoPathNode = doc.allocate_node(rapidxml::node_element, "AOMAP");
+	aoPathNode->value(temp_val);
+	materialNode->append_node(aoPathNode);
+
+	temp_val = doc.allocate_string("False");
+	rapidxml::xml_node<>* useMapNode = doc.allocate_node(rapidxml::node_element, "UseMap");
+	useMapNode->append_attribute(doc.allocate_attribute("Albedo", temp_val));
+	useMapNode->append_attribute(doc.allocate_attribute("Normal", temp_val));
+	useMapNode->append_attribute(doc.allocate_attribute("Metallic", temp_val));
+	useMapNode->append_attribute(doc.allocate_attribute("Roughness", temp_val));
+	useMapNode->append_attribute(doc.allocate_attribute("AO", temp_val));
+	materialNode->append_node(useMapNode);
+
+	temp_val = doc.allocate_string("0.5");
+	rapidxml::xml_node<>* amountNode = doc.allocate_node(rapidxml::node_element, "Amount");
+	amountNode->append_attribute(doc.allocate_attribute("Normal", temp_val));
+	amountNode->append_attribute(doc.allocate_attribute("Metallic", temp_val));
+	materialNode->append_node(amountNode);
+
+	temp_val = doc.allocate_string("1.0");
+	rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "AlbedoColor");
+	colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
+	colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
+	colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
+	materialNode->append_node(colorNode);
+
+	doc.append_node(materialNode);
+
+	//std::string xml_as_string;
+	//rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	//std::string path = files[currentDirID].path + "\\" + fileName + ".mat";
+
+	//std::ofstream file_stored(path);
+	//file_stored << doc;
+	//file_stored.close();
+	//doc.clear();
+}
+
 void FileSystem::rename(int id, const char* newName) {
 
 	if (Utility::iequals(newName, files[id].name) == 0)
@@ -391,6 +494,8 @@ FileType FileSystem::getFileType(std::string extension) {
 		return FileType::object;
 	else if (extension == ".DDS")
 		return FileType::texture;
+	else if (extension == ".mat")
+		return FileType::material;
 	else
 		return FileType::undefined;
 }
@@ -430,6 +535,13 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	case FileType::folder: {
 
 		fileNode.textureID = editorTextures.folderBigTextureID;
+		break;
+	}
+	case FileType::material: {
+
+		fileNode.textureID = editorTextures.materialTextureID;
+		//Material material;
+		//material.loadMaterial(fileNode.path.c_str());
 		break;
 	}
 	case FileType::undefined: {
@@ -554,4 +666,8 @@ void FileSystem::loadDefaultAssets() {
 	std::string name = "Null";
 	MeshRenderer nullMesh(vertices, indices, name);
 	meshes.push_back(nullMesh);
+
+	Texture texture;
+	unsigned int emptyTextureID = texture.getEmptyTexture();
+	textures.push_back(emptyTextureID);
 }

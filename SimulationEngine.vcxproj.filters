@@ -90,6 +90,9 @@
     <ClCompile Include="source\api\component.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\api\material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -104,7 +107,7 @@
     <ClInclude Include="source\api\scene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\api\Material.hpp">
+    <ClInclude Include="source\api\material.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\editor\editor.hpp">
