@@ -36,7 +36,6 @@ public:
 	std::string roughnessTexturePath;
 	std::string aoTexturePath;
 
-	// muhtemelen bunlar gecici olur
 	unsigned int albedoTextureID;
 	unsigned int normalTextureID;
 	unsigned int metallicTextureID;

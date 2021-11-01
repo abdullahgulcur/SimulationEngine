@@ -54,8 +54,6 @@ class FileSystem {
 
 private:
 
-	std::string assetsPathExternal;
-
 	void initEditorTextures();
 
 	void generateFileStructure(File* file);
@@ -66,7 +64,11 @@ private:
 
 	std::string getAvailableFileName(File* file, const char* name);
 
+	void loadTextureIDsOfMaterials();
+
 public:
+
+	std::string assetsPathExternal;
 
 	File* file;
 	std::vector<FileNode> files;
@@ -125,6 +127,11 @@ public:
 	void importFiles(std::vector<std::string> filesToMove, int toDir);
 
 	void loadDefaultAssets();
+
+	Material& getMaterial(int id);
+
+	Texture& getTexture(int id);
+
 
 	//node* newNode(int data);
 

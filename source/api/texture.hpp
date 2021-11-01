@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <vector>
 #include <string>
 #include <stdlib.h>
 
@@ -19,6 +20,7 @@ private:
 public:
 
 	unsigned int textureID;
+	std::string name;
 
 	Texture();
 

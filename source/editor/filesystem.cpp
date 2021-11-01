@@ -29,6 +29,44 @@ void FileSystem::initFileSystem() {
 	files.push_back(fileNode);
 
 	FileSystem::generateFileStructure(file);
+
+	FileSystem::loadTextureIDsOfMaterials();
+}
+
+void FileSystem::loadTextureIDsOfMaterials() {
+
+	for (auto& it : materials) {
+
+		auto found = textures.find(it.second.albedoTexturePath);
+		if (found != textures.end())
+			it.second.albedoTextureID = found->second.textureID;
+		else
+			it.second.albedoTextureID = textures["Null"].textureID;
+		
+		found = textures.find(it.second.normalTexturePath);
+		if (found != textures.end())
+			it.second.normalTextureID = found->second.textureID;
+		else
+			it.second.normalTextureID = textures["Null"].textureID;
+
+		found = textures.find(it.second.metallicTexturePath);
+		if (found != textures.end())
+			it.second.metallicTextureID = found->second.textureID;
+		else
+			it.second.metallicTextureID = textures["Null"].textureID;
+
+		found = textures.find(it.second.roughnessTexturePath);
+		if (found != textures.end())
+			it.second.roughnessTextureID = found->second.textureID;
+		else
+			it.second.roughnessTextureID = textures["Null"].textureID;
+
+		found = textures.find(it.second.aoTexturePath);
+		if (found != textures.end())
+			it.second.aoTextureID = found->second.textureID;
+		else
+			it.second.aoTextureID = textures["Null"].textureID;
+	}
 }
 
 void FileSystem::checkProjectFolder() {
@@ -598,6 +636,7 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	case FileType::texture: {
 
 		Texture texture;
+		texture.name = fileNode.name;
 		texture.setTextureID(fileNode.path.c_str());
 		std::string relativePath = fileNode.path;
 		relativePath.erase(0, assetsPathExternal.length());
@@ -695,9 +734,29 @@ void FileSystem::loadDefaultAssets() {
 
 	meshes.push_back(MeshRenderer());
 
+	Material mat;
+	materials.insert({ "Default", mat });
+
 	Texture texture;
+	texture.name = "Null";
 	texture.setEmptyTextureID();
 	textures.insert({"Null", texture });
+}
+
+Material& FileSystem::getMaterial(int id) {
+
+	std::string relativePath = files[id].path;
+	relativePath.erase(0, assetsPathExternal.length());
+	auto it = materials.find(relativePath);
+	return it->second;
+}
+
+Texture& FileSystem::getTexture(int id) {
+
+	std::string relativePath = files[id].path;
+	relativePath.erase(0, assetsPathExternal.length());
+	auto it = textures.find(relativePath);
+	return it->second;
 }
 
 //node* FileSystem::newNode(int data)

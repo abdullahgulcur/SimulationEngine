@@ -67,6 +67,7 @@ private:
 	*/
 
 	bool inspectorHovered = false;
+	bool fileChangedInInspector = false;
 
 public:
 
