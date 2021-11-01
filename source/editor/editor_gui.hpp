@@ -16,7 +16,7 @@ class EditorGUI {
 private:
 
 	Editor* editor;
-	std::map<int, FileNode>* files;
+	std::vector<FileNode>* files;
 	//std::vector<Scene>* sceneList;
 
 	/*
@@ -155,9 +155,9 @@ public:
 
 	Editor* getEditor();
 
-	void setFiles(std::map<int, FileNode>* files);
+	void setFiles(std::vector<FileNode>* files);
 
-	std::map<int, FileNode>* getFiles();
+	//std::map<int, FileNode>* getFiles();
 
 	//void setSceneList(std::vector<Scene>* sceneList);
 

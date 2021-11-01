@@ -1,5 +1,11 @@
 #include "api/mesh_renderer.hpp"
 
+MeshRenderer::MeshRenderer() {
+
+    name = "null";
+    MeshRenderer::initEmtyBuffers();
+}
+
 MeshRenderer::MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
 
     this->vertices = vertices;

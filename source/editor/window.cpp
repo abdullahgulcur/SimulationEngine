@@ -9,7 +9,6 @@ std::vector<std::string> Window::dragAndDropFiles;
 Window::Window() {
 
 	std::cout << "Editor started..." << std::endl;
-
 }
 
 int Window::startGLFW() {
@@ -29,24 +28,24 @@ int Window::startGLFW() {
 
 	monitor = glfwGetPrimaryMonitor();
 	mode = glfwGetVideoMode(monitor);
-	window = glfwCreateWindow(mode->width, mode->height, title, NULL, NULL);
+	GLFW_window = glfwCreateWindow(mode->width, mode->height, title, NULL, NULL);
 
-	glfwMaximizeWindow(window);
-	glfwMakeContextCurrent(window);
+	glfwMaximizeWindow(GLFW_window);
+	glfwMakeContextCurrent(GLFW_window);
 }
 
 void Window::startGLOptions() {
 
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetInputMode(GLFW_window, GLFW_STICKY_KEYS, GL_TRUE);
+	glfwSetInputMode(GLFW_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	glfwSetMouseButtonCallback(window, editor->getEditorCamera().mouse_button_callback);
-	glfwSetKeyCallback(window, editor->getEditorCamera().key_callback);
-	glfwSetScrollCallback(window, editor->getEditorCamera().scrollCallback);
-	glfwSetDropCallback(window, drop_callback);
+	glfwSetMouseButtonCallback(GLFW_window, editor->editorCamera.mouse_button_callback);
+	glfwSetKeyCallback(GLFW_window, editor->editorCamera.key_callback);
+	glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
+	glfwSetDropCallback(GLFW_window, drop_callback);
 
 	glfwPollEvents();
-	glfwSetCursorPos(window, mode->width / 2, mode->height / 2);
+	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -60,13 +59,8 @@ void Window::clear() {
 
 void Window::end() {
 
-	glfwSwapBuffers(window);
+	glfwSwapBuffers(GLFW_window);
 	glfwPollEvents();
-}
-
-void Window::renderScreen() {
-
-
 }
 
 void Window::handleCallBacks() {
@@ -81,7 +75,7 @@ void Window::handleCallBacks() {
 
 bool Window::getOpen() {
 
-	return glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0;
+	return glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
 }
 
 void Window::terminateGLFW() {
@@ -126,22 +120,22 @@ void Window::drop_callback(GLFWwindow* window, int count, const char** paths)
 	dragAndDropFromOutside = true;
 }
 
-void Window::setWindow(GLFWwindow* window) { this->window = window; }
+void Window::setWindow(GLFWwindow* window) { this->GLFW_window = window; }
 
-GLFWwindow* Window::getGLFWwindow() { return window; }
+//GLFWwindow* Window::getGLFWwindow() { return window; }
 
 void Window::setTitle(const char* title) { this->title = title; }
 
-const char* Window::getTitle() { return title; }
+//const char* Window::getTitle() { return title; }
 
 void Window::setGLFWvidmode(GLFWvidmode* mode) { this->mode = mode; }
 
-const GLFWvidmode* Window::getGLFWvidmode() { return mode; }
+//const GLFWvidmode* Window::getGLFWvidmode() { return mode; }
 
 void Window::setGLFWmonitor(GLFWmonitor* monitor) { this->monitor = monitor; }
 
-GLFWmonitor* Window::getGLFWmonitor() { return monitor; }
+//GLFWmonitor* Window::getGLFWmonitor() { return monitor; }
 
 void Window::setEditor(Editor* editor) { this->editor = editor; }
 
-Editor* Window::getEditor() { return editor; }
+//Editor* Window::getEditor() { return editor; }

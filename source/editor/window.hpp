@@ -7,13 +7,14 @@ class Window {
 
 private:
 
-	GLFWwindow* window;
-	const char* title;
-	const GLFWvidmode* mode;
-	GLFWmonitor* monitor;
 	Editor* editor;
 
 public:
+
+	GLFWwindow* GLFW_window;
+	const char* title;
+	const GLFWvidmode* mode;
+	GLFWmonitor* monitor;
 
 	unsigned int framebuffer;
 	unsigned int textureColorbuffer;
@@ -30,8 +31,6 @@ public:
 
 	void end();
 
-	void renderScreen();
-
 	void handleCallBacks();
 
 	bool getOpen();
@@ -42,23 +41,23 @@ public:
 
 	void setWindow(GLFWwindow* window);
 
-	GLFWwindow* getGLFWwindow();
+	//GLFWwindow* getGLFWwindow();
 
 	void setTitle(const char* title);
 
-	const char* getTitle();
+	//const char* getTitle();
 
 	void setGLFWvidmode(GLFWvidmode* mode);
 
-	const GLFWvidmode* getGLFWvidmode();
+	//const GLFWvidmode* getGLFWvidmode();
 
 	void setGLFWmonitor(GLFWmonitor* monitor);
 
-	GLFWmonitor* getGLFWmonitor();
+	//GLFWmonitor* getGLFWmonitor();
 
 	void setEditor(Editor* editor);
 
-	Editor* getEditor();
+	//Editor* getEditor();
 
 	static void drop_callback(GLFWwindow* window, int count, const char** paths);
 

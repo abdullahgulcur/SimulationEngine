@@ -1,10 +1,10 @@
 #pragma once
 
-#include <GL/glew.h>
-
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <stdlib.h>
+
+#include <GL/glew.h>
 
 #define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
 #define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
@@ -18,10 +18,16 @@ private:
 
 public:
 
+	unsigned int textureID;
+
 	Texture();
 
 	unsigned int loadDDS(const char* imagepath);
 
-	GLuint getEmptyTexture();
+	void setTextureID(const char* imagepath);
+
+	void setEmptyTextureID();
+
+	GLuint getEmptyTexture(); // make it static
 
 };

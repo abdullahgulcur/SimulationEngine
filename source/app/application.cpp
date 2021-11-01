@@ -14,7 +14,7 @@ void Application::run() {
 	do {
 
 		editor.stayOpen();
-	} while (editor.getWindow().getOpen());
+	} while (editor.window.getOpen());
 
 	//editor.editorGUI
 	//glfw 

@@ -4,32 +4,34 @@ FileSystem::FileSystem() {
 
 }
 
+FileSystem::~FileSystem() {
+
+}
+
 void FileSystem::initFileSystem() {
 
+	FileSystem::checkProjectFolder();
 	FileSystem::loadDefaultAssets();
-
 	FileSystem::initEditorTextures();
-	FileSystem::checkAssetsFolder();
 
 	file = new File;
-	file->id = index;
+	file->id = files.size();
 	file->parent = NULL;
 
 	FileNode fileNode;
 
+	fileNode.addr = file;
 	fileNode.path = assetsPathExternal + "\\MyProject";
 	fileNode.name = "MyProject";
 	fileNode.extension = "";
 	fileNode.type = FileType::folder;
 	fileNode.textureID = editorTextures.folderBigTextureID;
-	files[index] = fileNode;
-
-	index++;
+	files.push_back(fileNode);
 
 	FileSystem::generateFileStructure(file);
 }
 
-void FileSystem::checkAssetsFolder() {
+void FileSystem::checkProjectFolder() {
 
 	PWSTR ppszPath; // variable to receive the path memory block pointer.
 
@@ -44,24 +46,22 @@ void FileSystem::checkAssetsFolder() {
 	const std::string temp(documentsPath.begin(), documentsPath.end());
 	assetsPathExternal = temp + "\\Fury";
 
-	if (!std::filesystem::exists(assetsPathExternal)) {
-
+	if (!std::filesystem::exists(assetsPathExternal))
 		std::filesystem::create_directory(assetsPathExternal);
-	}
 
-	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject")) {
-
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject"))
 		std::filesystem::create_directory(assetsPathExternal + "\\MyProject");
-	}
 
-	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Folders")) {
-
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Folders"))
 		std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Folders");
-	}
+
+	//if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Database"))
+	//	std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Database");
 }
 
 void FileSystem::initEditorTextures() {
 
+	Texture texture;
 	editorTextures.openFolderTextureID = texture.loadDDS("resource/icons/folder_open.DDS");
 	editorTextures.closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
 	editorTextures.objectTextureID = texture.loadDDS("resource/icons/icon_object.DDS");
@@ -79,7 +79,7 @@ void FileSystem::generateFileStructure(File* file) {
 	for (std::filesystem::path entry : std::filesystem::directory_iterator(files[file->id].path)) {
 
 		File* subfile = new File;
-		subfile->id = index;
+		subfile->id = files.size();
 		subfile->parent = file;
 
 		FileNode fileNode;
@@ -89,10 +89,9 @@ void FileSystem::generateFileStructure(File* file) {
 		fileNode.type = FileSystem::getFileType(entry.extension().string());
 		fileNode.addr = subfile;
 		loadFileToEngine(fileNode);
-		files[index] = fileNode;
+		files.push_back(fileNode);
 
 		(file->subfiles).push_back(subfile);
-		index++;
 
 		if(fileNode.type == FileType::folder)
 			FileSystem::generateFileStructure(subfile);
@@ -112,7 +111,7 @@ void FileSystem::updateChildrenPathRecursively(File* file) {
 			iter = iter->parent;
 		}
 
-		std::string updatedPath = "MyProject\\";
+		std::string updatedPath = assetsPathExternal + "\\MyProject\\";
 
 		while (fileStack.size() > 1) {
 
@@ -121,15 +120,16 @@ void FileSystem::updateChildrenPathRecursively(File* file) {
 			updatedPath = updatedPath + files[popped->id].name + "\\";
 		}
 
+		std::string oldPath = files[file->subfiles[i]->id].path;
 		File* popped = fileStack.top();
 		fileStack.pop();
 		updatedPath = updatedPath + files[popped->id].name + files[popped->id].extension;
-
 		files[file->subfiles[i]->id].path = updatedPath;
+
+		FileSystem::changeAssetsKeyManually(file->subfiles[i]->id, oldPath, files[file->subfiles[i]->id].path);
 
 		FileSystem::updateChildrenPathRecursively(file->subfiles[i]);
 	}
-
 }
 
 void FileSystem::traverseAllFiles(File* file) {
@@ -140,10 +140,14 @@ void FileSystem::traverseAllFiles(File* file) {
 	std::cout << files[file->id].path << std::endl;
 }
 
- /*
- * It checks if we try to move file to subfolders or file itself.
- * In this case function returns true.
- */
+void FileSystem::getTreeIndices(File* file, std::vector<int>& indices) {
+
+	for (int i = 0; i < file->subfiles.size(); i++)
+		getTreeIndices(file->subfiles[i], indices);
+
+	indices.push_back(file->id);
+}
+
 bool FileSystem::subfolderAndItselfCheck(File* fileToMove, File* fileToBeMoved) {
 
 	while (fileToMove->parent != NULL) {
@@ -170,7 +174,7 @@ bool FileSystem::subfolderCheck(File* fileToMove, File* fileToBeMoved) {
 
 void FileSystem::moveFile(int toBeMoved, int moveTo) {
 
-	if (files[moveTo].type != FileType::folder || FileSystem::subfolderAndItselfCheck(files[moveTo].addr, files[toBeMoved].addr))
+	if (files[moveTo].type != FileType::folder || FileSystem::subfolderAndItselfCheck(files[moveTo].addr, files[toBeMoved].addr) || files[toBeMoved].addr->parent == files[moveTo].addr)
 		return;
 
 	std::string previousPath = files[toBeMoved].path;
@@ -182,25 +186,98 @@ void FileSystem::moveFile(int toBeMoved, int moveTo) {
 	if (files[moveTo].addr->subfiles.size() == 0) {
 		(files[moveTo].addr->subfiles).push_back(files[toBeMoved].addr);
 		std::string destination = files[moveTo].path + "\\" + files[toBeMoved].name + files[toBeMoved].extension;
+		files[toBeMoved].path = destination;
+		FileSystem::updateChildrenPathRecursively(files[toBeMoved].addr);
 		std::filesystem::copy(previousPath, destination, copyOptions);
 		std::filesystem::remove_all(previousPath);
+
+		FileSystem::changeAssetsKeyManually(toBeMoved, previousPath, destination);
 	}
 	else {
-		FileSystem::addFile(files[toBeMoved].addr, files[toBeMoved].name.c_str(), AddType::fromMove);
+
+		files[toBeMoved].name = FileSystem::getAvailableFileName(files[toBeMoved].addr, files[toBeMoved].name.c_str());
+		files[toBeMoved].path = files[files[toBeMoved].addr->parent->id].path +"\\" + files[toBeMoved].name + files[toBeMoved].extension;
+		FileSystem::insertFileToParentsSubfolders(files[toBeMoved].addr);
+		FileSystem::updateChildrenPathRecursively(files[toBeMoved].addr);
+
 		std::filesystem::copy(previousPath, files[toBeMoved].path, copyOptions);
 		std::filesystem::remove_all(previousPath);
+
+		FileSystem::changeAssetsKeyManually(toBeMoved, previousPath, files[toBeMoved].path);
 	}
 
 	FileSystem::deleteFileFromTree(oldParent, toBeMoved);
+}
+
+void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath, std::string destination) {
+
+	switch (files[toBeMoved].type) {
+
+	case FileType::material: {
+
+		previousPath.erase(0, assetsPathExternal.length());
+		destination.erase(0, assetsPathExternal.length());
+		auto it = materials.extract(previousPath);
+		it.key() = destination;
+		materials.insert(std::move(it));
+		break;
+	}
+	case FileType::object: {
+
+		break;
+	}
+	case FileType::texture: {
+
+		previousPath.erase(0, assetsPathExternal.length());
+		destination.erase(0, assetsPathExternal.length());
+		auto it = textures.extract(previousPath);
+		it.key() = destination;
+		textures.insert(std::move(it));
+		break;
+	}
+	}
 }
 
 void FileSystem::deleteFileCompletely(int id) {
 
 	std::filesystem::remove_all(files[id].path);
 
+	std::vector<int> indices;
+	FileSystem::getTreeIndices(files[id].addr, indices);
+	std::sort(indices.begin(), indices.end(), std::greater<int>());
+
 	File* parent = files[id].addr->parent;
 	FileSystem::deleteFileFromTree(parent, id);
-	files.erase(id);
+
+	for (int i = 0; i < indices.size(); i++) {
+
+		switch (files[indices[i]].type) {
+
+		case FileType::material: {
+			std::string relativePath = files[indices[i]].path;
+			relativePath.erase(0, assetsPathExternal.length());
+			materials.erase(relativePath);
+			// delete texture ids
+			//std::unordered_map<std::string, Material>::const_iterator it = materials.find(relativePath);
+			break;
+		}
+		case FileType::texture: {
+
+			std::string relativePath = files[indices[i]].path;
+			relativePath.erase(0, assetsPathExternal.length());
+			textures.erase(relativePath);
+			// delete texture ids
+			//std::unordered_map<std::string, Texture>::const_iterator it = textures.find(relativePath);
+			break;
+		}
+		}
+
+		delete files[indices[i]].addr;
+		files.erase(files.begin() + indices[i]);
+	}
+
+	for (int i = indices[indices.size() - 1]; i < files.size(); i++)
+		files[i].addr->id = i;
 }
 
 void FileSystem::deleteFileFromTree(File* parent, int id) {
@@ -218,7 +295,7 @@ void FileSystem::deleteFileFromTree(File* parent, int id) {
 void FileSystem::newFolder(int currentDirID, const char* fileName) {
 
 	File* subFile = new File;
-	subFile->id = index;
+	subFile->id = files.size();
 	subFile->parent = files[currentDirID].addr;
 
 	// called this temp becasuse its properties can be changed afterwards 
@@ -229,15 +306,20 @@ void FileSystem::newFolder(int currentDirID, const char* fileName) {
 	tempFileNode.extension = "";
 	tempFileNode.type = FileType::folder;
 	tempFileNode.addr = subFile;
-	files[index] = tempFileNode;
-	index++;
+	files.push_back(tempFileNode);
 
 	if (files[currentDirID].addr->subfiles.size() == 0) {
 		(files[currentDirID].addr->subfiles).push_back(subFile);
 		std::filesystem::create_directory(files[subFile->id].path);
 	}
-	else
-		FileSystem::addFile(subFile, fileName, AddType::fromNewFolder);
+	else {
+
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path +"\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+
+		std::filesystem::create_directory(files[subFile->id].path);
+	}
 
 	loadFileToEngine(files[subFile->id]);
 }
@@ -245,7 +327,7 @@ void FileSystem::newFolder(int currentDirID, const char* fileName) {
 void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 
 	File* subFile = new File;
-	subFile->id = index;
+	subFile->id = files.size();
 	subFile->parent = files[currentDirID].addr;
 
 	// called this temp becasuse its properties can be changed afterwards 
@@ -256,20 +338,63 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	tempFileNode.extension = ".mat";
 	tempFileNode.type = FileType::material;
 	tempFileNode.addr = subFile;
-	files[index] = tempFileNode;
-	index++;
+	files.push_back(tempFileNode);
 
-	(files[currentDirID].addr->subfiles).push_back(subFile);
+	if (files[currentDirID].addr->subfiles.size() == 0)
+		(files[currentDirID].addr->subfiles).push_back(subFile);
+	else {
 
-	Material material;
-	materials[subFile->id] = material;
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+	}
 
-	FileSystem::writeMaterial(material);
-
-	loadFileToEngine(files[subFile->id]);
+	Material mat;
+	std::string relativePath = files[subFile->id].path;
+	relativePath.erase(0, assetsPathExternal.length());
+	materials.insert({ relativePath, mat });
+	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
+	files[subFile->id].textureID = editorTextures.materialTextureID;
 }
 
-void FileSystem::writeMaterial(Material& material) {
+void FileSystem::readMaterialFile(std::string path, Material& mat) {
+
+	std::ifstream file(path);
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("Material");
+
+	mat.type = std::strcmp("PBR", root_node->first_node("Type")->value()) == 0 ? MaterialType::pbr : MaterialType::phong;
+	mat.albedoTexturePath = root_node->first_node("AlbedoMap")->value();
+	mat.normalTexturePath = root_node->first_node("NormalMap")->value();
+	mat.metallicTexturePath = root_node->first_node("MetallicMap")->value();
+	mat.roughnessTexturePath = root_node->first_node("RoughnessMap")->value();
+	mat.aoTexturePath = root_node->first_node("AOMAP")->value();
+
+	mat.useAlbedo = std::strcmp(mat.albedoTexturePath.c_str(), "Null") != 0;
+	mat.useNormal = std::strcmp(mat.normalTexturePath.c_str(), "Null") != 0;
+	mat.useMetallic = std::strcmp(mat.metallicTexturePath.c_str(), "Null") != 0;
+	mat.useRoughness = std::strcmp(mat.roughnessTexturePath.c_str(), "Null") != 0;
+	mat.useAO = std::strcmp(mat.aoTexturePath.c_str(), "Null") != 0;
+
+	mat.normalAmount = atof(root_node->first_node("Amount")->first_attribute("Normal")->value());
+	mat.metallicAmount = atof(root_node->first_node("Amount")->first_attribute("Metallic")->value());
+	mat.roughnessAmount = atof(root_node->first_node("Amount")->first_attribute("Roughness")->value());
+
+	mat.albedoColor.x = atof(root_node->first_node("AlbedoColor")->first_attribute("X")->value());
+	mat.albedoColor.y = atof(root_node->first_node("AlbedoColor")->first_attribute("Y")->value());
+	mat.albedoColor.z = atof(root_node->first_node("AlbedoColor")->first_attribute("Z")->value());
+
+}
+
+void FileSystem::writeMaterialFile(std::string path, Material mat) {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -279,69 +404,58 @@ void FileSystem::writeMaterial(Material& material) {
 
 	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
 
-	const char* temp_val = doc.allocate_string("PBR");
-
+	const char* shaderType = mat.type == MaterialType::pbr ? "PBR" : "Phong";
 	rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
-	typeNode->value(temp_val);
+	typeNode->value(doc.allocate_string(shaderType));
 	materialNode->append_node(typeNode);
 
-	temp_val = doc.allocate_string("Null");
-
-	//if(material.useAlbedo)
-
+	const char* nullStr = "Null";
+	const char* albedoMapPath = mat.useAlbedo ? mat.albedoTexturePath.c_str() : nullStr;
 	rapidxml::xml_node<>* albedoPathNode = doc.allocate_node(rapidxml::node_element, "AlbedoMap");
-	albedoPathNode->value(temp_val);
+	albedoPathNode->value(doc.allocate_string(albedoMapPath));
 	materialNode->append_node(albedoPathNode);
 
+	const char* normalMapPath = mat.useNormal ? mat.normalTexturePath.c_str() : nullStr;
 	rapidxml::xml_node<>* normalPathNode = doc.allocate_node(rapidxml::node_element, "NormalMap");
-	normalPathNode->value(temp_val);
+	normalPathNode->value(doc.allocate_string(normalMapPath));
 	materialNode->append_node(normalPathNode);
 
+	const char* metallicMapPath = mat.useMetallic ? mat.metallicTexturePath.c_str() : nullStr;
 	rapidxml::xml_node<>* metallicPathNode = doc.allocate_node(rapidxml::node_element, "MetallicMap");
-	metallicPathNode->value(temp_val);
+	metallicPathNode->value(doc.allocate_string(metallicMapPath));
 	materialNode->append_node(metallicPathNode);
 
+	const char* roughnessMapPath = mat.useRoughness ? mat.roughnessTexturePath.c_str() : nullStr;
 	rapidxml::xml_node<>* roughnessPathNode = doc.allocate_node(rapidxml::node_element, "RoughnessMap");
-	roughnessPathNode->value(temp_val);
+	roughnessPathNode->value(doc.allocate_string(roughnessMapPath));
 	materialNode->append_node(roughnessPathNode);
 
+	const char* aoMapPath = mat.useAO ? mat.aoTexturePath.c_str() : nullStr;
 	rapidxml::xml_node<>* aoPathNode = doc.allocate_node(rapidxml::node_element, "AOMAP");
-	aoPathNode->value(temp_val);
+	aoPathNode->value(doc.allocate_string(aoMapPath));
 	materialNode->append_node(aoPathNode);
 
-	temp_val = doc.allocate_string("False");
-	rapidxml::xml_node<>* useMapNode = doc.allocate_node(rapidxml::node_element, "UseMap");
-	useMapNode->append_attribute(doc.allocate_attribute("Albedo", temp_val));
-	useMapNode->append_attribute(doc.allocate_attribute("Normal", temp_val));
-	useMapNode->append_attribute(doc.allocate_attribute("Metallic", temp_val));
-	useMapNode->append_attribute(doc.allocate_attribute("Roughness", temp_val));
-	useMapNode->append_attribute(doc.allocate_attribute("AO", temp_val));
-	materialNode->append_node(useMapNode);
-
-	temp_val = doc.allocate_string("0.5");
 	rapidxml::xml_node<>* amountNode = doc.allocate_node(rapidxml::node_element, "Amount");
-	amountNode->append_attribute(doc.allocate_attribute("Normal", temp_val));
-	amountNode->append_attribute(doc.allocate_attribute("Metallic", temp_val));
+	amountNode->append_attribute(doc.allocate_attribute("Normal", doc.allocate_string(std::to_string(mat.normalAmount).c_str())));
+	amountNode->append_attribute(doc.allocate_attribute("Metallic", doc.allocate_string(std::to_string(mat.metallicAmount).c_str())));
+	amountNode->append_attribute(doc.allocate_attribute("Roughness", doc.allocate_string(std::to_string(mat.roughnessAmount).c_str())));
 	materialNode->append_node(amountNode);
 
-	temp_val = doc.allocate_string("1.0");
 	rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "AlbedoColor");
-	colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
-	colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-	colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
+	colorNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(mat.albedoColor.x).c_str())));
+	colorNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(mat.albedoColor.y).c_str())));
+	colorNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(mat.albedoColor.z).c_str())));
 	materialNode->append_node(colorNode);
 
 	doc.append_node(materialNode);
 
-	//std::string xml_as_string;
-	//rapidxml::print(std::back_inserter(xml_as_string), doc);
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	//std::string path = files[currentDirID].path + "\\" + fileName + ".mat";
-
-	//std::ofstream file_stored(path);
-	//file_stored << doc;
-	//file_stored.close();
-	//doc.clear();
+	std::ofstream file_stored(path);
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
 }
 
 void FileSystem::rename(int id, const char* newName) {
@@ -349,16 +463,43 @@ void FileSystem::rename(int id, const char* newName) {
 	if (Utility::iequals(newName, files[id].name) == 0)
 		return;
 
-	FileSystem::addFile(files[id].addr, newName, AddType::fromRename);
+	std::string oldPath = files[id].path;
+	files[id].name = FileSystem::getAvailableFileName(files[id].addr, newName);
+	files[id].path = files[files[id].addr->parent->id].path +"\\" + files[id].name + files[id].extension;
+	files[id].addr->parent->subfiles.erase(files[id].addr->parent->subfiles.begin() + FileSystem::getSubFileIndex(files[id].addr));
+	FileSystem::insertFileToParentsSubfolders(files[id].addr);
+	std::filesystem::rename(oldPath, files[id].path);
+	FileSystem::updateChildrenPathRecursively(files[id].addr);
+	FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
 }
 
-/*
-* Returns 1 if there is a file with the same name
-* Returns 2 if there is not a file with the same name
-*/
-void FileSystem::addFile(File* file, const char* name, AddType type) {
+unsigned int FileSystem::getSubFileIndex(File* file) {
 
-	std::string oldPath = files[file->id].path;
+	for (int i = 0; i < file->parent->subfiles.size(); i++) {
+
+		if (file->id == file->parent->subfiles[i]->id)
+			return i;
+	}
+}
+
+void FileSystem::insertFileToParentsSubfolders(File* file) {
+
+	bool lastElementFlag = true;
+	for (int i = 0; i < file->parent->subfiles.size(); i++) {
+
+		if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
+
+			file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
+			lastElementFlag = false;
+			break;
+		}
+	}
+	if (lastElementFlag)
+		file->parent->subfiles.push_back(file);
+}
+
+std::string FileSystem::getAvailableFileName(File* file, const char* name) {
+
 	std::vector<int> indices;
 	bool flag = false;
 	int fileSubIndex = -1;
@@ -394,93 +535,33 @@ void FileSystem::addFile(File* file, const char* name, AddType type) {
 					max = stoi(rightPart);
 			}
 		}
-		files[file->id].name = std::string(name) + std::to_string(max + 1);
-		files[file->id].path = files[file->parent->id].path + "\\" + std::string(name) + std::to_string(max + 1) + files[file->id].extension;
 
-		if(type == AddType::fromRename)
-			file->parent->subfiles.erase(file->parent->subfiles.begin() + fileSubIndex);
-
-		bool lastElementFlag = true;
-		for (int i = 0; i < file->parent->subfiles.size(); i++) {
-
-			if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
-
-				file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
-				lastElementFlag = false;
-				break;
-			}
-		}
-		if (lastElementFlag)
-			file->parent->subfiles.push_back(file);
-
-		if (type == AddType::fromNewFolder)
-			std::filesystem::create_directory(files[file->id].path);
-		else if (type == AddType::fromRename) {
-
-			std::filesystem::rename(oldPath, files[file->id].path);
-			FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-		}
-		else if (type == AddType::fromMove || type == AddType::fromDuplicate) {
-
-			FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-		}
-
-		return;
+		return std::string(name) + std::to_string(max + 1);
 	}
 
-	/*
-	* if there are not files with the same name
-	*/
-	files[file->id].name = std::string(name);
-	files[file->id].path = files[file->parent->id].path + "\\" + std::string(name) + files[file->id].extension;
-
-	if (type == AddType::fromRename)
-		file->parent->subfiles.erase(file->parent->subfiles.begin() + fileSubIndex);
-
-	bool lastElementFlag = true;
-	for (int i = 0; i < file->parent->subfiles.size(); i++) {
-
-		if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
-
-			file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
-			lastElementFlag = false;
-			break;
-		}
-	}
-	if (lastElementFlag)
-		file->parent->subfiles.push_back(file);
-
-	if (type == AddType::fromNewFolder)
-		std::filesystem::create_directory(files[file->id].path);
-	else if (type == AddType::fromRename) {
-
-		std::filesystem::rename(oldPath, files[file->id].path);
-		FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-	}
-	else if (type == AddType::fromMove || type == AddType::fromDuplicate) {
-
-		FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-	}
+	return std::string(name);
 }
 
 void FileSystem::duplicateFile(int id) {
 
 	File* subFile = new File;
-	subFile->id = index;
+	subFile->id = files.size();
 	subFile->parent = files[id].addr->parent;
 
 	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode = files[id];
 	tempFileNode.addr = subFile;
-	files[index] = tempFileNode;
-	index++;
+	files.push_back(tempFileNode);
 
-	FileSystem::addFile(subFile, tempFileNode.name.c_str(), AddType::fromDuplicate);
+	files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+	files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+	FileSystem::insertFileToParentsSubfolders(subFile);
+	FileSystem::updateChildrenPathRecursively(subFile);
 
 	const auto copyOptions = std::filesystem::copy_options::recursive;
 	std::filesystem::copy(files[id].path, files[subFile->id].path, copyOptions);
 
-	loadFileToEngine(files[subFile->id]);
+	FileSystem::loadFileToEngine(files[subFile->id]);
 
 	if (files[subFile->id].type == FileType::folder)
 		generateFileStructure(subFile);
@@ -516,9 +597,12 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	{
 	case FileType::texture: {
 
-		unsigned int textureID = texture.loadDDS(fileNode.path.c_str());
-		fileNode.textureID = textureID;
-		textures.push_back(textureID);
+		Texture texture;
+		texture.setTextureID(fileNode.path.c_str());
+		std::string relativePath = fileNode.path;
+		relativePath.erase(0, assetsPathExternal.length());
+		textures.insert({ relativePath, texture });
+		fileNode.textureID = texture.textureID;
 		break;
 	}
 	case FileType::object: {
@@ -540,8 +624,12 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	case FileType::material: {
 
 		fileNode.textureID = editorTextures.materialTextureID;
-		//Material material;
-		//material.loadMaterial(fileNode.path.c_str());
+
+		Material mat;
+		readMaterialFile(fileNode.path, mat);
+		std::string relativePath = fileNode.path;
+		relativePath.erase(0, assetsPathExternal.length());
+		materials.insert({ relativePath, mat });
 		break;
 	}
 	case FileType::undefined: {
@@ -558,7 +646,6 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 
 void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
-
 	for (int i = 0; i < filesToMove.size(); i++) {
 
 		File* file = NULL;
@@ -569,7 +656,7 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 			file = files[toDir].addr;
 
 		File* subFile = new File;
-		subFile->id = index;
+		subFile->id = files.size();
 		subFile->parent = file;
 
 		// called this temp becasuse its properties can be changed afterwards 
@@ -580,8 +667,7 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 		tempFileNode.path = files[toDir].path + "\\" + tempFileNode.name + tempFileNode.extension;
 		tempFileNode.type = FileSystem::getFileType(tempFileNode.extension);
 		tempFileNode.addr = subFile;
-		files[index] = tempFileNode;
-		index++;
+		files.push_back(tempFileNode);
 
 		const auto copyOptions = std::filesystem::copy_options::recursive;
 
@@ -592,82 +678,80 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 		}
 		else {
 
-			FileSystem::addFile(subFile, tempFileNode.name.c_str(), AddType::fromImport);
+			files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+			files[subFile->id].path = files[files[subFile->id].addr->parent->id].path + +"\\" + files[subFile->id].name + files[subFile->id].extension;
+			FileSystem::insertFileToParentsSubfolders(subFile);
+
 			std::filesystem::copy(fullPath, files[subFile->id].path, copyOptions);
 		}
-		loadFileToEngine(files[subFile->id]);
+		FileSystem::loadFileToEngine(files[subFile->id]);
 
 		if (files[subFile->id].type == FileType::folder)
 			generateFileStructure(subFile);
 	}	
 }
 
-
-node* FileSystem::newNode(int data)
-{
-	node* Node = new node();
-	Node->data = data;
-	Node->left = NULL;
-	Node->right = NULL;
-
-	return(Node);
-}
-
-void FileSystem::identicalTrees(node* a, node* b, bool& identical)
-{
-	if (a == NULL && b == NULL)
-		return;
-	else if (a != NULL && b != NULL)
-	{
-		if (a->data != b->data) {
-
-			identical = false;
-			return;
-		}
-
-		identicalTrees(a->left, b->left, identical);
-		identicalTrees(a->right, b->right, identical);
-	}
-	else
-		identical = false;
-}
-
-// unfinished moterfuker
-void FileSystem::detectFilesChangedOutside(File* file, std::string fileToCompare)
-{
-	int count = 0;
-	for (std::filesystem::path entry : std::filesystem::directory_iterator(fileToCompare)) {
-
-		if (file->subfiles.size() == count) {
-
-			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
-			std::cout << "\nSHIT0!!!" << std::endl;
-			return;
-		}
-
-		if (std::strcmp(entry.string().c_str(), files[file->subfiles[count]->id].path.c_str()) != 0) {
-
-			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
-			std::cout << "\nSHIT1!!!" << std::endl;
-			return;
-		}
-
-		if (files[file->subfiles[count]->id].type == FileType::folder)
-			FileSystem::detectFilesChangedOutside(files[file->subfiles[count]->id].addr, entry.string());
-
-		count++;
-	}
-}
-
 void FileSystem::loadDefaultAssets() {
 
-	std::vector<Vertex> vertices;
-	std::vector<unsigned int> indices;
-	std::string name = "Null";
-	MeshRenderer nullMesh(vertices, indices, name);
-	meshes.push_back(nullMesh);
+	meshes.push_back(MeshRenderer());
 
 	Texture texture;
-	unsigned int emptyTextureID = texture.getEmptyTexture();
-	textures.push_back(emptyTextureID);
+	texture.setEmptyTextureID();
+	textures.insert({"Null", texture });
 }
+
+//node* FileSystem::newNode(int data)
+//{
+//	node* Node = new node();
+//	Node->data = data;
+//	Node->left = NULL;
+//	Node->right = NULL;
+//
+//	return(Node);
+//}
+//
+//void FileSystem::identicalTrees(node* a, node* b, bool& identical)
+//{
+//	if (a == NULL && b == NULL)
+//		return;
+//	else if (a != NULL && b != NULL)
+//	{
+//		if (a->data != b->data) {
+//
+//			identical = false;
+//			return;
+//		}
+//
+//		identicalTrees(a->left, b->left, identical);
+//		identicalTrees(a->right, b->right, identical);
+//	}
+//	else
+//		identical = false;
+//}
+//
+//// unfinished 
+//void FileSystem::detectFilesChangedOutside(File* file, std::string fileToCompare)
+//{
+//	int count = 0;
+//	for (std::filesystem::path entry : std::filesystem::directory_iterator(fileToCompare)) {
+//
+//		if (file->subfiles.size() == count) {
+//
+//			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
+//			std::cout << "\nSHIT0!!!" << std::endl;
+//			return;
+//		}
+//
+//		if (std::strcmp(entry.string().c_str(), files[file->subfiles[count]->id].path.c_str()) != 0) {
+//
+//			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
+//			std::cout << "\nSHIT1!!!" << std::endl;
+//			return;
+//		}
+//
+//		if (files[file->subfiles[count]->id].type == FileType::folder)
+//			FileSystem::detectFilesChangedOutside(files[file->subfiles[count]->id].addr, entry.string());
+//
+//		count++;
+//	}
+//}

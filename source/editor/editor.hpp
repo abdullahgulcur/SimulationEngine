@@ -15,11 +15,10 @@ class Editor {
 
 private:
 
-	Render render;
-	Window window;
-
 public:
 
+	Render render;
+	Window window;
 	EditorCamera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
@@ -36,15 +35,15 @@ public:
 
 	void setRender(Render render);
 
-	Render getRender();
+	//Render getRender();
 
 	void setWindow(Window window);
 
-	Window getWindow();
+	//Window getWindow();
 
 	void setEditorCamera(EditorCamera editorCamera);
 
-	EditorCamera& getEditorCamera();
+	//EditorCamera& getEditorCamera();
 
 	//void addScene(Scene scene);
 };

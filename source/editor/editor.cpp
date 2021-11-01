@@ -11,7 +11,7 @@ void Editor::startEditorScreen() {
 	window.startGLOptions();
 	fileSystem.initFileSystem();
 	scene.setEditor(this);
-	scene.initSceneGraph();
+	//scene.initSceneGraph();
 
 	window.setEditor(this);
 	render.setEditor(this);
@@ -20,11 +20,11 @@ void Editor::startEditorScreen() {
 
 	//editorGUI.setSceneList(sceneList[0]);
 	editorGUI.initImGui();
-	editorCamera.setWindow(window.getGLFWwindow());
-	editorCamera.setMode(window.getGLFWvidmode());
+	editorCamera.setWindow(window.GLFW_window);
+	editorCamera.setMode(window.mode);
 	window.renderToTexture();
 
-	scene.start();
+	//scene.start();
 }
 
 void Editor::stayOpen() {
@@ -34,13 +34,13 @@ void Editor::stayOpen() {
 	editorCamera.computeMatricesFromInputs();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
-	glViewport(0, 0, window.getGLFWvidmode()->width, window.getGLFWvidmode()->height);
+	glViewport(0, 0, window.mode->width, window.mode->height);
 
 	window.clear();
 
 	editorGUI.newFrameImGui();
 
-	scene.update();
+	//scene.update();
 
 	//drawAllAxis();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -83,14 +83,14 @@ void Editor::drawAllAxis() {
 
 void Editor::setRender(Render render) { this->render = render; }
 
-Render Editor::getRender() { return render; }
+//Render Editor::getRender() { return render; }
 
 void Editor::setWindow(Window window) { this->window = window; }
 
-Window Editor::getWindow() { return window; }
+//Window Editor::getWindow() { return window; }
 
 void Editor::setEditorCamera(EditorCamera editorCamera) { this->editorCamera = editorCamera; }
 
-EditorCamera& Editor::getEditorCamera() { return editorCamera; }
+//EditorCamera& Editor::getEditorCamera() { return editorCamera; }
 
 //void Editor::addScene(Scene scene) { sceneList.push_back(scene); }

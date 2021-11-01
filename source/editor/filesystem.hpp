@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <unordered_map>
 #include <stack>
 #include <shlobj.h>
 #include <fstream>
@@ -17,9 +18,6 @@
 #include "material.hpp"
 
 enum class FileType {folder, object, material, texture, audio, script, undefined};
-
-enum class AddType { fromMove, fromRename, fromNewFolder, fromImport, fromDuplicate };
-
 
 struct EditorTextures {
 
@@ -52,53 +50,55 @@ struct FileNode {
 	unsigned int textureID;
 };
 
-class node
-{
-public:
-	int data;
-	node* left;
-	node* right;
-};
-
 class FileSystem {
 
 private:
 
-	int index = 0;
-	Texture texture;
 	std::string assetsPathExternal;
-
-	void addFile(File* file, const char* name, AddType type);
-
-public:
-
-	File* file;
-	std::map<int, FileNode> files;
-	std::map<int, Material> materials;
-	std::vector<Model> models;
-	std::vector<MeshRenderer> meshes;
-	std::vector<unsigned int> textures;
-	EditorTextures editorTextures;
-
-	FileSystem();
-
-	void checkAssetsFolder();
-
-	void initFileSystem();
 
 	void initEditorTextures();
 
 	void generateFileStructure(File* file);
 
+	unsigned int getSubFileIndex(File* file);
+
+	void insertFileToParentsSubfolders(File* file);
+
+	std::string getAvailableFileName(File* file, const char* name);
+
+public:
+
+	File* file;
+	std::vector<FileNode> files;
+
+	std::unordered_map<std::string, Material> materials;
+	std::unordered_map<std::string, Texture> textures;
+
+	std::vector<Model> models;
+	std::vector<MeshRenderer> meshes;
+	EditorTextures editorTextures;
+
+	FileSystem();
+
+	~FileSystem();
+
+	void checkProjectFolder();
+
+	void initFileSystem();
+
 	void updateChildrenPathRecursively(File* file);
 
 	void traverseAllFiles(File* file);
+
+	void getTreeIndices(File* file, std::vector<int>& indices);
 
 	bool subfolderAndItselfCheck(File* fileToMove, File* fileToBeMoved);
 
 	bool subfolderCheck(File* fileToMove, File* fileToBeMoved);
 
 	void moveFile(int toBeMoved, int moveTo);
+
+	void changeAssetsKeyManually(int toBeMoved, std::string previousPath, std::string destination);
 
 	void deleteFileFromTree(File* parent, int id);
 
@@ -112,7 +112,9 @@ public:
 
 	void newMaterial(int currentDirID, const char* fileName);
 
-	void writeMaterial(Material& material);
+	void readMaterialFile(std::string path, Material& mat);
+
+	void writeMaterialFile(std::string path, Material mat);
 
 	void rename(int id, const char* newName);
 
@@ -122,12 +124,12 @@ public:
 
 	void importFiles(std::vector<std::string> filesToMove, int toDir);
 
-	node* newNode(int data);
-
-	void identicalTrees(node* a, node* b, bool& identical);
-
-	void detectFilesChangedOutside(File* file, std::string fileToCompare);
-
 	void loadDefaultAssets();
+
+	//node* newNode(int data);
+
+	//void identicalTrees(node* a, node* b, bool& identical);
+
+	//void detectFilesChangedOutside(File* file, std::string fileToCompare);
 
 };

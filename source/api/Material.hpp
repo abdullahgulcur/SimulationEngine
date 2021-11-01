@@ -25,10 +25,18 @@ public:
 	bool useRoughness = false;
 	bool useAO = false;
 
+	float normalAmount = 0.0f;
 	float metallicAmount = 0.0f;
 	float roughnessAmount = 0.5f;
 	glm::vec3 albedoColor;
 
+	std::string albedoTexturePath;
+	std::string normalTexturePath;
+	std::string metallicTexturePath;
+	std::string roughnessTexturePath;
+	std::string aoTexturePath;
+
+	// muhtemelen bunlar gecici olur
 	unsigned int albedoTextureID;
 	unsigned int normalTextureID;
 	unsigned int metallicTextureID;

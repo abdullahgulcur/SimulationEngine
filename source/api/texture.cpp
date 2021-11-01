@@ -101,3 +101,13 @@ GLuint Texture::getEmptyTexture() {
 	glGenTextures(1, &textureID);
 	return textureID;
 }
+
+void Texture::setTextureID(const char* imagepath) {
+
+	textureID = Texture::loadDDS(imagepath);
+}
+
+void Texture::setEmptyTextureID() {
+
+	textureID = Texture::getEmptyTexture();
+}
