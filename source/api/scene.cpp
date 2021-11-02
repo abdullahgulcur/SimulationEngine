@@ -3,8 +3,7 @@
 
 Scene::Scene() {
 
-	name = "MyScene";
-	
+	name = "MyScene";	
 }
 
 void Scene::initSceneGraph() {
@@ -21,16 +20,18 @@ void Scene::initSceneGraph() {
 		entitity.name = "Root";
 		entitity.transform = rootTransform;
 		entities[rootTransform->id] = entitity;
+
+		Scene::saveEditorProperties();
 	}
 	else {
 
 		Scene::loadEntities();
-		Scene::loadTransforms();
-		Scene::loadMeshRenderers();
-		Scene::loadLights();
+		//Scene::loadTransforms();
+		//Scene::loadMeshRenderers();
+		//Scene::loadLights();
 
 		Scene::generateSceneGraph(rootTransform);
-		Scene::setTransformsOfComponents();
+		//Scene::setTransformsOfComponents();
 		entities[rootTransform->id].transform = rootTransform;
 
 		transforms.clear();
@@ -95,7 +96,7 @@ void Scene::setTransformsOfComponents() {
 
 bool Scene::readSceneGraph() {
 
-	std::ifstream file("resource/backup/scenegraph_db.txt");
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenegraph_db.txt");
 
 	if (file.fail())
 		return false;
@@ -121,7 +122,7 @@ bool Scene::readSceneGraph() {
 
 void Scene::loadEntities() {
 
-	std::ifstream file("resource/backup/entity_db.xml");
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\entity_db.xml");
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
@@ -458,9 +459,9 @@ void Scene::saveEditorProperties() {
 
 	Scene::saveSceneGraph();
 	Scene::saveEntities();
-	Scene::saveTransforms();
-	Scene::saveMeshRenderers();
-	Scene::saveLights();
+	//Scene::saveTransforms();
+	//Scene::saveMeshRenderers();
+	//Scene::saveLights();
 } 
 
 void Scene::saveEntities() {
@@ -496,7 +497,7 @@ void Scene::saveEntities() {
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/entity_db.xml");
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\entity_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -703,7 +704,7 @@ void Scene::saveTransforms() {
 
 void Scene::saveSceneGraph() {
 
-	std::ofstream MyFile("resource/backup/scenegraph_db.txt");
+	std::ofstream MyFile(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenegraph_db.txt");
 
 	std::ostringstream fileTextStream;
 

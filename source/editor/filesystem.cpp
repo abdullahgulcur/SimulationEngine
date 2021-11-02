@@ -93,8 +93,8 @@ void FileSystem::checkProjectFolder() {
 	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Folders"))
 		std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Folders");
 
-	//if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Database"))
-	//	std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Database");
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Database"))
+		std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Database");
 }
 
 void FileSystem::initEditorTextures() {
@@ -116,13 +116,17 @@ void FileSystem::generateFileStructure(File* file) {
 
 	for (std::filesystem::path entry : std::filesystem::directory_iterator(files[file->id].path)) {
 
+		FileNode fileNode;
+		fileNode.path = entry.string();
+		fileNode.name = entry.stem().string();
+
+		if (std::strcmp(fileNode.name.c_str(), "Database") == 0)
+			continue;
+
 		File* subfile = new File;
 		subfile->id = files.size();
 		subfile->parent = file;
 
-		FileNode fileNode;
-		fileNode.path = entry.string();
-		fileNode.name = entry.stem().string();
 		fileNode.extension = entry.extension().string();
 		fileNode.type = FileSystem::getFileType(entry.extension().string());
 		fileNode.addr = subfile;

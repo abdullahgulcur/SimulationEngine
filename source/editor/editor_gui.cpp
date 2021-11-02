@@ -265,7 +265,7 @@ void EditorGUI::createPanels() {
 
 	EditorGUI::createInspectorPanel();
 	EditorGUI::createAppPanel();
-	//EditorGUI::createHierarchyPanel();
+	EditorGUI::createHierarchyPanel();
 	EditorGUI::createFilesPanel();
 	EditorGUI::createScenePanel();
 	EditorGUI::createConsolePanel();
@@ -326,17 +326,17 @@ void EditorGUI::createInspectorPanel() {
 
 		ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.23f, 0.23f, 0.23f, 1.f));
 
-		EditorGUI::showTransformComponent();
+		//EditorGUI::showTransformComponent();
 
 		for (int i = 0; i < editor->scene.entities[lastSelectedEntityID].components.size(); i++) {
 
 			if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::MeshRenderer) {
 
-				EditorGUI::showMeshRendererComponent();
+				//EditorGUI::showMeshRendererComponent();
 			}
 			else if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::Light) {
 
-				EditorGUI::showLightComponent();
+				//EditorGUI::showLightComponent();
 			}
 		}
 

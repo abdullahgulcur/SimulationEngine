@@ -11,7 +11,7 @@ void Editor::startEditorScreen() {
 	window.startGLOptions();
 	fileSystem.initFileSystem();
 	scene.setEditor(this);
-	//scene.initSceneGraph();
+	scene.initSceneGraph();
 
 	window.setEditor(this);
 	render.setEditor(this);
