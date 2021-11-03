@@ -36,6 +36,7 @@ struct MeshRendererComponent {
 	int entID;
 	unsigned int VAO;
 	unsigned int indiceCount;
+	unsigned int programID;
 };
 
 struct RigidBodyComponent {

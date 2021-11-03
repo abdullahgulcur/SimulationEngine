@@ -96,7 +96,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common;$(ProjectDir)source/component</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -114,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common;$(ProjectDir)source/component</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -166,6 +166,7 @@
     <ClCompile Include="source\api\utility.cpp" />
     <ClCompile Include="source\app\application.cpp" />
     <ClCompile Include="Source\App\main.cpp" />
+    <ClCompile Include="source\component\meshrenderer.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
     <ClCompile Include="source\editor\editor_camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
@@ -197,6 +198,7 @@
     <ClInclude Include="source\common\rapidxml_iterators.hpp" />
     <ClInclude Include="source\common\rapidxml_print.hpp" />
     <ClInclude Include="source\common\rapidxml_utils.hpp" />
+    <ClInclude Include="source\component\meshrenderer.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
     <ClInclude Include="source\editor\editor_camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />

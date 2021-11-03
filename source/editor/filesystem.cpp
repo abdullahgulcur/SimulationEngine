@@ -1,3 +1,4 @@
+#include "editor.hpp"
 #include "filesystem.hpp"
 
 FileSystem::FileSystem() {
@@ -251,17 +252,32 @@ void FileSystem::moveFile(int toBeMoved, int moveTo) {
 	FileSystem::deleteFileFromTree(oldParent, toBeMoved);
 }
 
-void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath, std::string destination) {
+void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousName, std::string newName) {
 
 	switch (files[toBeMoved].type) {
 
 	case FileType::material: {
 
-		previousPath.erase(0, assetsPathExternal.length());
-		destination.erase(0, assetsPathExternal.length());
-		auto it = materials.extract(previousPath);
-		it.key() = destination;
+		std::vector<int> keys;
+
+		for (auto& iter : editor->scene.meshRendererComponents) {
+
+			if (strcmp(iter.second.mat->name.c_str(), previousName.c_str()) == 0)
+				keys.push_back(iter.second.entID);
+		}
+
+		Material mat = materials[previousName];
+		auto it = materials.extract(previousName);
+		it.key() = newName;
+		materials[it.key()] = mat;
+		materials[it.key()].name = newName;
 		materials.insert(std::move(it));
+
+		for (int i = 0; i < keys.size(); i++)
+			editor->scene.meshRendererComponents[keys[i]].mat = &materials[newName];
+
+		//editor->scene.saveMeshRenderers();
+
 		break;
 	}
 	case FileType::object: {
@@ -270,10 +286,8 @@ void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath
 	}
 	case FileType::texture: {
 
-		previousPath.erase(0, assetsPathExternal.length());
-		destination.erase(0, assetsPathExternal.length());
-		auto it = textures.extract(previousPath);
-		it.key() = destination;
+		auto it = textures.extract(previousName);
+		it.key() = newName;
 		textures.insert(std::move(it));
 		break;
 	}
@@ -296,18 +310,31 @@ void FileSystem::deleteFileCompletely(int id) {
 		switch (files[indices[i]].type) {
 
 		case FileType::material: {
-			std::string relativePath = files[indices[i]].path;
-			relativePath.erase(0, assetsPathExternal.length());
-			materials.erase(relativePath);
+			//std::string relativePath = files[indices[i]].path;
+			//relativePath.erase(0, assetsPathExternal.length());
+
+			std::vector<int> keys;
+			for (auto& iter : editor->scene.meshRendererComponents) {
+
+				if (strcmp(iter.second.mat->name.c_str(), files[id].name.c_str()) == 0)
+					keys.push_back(iter.second.entID);
+			}
+
+			for (int i = 0; i < keys.size(); i++)
+				editor->scene.meshRendererComponents[keys[i]].mat = &materials["Default"];
+
+			materials.erase(files[indices[i]].name);
+
+			//editor->scene.saveMeshRenderers();
 			// delete texture ids
 			//std::unordered_map<std::string, Material>::const_iterator it = materials.find(relativePath);
 			break;
 		}
 		case FileType::texture: {
 
-			std::string relativePath = files[indices[i]].path;
-			relativePath.erase(0, assetsPathExternal.length());
-			textures.erase(relativePath);
+			//std::string relativePath = files[indices[i]].path;
+			//relativePath.erase(0, assetsPathExternal.length());
+			textures.erase(files[i].name);
 			// delete texture ids
 			//std::unordered_map<std::string, Texture>::const_iterator it = textures.find(relativePath);
 			break;
@@ -392,9 +419,10 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	}
 
 	Material mat;
-	std::string relativePath = files[subFile->id].path;
-	relativePath.erase(0, assetsPathExternal.length());
-	materials.insert({ relativePath, mat });
+	mat.name = files[subFile->id].name;
+	//std::string relativePath = files[subFile->id].path;
+	//relativePath.erase(0, assetsPathExternal.length());
+	materials.insert({ mat.name, mat });
 	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
 	files[subFile->id].textureID = editorTextures.materialTextureID;
 }
@@ -413,6 +441,7 @@ void FileSystem::readMaterialFile(std::string path, Material& mat) {
 
 	root_node = doc.first_node("Material");
 
+	mat.name = root_node->first_node("Name")->value();
 	mat.type = std::strcmp("PBR", root_node->first_node("Type")->value()) == 0 ? MaterialType::pbr : MaterialType::phong;
 	mat.albedoTexturePath = root_node->first_node("AlbedoMap")->value();
 	mat.normalTexturePath = root_node->first_node("NormalMap")->value();
@@ -433,7 +462,6 @@ void FileSystem::readMaterialFile(std::string path, Material& mat) {
 	mat.albedoColor.x = atof(root_node->first_node("AlbedoColor")->first_attribute("X")->value());
 	mat.albedoColor.y = atof(root_node->first_node("AlbedoColor")->first_attribute("Y")->value());
 	mat.albedoColor.z = atof(root_node->first_node("AlbedoColor")->first_attribute("Z")->value());
-
 }
 
 void FileSystem::writeMaterialFile(std::string path, Material mat) {
@@ -445,6 +473,10 @@ void FileSystem::writeMaterialFile(std::string path, Material mat) {
 	doc.append_node(decl);
 
 	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
+
+	rapidxml::xml_node<>* nameNode = doc.allocate_node(rapidxml::node_element, "Name");
+	nameNode->value(doc.allocate_string(mat.name.c_str()));
+	materialNode->append_node(nameNode);
 
 	const char* shaderType = mat.type == MaterialType::pbr ? "PBR" : "Phong";
 	rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
@@ -506,13 +538,18 @@ void FileSystem::rename(int id, const char* newName) {
 		return;
 
 	std::string oldPath = files[id].path;
+	std::string oldName = files[id].name;
 	files[id].name = FileSystem::getAvailableFileName(files[id].addr, newName);
 	files[id].path = files[files[id].addr->parent->id].path +"\\" + files[id].name + files[id].extension;
 	files[id].addr->parent->subfiles.erase(files[id].addr->parent->subfiles.begin() + FileSystem::getSubFileIndex(files[id].addr));
 	FileSystem::insertFileToParentsSubfolders(files[id].addr);
 	std::filesystem::rename(oldPath, files[id].path);
 	FileSystem::updateChildrenPathRecursively(files[id].addr);
-	FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
+	FileSystem::changeAssetsKeyManually(id, oldName, files[id].name);
+
+	if (files[id].type == FileType::material) {
+		writeMaterialFile(files[id].path, materials[files[id].name]);
+	}
 }
 
 unsigned int FileSystem::getSubFileIndex(File* file) {
@@ -640,11 +677,11 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	case FileType::texture: {
 
 		Texture texture;
-		texture.name = fileNode.name;
+		//texture.name = fileNode.name;
 		texture.setTextureID(fileNode.path.c_str());
-		std::string relativePath = fileNode.path;
-		relativePath.erase(0, assetsPathExternal.length());
-		textures.insert({ relativePath, texture });
+		//std::string relativePath = fileNode.path;
+		//relativePath.erase(0, assetsPathExternal.length());
+		textures.insert({ fileNode.name, texture });
 		fileNode.textureID = texture.textureID;
 		break;
 	}
@@ -654,7 +691,7 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 		model.loadModel(fileNode.path.c_str());
 
 		for (Mesh mesh : model.meshes)
-			meshes.insert({ mesh.VAO, mesh});
+			meshes.insert({ mesh.name, mesh});
 
 		fileNode.textureID = editorTextures.objectBigTextureID;
 		break;
@@ -670,9 +707,9 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 
 		Material mat;
 		readMaterialFile(fileNode.path, mat);
-		std::string relativePath = fileNode.path;
-		relativePath.erase(0, assetsPathExternal.length());
-		materials.insert({ relativePath, mat });
+		//std::string relativePath = fileNode.path;
+		//relativePath.erase(0, assetsPathExternal.length());
+		materials.insert({ mat.name, mat });
 		break;
 	}
 	case FileType::undefined: {
@@ -736,22 +773,23 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
 void FileSystem::loadDefaultAssets() {
 
-	meshes.insert({ 0, Mesh() });
+	meshes.insert({ "Null", Mesh()});
 
 	Material mat;
+	mat.name = "Default";
 	materials.insert({ "Default", mat });
 
 	Texture texture;
-	texture.name = "Null";
+	//texture.name = "Null";
 	texture.setEmptyTextureID();
 	textures.insert({"Null", texture });
 }
 
 Material& FileSystem::getMaterial(int id) {
 
-	std::string relativePath = files[id].path;
-	relativePath.erase(0, assetsPathExternal.length());
-	auto it = materials.find(relativePath);
+	//std::string relativePath = files[id].path;
+	//relativePath.erase(0, assetsPathExternal.length());
+	auto it = materials.find(files[id].name);
 	return it->second;
 }
 
@@ -762,6 +800,8 @@ Texture& FileSystem::getTexture(int id) {
 	auto it = textures.find(relativePath);
 	return it->second;
 }
+
+void FileSystem::setEditor(Editor* editor) { this->editor = editor; }
 
 //node* FileSystem::newNode(int data)
 //{

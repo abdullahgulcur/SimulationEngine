@@ -15,6 +15,9 @@
 #include "component.hpp"
 #include "material.hpp"
 
+#include "meshrenderer.hpp"
+
+
 class Editor;
 
 class Scene {
@@ -34,15 +37,16 @@ public:
 	std::vector<Entity> entities;
 	std::map<int, std::vector<int>> initialSceneGraph;
 
-	std::map<int, AnimationComponent> animationComponents;
-	std::map<int, AnimatorComponent> animatorComponents;
-	std::map<int, ColliderComponent> colliderComponents;
-	std::map<int, LightComponent> lightComponents;
-	std::vector<MeshRendererComponent> meshRendererComponents;
-	std::map<int, RigidBodyComponent> rigidBodyComponents;
-	std::map<int, ScriptComponent> scriptComponents;
-	std::map<int, TransformComponent> transformComponents;
+	//std::map<int, AnimationComponent> animationComponents;
+	//std::map<int, AnimatorComponent> animatorComponents;
+	//std::map<int, ColliderComponent> colliderComponents;
+	//std::map<int, LightComponent> lightComponents;
+	//std::vector<MeshRendererComponent> meshRendererComponents;
+	//std::map<int, RigidBodyComponent> rigidBodyComponents;
+	//std::map<int, ScriptComponent> scriptComponents;
+	//std::map<int, TransformComponent> transformComponents;
 
+	std::unordered_map<unsigned int, MeshRenderer> meshRendererComponents;
 
 	Scene();
 
@@ -86,9 +90,9 @@ public:
 
 	Transform* newEntity(int parentID, const char* name);
 
-	void newPointLight(int parentID, const char* name);
+	//void newPointLight(int parentID, const char* name);
 
-	void newDirectionalLight(int parentID, const char* name);
+	//void newDirectionalLight(int parentID, const char* name);
 
 	void renameEntity(int id, const char* newName);
 

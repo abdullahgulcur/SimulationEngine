@@ -17,6 +17,8 @@
 #include "utility.hpp"
 #include "material.hpp"
 
+class Editor;
+
 enum class FileType {folder, object, material, texture, audio, script, undefined};
 
 struct EditorTextures {
@@ -54,6 +56,8 @@ class FileSystem {
 
 private:
 
+	Editor* editor;
+
 	void initEditorTextures();
 
 	void generateFileStructure(File* file);
@@ -73,9 +77,9 @@ public:
 	File* rootFile;
 	std::vector<FileNode> files;
 
+	std::unordered_map<std::string, Mesh> meshes;
 	std::unordered_map<std::string, Material> materials;
 	std::unordered_map<std::string, Texture> textures;
-	std::unordered_map<unsigned int, Mesh> meshes;
 
 	EditorTextures editorTextures;
 
@@ -99,7 +103,7 @@ public:
 
 	void moveFile(int toBeMoved, int moveTo);
 
-	void changeAssetsKeyManually(int toBeMoved, std::string previousPath, std::string destination);
+	void changeAssetsKeyManually(int toBeMoved, std::string previousName, std::string newName);
 
 	void deleteFileFromTree(File* parent, int id);
 
@@ -130,6 +134,9 @@ public:
 	Material& getMaterial(int id);
 
 	Texture& getTexture(int id);
+
+	void setEditor(Editor* editor);
+
 
 
 	//node* newNode(int data);

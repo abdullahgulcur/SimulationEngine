@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <sstream>
 #include <fstream>
 #include <vector>
@@ -9,13 +10,11 @@
 
 enum class MaterialType { pbr, phong };
 
-struct Mat {
-
-};
-
 class Material {
 
 public:
+
+	std::string name;
 
 	MaterialType type;
 

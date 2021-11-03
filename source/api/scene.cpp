@@ -20,7 +20,6 @@ void Scene::initSceneGraph() {
 		entitity.transform = rootTransform;
 		entities.push_back(entitity);
 
-		Scene::saveEditorProperties();
 	}
 	else {
 
@@ -36,6 +35,9 @@ void Scene::initSceneGraph() {
 
 		entities[rootTransform->id].transform = rootTransform;
 	}
+
+	Scene::saveEditorProperties();
+
 }
 
 void Scene::generateSceneGraph(Transform* parent) {
@@ -189,26 +191,23 @@ void Scene::loadMeshRenderers() {
 
 	for (rapidxml::xml_node<>* mesh_node = root_node->first_node("MeshRendererComponent"); mesh_node; mesh_node = mesh_node->next_sibling()) {
 
-		MeshRendererComponent comp;
-		comp.entID = atoi(mesh_node->first_attribute("ID")->value());
+		MeshRenderer m_renderer;
+		m_renderer.entID = atoi(mesh_node->first_attribute("EntID")->value());
 
-		bool found = false;
-		for (auto& it : editor->fileSystem.meshes) {
+		auto meshFound = editor->fileSystem.meshes.find(mesh_node->first_attribute("MeshName")->value());
+		if (meshFound != editor->fileSystem.meshes.end())
+			m_renderer.mesh = &meshFound->second;
+		else
+			m_renderer.mesh = &editor->fileSystem.meshes["Null"];
 
-			if (strcmp(it.second.name.c_str(), mesh_node->first_attribute("Name")->value()) == 0) {
+		auto matFound = editor->fileSystem.materials.find(mesh_node->first_attribute("MatName")->value());
+		if (matFound != editor->fileSystem.materials.end())
+			m_renderer.mat = &matFound->second;
+		else
+			m_renderer.mat = &editor->fileSystem.materials["Default"];
 
-				comp.VAO = it.second.VAO;
-				comp.indiceCount = it.second.indices.size();
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			comp.VAO = editor->fileSystem.meshes[0].VAO;
-			comp.VAO = editor->fileSystem.meshes[0].indices.size();
-		}
-		meshRendererComponents.push_back(comp);
-		entities[comp.entID].components.push_back(ComponentType::MeshRenderer);
+		entities[m_renderer.entID].components.push_back(ComponentType::MeshRenderer);
+		meshRendererComponents.insert({ m_renderer.entID, m_renderer });
 	}
 }
 
@@ -445,19 +444,19 @@ Transform* Scene::newEntity(int parentID, const char* name){
 	return transform;
 }
 
-void Scene::newPointLight(int parentID, const char* name) {
+//void Scene::newPointLight(int parentID, const char* name) {
+//
+//	Transform* entity = Scene::newEntity(parentID, name);
+//	entities[entity->id].addLightComponent();
+//	lightComponents[entity->id].type = LightType::PointLight;
+//}
 
-	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent();
-	lightComponents[entity->id].type = LightType::PointLight;
-}
-
-void Scene::newDirectionalLight(int parentID, const char* name) {
-
-	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent();
-	lightComponents[entity->id].type = LightType::DirectionalLight;
-}
+//void Scene::newDirectionalLight(int parentID, const char* name) {
+//
+//	Transform* entity = Scene::newEntity(parentID, name);
+//	entities[entity->id].addLightComponent();
+//	lightComponents[entity->id].type = LightType::DirectionalLight;
+//}
 
 void Scene::renameEntity(int id, const char* newName) {
 
@@ -510,20 +509,12 @@ void Scene::saveMeshRenderers() {
 	rapidxml::xml_node<>* meshRenderersNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponents");
 	doc.append_node(meshRenderersNode);
 
-	for (MeshRendererComponent& comp : editor->scene.meshRendererComponents) {
-
+	for (auto& it : editor->scene.meshRendererComponents) {
+	
 		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponent");
-
-		componentNode->append_attribute(doc.allocate_attribute("ID", doc.allocate_string(std::to_string(comp.entID).c_str())));
-
-		for (auto& it : editor->fileSystem.meshes) {
-
-			if (comp.VAO == it.second.VAO) {
-
-				componentNode->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(it.second.name.c_str())));
-				break;
-			}
-		}
+		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.second.entID).c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(it.second.mesh->name.c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MatName", doc.allocate_string(it.second.mat->name.c_str())));
 		meshRenderersNode->append_node(componentNode);
 	}
 

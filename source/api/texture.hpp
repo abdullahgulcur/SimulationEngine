@@ -20,7 +20,6 @@ private:
 public:
 
 	unsigned int textureID;
-	std::string name;
 
 	Texture();
 

@@ -4,7 +4,7 @@ Entity::Entity() {
 
 }
 
-void Entity::addMeshRendererComponent(Mesh& mesh, std::vector<MeshRendererComponent>& m_rendererComponents) {
+void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_map<unsigned int, MeshRenderer>& m_rendererComponents) {
 
 	for (int i = 0; i < components.size(); i++) {
 
@@ -12,16 +12,12 @@ void Entity::addMeshRendererComponent(Mesh& mesh, std::vector<MeshRendererCompon
 			return;
 	}
 
-	MeshRendererComponent component;
+	MeshRenderer component;
 	component.entID = transform->id;
-	component.VAO = mesh.VAO;
-	component.indiceCount = mesh.indices.size();
-	m_rendererComponents.push_back(component);
+	component.mesh = mesh;
+	component.mat = mat;
 
-	//component.meshName = "Null";
-	//component.id = transform->id;
-	//component.transform = transform;
-	//scene->meshRendererComponents[transform->id] = component;
+	m_rendererComponents.insert({ component.entID, component });
 
 	components.push_back(ComponentType::MeshRenderer);
 }

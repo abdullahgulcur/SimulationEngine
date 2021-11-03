@@ -10,6 +10,7 @@ void Editor::startEditorScreen() {
 	render.startGLEW();
 	window.startGLOptions();
 	fileSystem.initFileSystem();
+	fileSystem.setEditor(this);
 	scene.setEditor(this);
 	scene.initSceneGraph();
 

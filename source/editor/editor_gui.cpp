@@ -402,8 +402,9 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			Mesh& mesh = editor->fileSystem.meshes[0];
-			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, editor->scene.meshRendererComponents);
+			Mesh* mesh = &editor->fileSystem.meshes["Null"];
+			Material* mat = &editor->fileSystem.materials["Default"];
+			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, mat, editor->scene.meshRendererComponents);
 		}
 		ImGui::Separator();
 
@@ -634,166 +635,167 @@ void EditorGUI::showMeshRendererComponent() {
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		ImGui::Text("Mesh");
+		MeshRenderer& m_renderer = editor->scene.meshRendererComponents[lastSelectedEntityID];
+		const char* meshName = m_renderer.mesh->name.c_str();
+		const char* matName = m_renderer.mat->name.c_str();
 
-		ImGui::SameLine(95);
+		int size_meshes = editor->fileSystem.meshes.size();
+		int size_mats = editor->fileSystem.materials.size();
+		const char** meshItems = new const char* [size_meshes];
+		const char** matItems = new const char* [size_mats];
 
-		ImGui::PushItemWidth(80);
-
-		int item = -1;
-		const char* mName = "";
-		int meshRendererComponentIndex = -1;
-
-		for (int i = 0; i < editor->scene.meshRendererComponents.size(); i++) {
-
-			if (editor->scene.meshRendererComponents[i].entID == lastSelectedEntityID) {
-				auto it = editor->fileSystem.meshes.find(editor->scene.meshRendererComponents[i].VAO);
-
-				if (it != editor->fileSystem.meshes.end())
-					mName = it->second.name.c_str();
-				else
-					mName = editor->fileSystem.meshes[0].name.c_str();
-				
-				meshRendererComponentIndex = i;
-				break;
-			}
-		}
-
-		int size = editor->fileSystem.meshes.size();
-		const char** items = new const char*[size];
+		int meshIndex = -1;
+		int matIndex = -1;
 
 		int i = 0;
 		for (auto& it : editor->fileSystem.meshes) {
 
-			items[i] = it.second.name.c_str();
-			if (strcmp(mName, items[i]) == 0)
-				item = i;
+			meshItems[i] = it.second.name.c_str();
+			if (strcmp(meshName, meshItems[i]) == 0)
+				meshIndex = i;
 			i++;
 		}
 
-		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
-
-		ImGui::SetNextItemWidth(width - 130);
-		if (ImGui::Combo("##0", &item, items, size)) {
-
-			for (auto& it : editor->fileSystem.meshes) {
-
-				if (strcmp(items[item], it.second.name.c_str()) == 0) {
-
-					editor->scene.meshRendererComponents[meshRendererComponentIndex].VAO = it.second.VAO;
-					editor->scene.meshRendererComponents[meshRendererComponentIndex].indiceCount = it.second.indices.size();
-					break;
-				}
-			}
-		}
-
-		delete items;
-		ImGui::PopStyleColor();
-		ImGui::TreePop();
-	}
-
-	ImGui::Separator();
-}
-
-void EditorGUI::showLightComponent() {
-
-	float width = ImGui::GetContentRegionAvail().x;
-
-	ImGui::SetNextItemOpen(true);
-
-	bool treeNodeOpen = ImGui::TreeNode("##2");
-
-	int frame_padding = 1;
-	ImVec2 size = ImVec2(16.0f, 16.0f);
-	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
-	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
-	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
-	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
-
-	ImGui::SameLine(25);
-	ImGui::Image((ImTextureID)lightTextureID, size, uv0, uv1, tint_col, border_col);
-	ImGui::SameLine();
-	ImGui::Text("  Light");
-
-	ImGui::SameLine();
-	ImVec2 pos = ImGui::GetCursorPos();
-	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
-
-	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
-		ImGui::OpenPopup("context_menu_popup");
-
-	if (EditorGUI::contextMenuPopup(ComponentType::Light)) {
-
-		ImGui::TreePop();
-		return;
-	}
-
-	if (treeNodeOpen) {
-
-		pos = ImGui::GetCursorPos();
-		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-
-		ImGui::Text("Type");
-
+		ImGui::Text("Mesh");
 		ImGui::SameLine(95);
-
 		ImGui::PushItemWidth(80);
-
-		int item = editor->scene.lightComponents[lastSelectedEntityID].type == LightType::DirectionalLight ? 0 : 1;
-		const char* items[] = { "Directional", "Point" };
-
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+		ImGui::SetNextItemWidth(width - 130);
 
-		ImGui::SetNextItemWidth(width - 180);
-		if (ImGui::Combo("##0", &item, items, IM_ARRAYSIZE(items))) {
+		if (ImGui::Combo("##0", &meshIndex, meshItems, size_meshes)) {
 
-			editor->scene.lightComponents[lastSelectedEntityID].type = item == 0 ? LightType::DirectionalLight : LightType::PointLight;
+			std::string meshName = meshItems[meshIndex];
+			m_renderer.mesh = &editor->fileSystem.meshes[meshName];
 		}
+
+		i = 0;
+		for (auto& it : editor->fileSystem.materials) {
+
+			matItems[i] = it.second.name.c_str();
+			if (strcmp(matName, matItems[i]) == 0)
+				matIndex = i;
+			i++;
+		}
+
+		ImGui::Text("Material");
+		ImGui::SameLine(95);
+		ImGui::PushItemWidth(80);
+		ImGui::SetNextItemWidth(width - 130);
+
+		if (ImGui::Combo("##1", &matIndex, matItems, size_mats)) {
+
+			std::string matName = matItems[matIndex];
+			m_renderer.mat = &editor->fileSystem.materials[matName];
+		}
+		delete meshItems;
+		delete matItems;
 
 		ImGui::PopStyleColor();
-
-		ImGui::Text("Power");
-
-		ImGui::SameLine(95);
-
-		float power = editor->scene.lightComponents[lastSelectedEntityID].power;
-		if (ImGui::DragFloat("##1", &power, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.lightComponents[lastSelectedEntityID].power = power;
-
-		ImGui::Text("Color");
-
-		ImGui::SameLine(95);
-
-		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
-
-		ImVec4 color = ImVec4(editor->scene.lightComponents[lastSelectedEntityID].color.x,
-			editor->scene.lightComponents[lastSelectedEntityID].color.y,
-			editor->scene.lightComponents[lastSelectedEntityID].color.z, 1.f);
-
-		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
-		static ImVec4 backup_color;
-		bool open_popup = ImGui::ColorButton("##2", color);
-		if (open_popup)
-		{
-			ImGui::OpenPopup("mypicker");
-			backup_color = color;
-		}
-		if (ImGui::BeginPopup("mypicker"))
-		{
-			ImGui::ColorPicker4("##3", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-			editor->scene.lightComponents[lastSelectedEntityID].color = glm::vec3(color.x, color.y, color.z);
-
-			ImGui::EndPopup();
-		}
-
-		ImGui::PopStyleColor();
-
 		ImGui::TreePop();
 	}
 
 	ImGui::Separator();
 }
+
+//void EditorGUI::showLightComponent() {
+//
+//	float width = ImGui::GetContentRegionAvail().x;
+//
+//	ImGui::SetNextItemOpen(true);
+//
+//	bool treeNodeOpen = ImGui::TreeNode("##2");
+//
+//	int frame_padding = 1;
+//	ImVec2 size = ImVec2(16.0f, 16.0f);
+//	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+//	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+//	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+//	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+//	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+//
+//	ImGui::SameLine(25);
+//	ImGui::Image((ImTextureID)lightTextureID, size, uv0, uv1, tint_col, border_col);
+//	ImGui::SameLine();
+//	ImGui::Text("  Light");
+//
+//	ImGui::SameLine();
+//	ImVec2 pos = ImGui::GetCursorPos();
+//	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+//
+//	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+//		ImGui::OpenPopup("context_menu_popup");
+//
+//	if (EditorGUI::contextMenuPopup(ComponentType::Light)) {
+//
+//		ImGui::TreePop();
+//		return;
+//	}
+//
+//	if (treeNodeOpen) {
+//
+//		pos = ImGui::GetCursorPos();
+//		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+//
+//		ImGui::Text("Type");
+//
+//		ImGui::SameLine(95);
+//
+//		ImGui::PushItemWidth(80);
+//
+//		int item = editor->scene.lightComponents[lastSelectedEntityID].type == LightType::DirectionalLight ? 0 : 1;
+//		const char* items[] = { "Directional", "Point" };
+//
+//		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+//
+//		ImGui::SetNextItemWidth(width - 180);
+//		if (ImGui::Combo("##0", &item, items, IM_ARRAYSIZE(items))) {
+//
+//			editor->scene.lightComponents[lastSelectedEntityID].type = item == 0 ? LightType::DirectionalLight : LightType::PointLight;
+//		}
+//
+//		ImGui::PopStyleColor();
+//
+//		ImGui::Text("Power");
+//
+//		ImGui::SameLine(95);
+//
+//		float power = editor->scene.lightComponents[lastSelectedEntityID].power;
+//		if (ImGui::DragFloat("##1", &power, 0.1f, 0.0f, 0.0f, "%.2f"))
+//			editor->scene.lightComponents[lastSelectedEntityID].power = power;
+//
+//		ImGui::Text("Color");
+//
+//		ImGui::SameLine(95);
+//
+//		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+//
+//		ImVec4 color = ImVec4(editor->scene.lightComponents[lastSelectedEntityID].color.x,
+//			editor->scene.lightComponents[lastSelectedEntityID].color.y,
+//			editor->scene.lightComponents[lastSelectedEntityID].color.z, 1.f);
+//
+//		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
+//		static ImVec4 backup_color;
+//		bool open_popup = ImGui::ColorButton("##2", color);
+//		if (open_popup)
+//		{
+//			ImGui::OpenPopup("mypicker");
+//			backup_color = color;
+//		}
+//		if (ImGui::BeginPopup("mypicker"))
+//		{
+//			ImGui::ColorPicker4("##3", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
+//			editor->scene.lightComponents[lastSelectedEntityID].color = glm::vec3(color.x, color.y, color.z);
+//
+//			ImGui::EndPopup();
+//		}
+//
+//		ImGui::PopStyleColor();
+//
+//		ImGui::TreePop();
+//	}
+//
+//	ImGui::Separator();
+//}
 
 void EditorGUI::showMaterialProperties() {
 
@@ -1017,7 +1019,7 @@ void EditorGUI::textureMenuPopup(Material& material, TextureType type, bool& fla
 					ImGui::EndPopup();
 					return;
 				}
-				ImGui::Text(it.second.name.c_str());
+				ImGui::Text(it.first.c_str());
 
 				ImGui::PopID();
 			}
@@ -1206,8 +1208,15 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 			ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
 			ImGui::Dummy(ImVec2(0, 1));
 
-			if (ImGui::Selectable("   Rename"))
+			if (ImGui::Selectable("   Rename")) {
+
 				renameEntityID = transform->children[i]->id;
+
+				ImGui::PopStyleColor();
+				ImGui::EndPopup();
+				ImGui::PopID();
+				return;
+			}
 
 			if (ImGui::Selectable("   Duplicate")) {
 
@@ -1334,7 +1343,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			editor->scene.newDirectionalLight(editor->scene.rootTransform->id, "Sun");
+			//editor->scene.newDirectionalLight(editor->scene.rootTransform->id, "Sun");
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1343,7 +1352,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			editor->scene.newPointLight(editor->scene.rootTransform->id, "Point_Light");
+			//editor->scene.newPointLight(editor->scene.rootTransform->id, "Point_Light");
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
