@@ -36,7 +36,7 @@
     <ClCompile Include="source\api\transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\api\mesh_renderer.cpp">
+    <ClCompile Include="source\api\mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\api\model.cpp">
@@ -75,9 +75,6 @@
     <ClCompile Include="source\api\utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\api\scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\api\entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -93,6 +90,9 @@
     <ClCompile Include="source\api\material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\api\scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -102,9 +102,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\transform.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\api\scene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\material.hpp">
@@ -122,7 +119,7 @@
     <ClInclude Include="source\editor\editor_camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\api\mesh_renderer.hpp">
+    <ClInclude Include="source\api\mesh.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\model.hpp">
@@ -189,6 +186,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\component.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\api\scene.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

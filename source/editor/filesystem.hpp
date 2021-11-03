@@ -70,14 +70,13 @@ public:
 
 	std::string assetsPathExternal;
 
-	File* file;
+	File* rootFile;
 	std::vector<FileNode> files;
 
 	std::unordered_map<std::string, Material> materials;
 	std::unordered_map<std::string, Texture> textures;
+	std::unordered_map<unsigned int, Mesh> meshes;
 
-	std::vector<Model> models;
-	std::vector<MeshRenderer> meshes;
 	EditorTextures editorTextures;
 
 	FileSystem();

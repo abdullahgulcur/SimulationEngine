@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include "mesh_renderer.hpp"
+#include "mesh.hpp"
 
 enum class ComponentType{Light, MeshRenderer, RigidBody, Collider, Transform, Script, Animation, Animator};
 
@@ -10,48 +10,46 @@ enum LightType{ PointLight, DirectionalLight };
 
 struct AnimationComponent {
 
-	int id;
+	int entID;
 };
 
 struct AnimatorComponent {
 
-	int id;
+	int entID;
 };
 
 struct ColliderComponent {
 
-	int id;
+	int entID;
 };
 
 struct LightComponent {
 
-	int id;
+	int entID;
 	LightType type;
 	float power;
-	Transform* transform;
 	glm::vec3 color;
 };
 
 struct MeshRendererComponent {
 
-	int id;
-	std::string meshName;
-	Transform* transform;
-	MeshRenderer* renderer;
+	int entID;
+	unsigned int VAO;
+	unsigned int indiceCount;
 };
 
 struct RigidBodyComponent {
 
-	int id;
+	int entID;
 };
 
 struct ScriptComponent {
 
-	int id;
+	int entID;
 };
 
 // unnecessary for now...
 struct TransformComponent {
 
-	int id;
+	int entID;
 };

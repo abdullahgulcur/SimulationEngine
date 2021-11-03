@@ -41,7 +41,7 @@ void Model::processNode(aiNode* node, const aiScene* scene)
 
 }
 
-MeshRenderer Model::processMesh(aiMesh* mesh, const aiScene* scene)
+Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 {
     // data to fill
     std::vector<Vertex> vertices;
@@ -122,7 +122,7 @@ MeshRenderer Model::processMesh(aiMesh* mesh, const aiScene* scene)
     //textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
     // return a mesh object created from the extracted mesh data
-    return MeshRenderer(vertices, indices, mesh->mName.C_Str()); // , textures
+    return Mesh(vertices, indices, mesh->mName.C_Str()); // , textures
 }
 
 //void Model::setMeshRenderer(MeshRenderer meshRenderer) { this->meshRenderer = meshRenderer; }

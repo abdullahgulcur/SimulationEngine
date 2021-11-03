@@ -15,7 +15,7 @@ struct Vertex {
     glm::vec3 bitangent;
 };
 
-class MeshRenderer {
+class Mesh {
 
 private:
 
@@ -32,9 +32,9 @@ public:
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
-    MeshRenderer();
+    Mesh();
 
-    MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
 
     void initBuffers();
 

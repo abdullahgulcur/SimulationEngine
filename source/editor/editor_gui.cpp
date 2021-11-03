@@ -326,13 +326,13 @@ void EditorGUI::createInspectorPanel() {
 
 		ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.23f, 0.23f, 0.23f, 1.f));
 
-		//EditorGUI::showTransformComponent();
+		EditorGUI::showTransformComponent();
 
 		for (int i = 0; i < editor->scene.entities[lastSelectedEntityID].components.size(); i++) {
 
 			if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::MeshRenderer) {
 
-				//EditorGUI::showMeshRendererComponent();
+				EditorGUI::showMeshRendererComponent();
 			}
 			else if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::Light) {
 
@@ -396,14 +396,14 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Light")) {
 
-			editor->scene.entities[lastSelectedEntityID].addLightComponent();
+			//editor->scene.entities[lastSelectedEntityID].addLightComponent();
 		}
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent();
-			editor->scene.meshRendererComponents[lastSelectedEntityID].renderer = &editor->fileSystem.meshes[0];
+			Mesh& mesh = editor->fileSystem.meshes[0];
+			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, editor->scene.meshRendererComponents);
 		}
 		ImGui::Separator();
 
@@ -641,37 +641,54 @@ void EditorGUI::showMeshRendererComponent() {
 		ImGui::PushItemWidth(80);
 
 		int item = -1;
-		const char* mName = editor->scene.meshRendererComponents[lastSelectedEntityID].meshName.c_str();
+		const char* mName = "";
+		int meshRendererComponentIndex = -1;
 
-		const char** items = new const char*[editor->fileSystem.meshes.size()];
+		for (int i = 0; i < editor->scene.meshRendererComponents.size(); i++) {
 
-		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+			if (editor->scene.meshRendererComponents[i].entID == lastSelectedEntityID) {
+				auto it = editor->fileSystem.meshes.find(editor->scene.meshRendererComponents[i].VAO);
 
-			items[i] = editor->fileSystem.meshes[i].name.c_str();
+				if (it != editor->fileSystem.meshes.end())
+					mName = it->second.name.c_str();
+				else
+					mName = editor->fileSystem.meshes[0].name.c_str();
+				
+				meshRendererComponentIndex = i;
+				break;
+			}
+		}
 
+		int size = editor->fileSystem.meshes.size();
+		const char** items = new const char*[size];
+
+		int i = 0;
+		for (auto& it : editor->fileSystem.meshes) {
+
+			items[i] = it.second.name.c_str();
 			if (strcmp(mName, items[i]) == 0)
 				item = i;
+			i++;
 		}
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 
 		ImGui::SetNextItemWidth(width - 130);
-		if (ImGui::Combo("##0", &item, items, editor->fileSystem.meshes.size())) {
+		if (ImGui::Combo("##0", &item, items, size)) {
 
-			for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+			for (auto& it : editor->fileSystem.meshes) {
 
-				if (strcmp(items[item], editor->fileSystem.meshes[i].name.c_str()) == 0) {
+				if (strcmp(items[item], it.second.name.c_str()) == 0) {
 
-					editor->scene.entities[lastSelectedEntityID].updateMeshRendererComponent(&editor->fileSystem.meshes[i]);
+					editor->scene.meshRendererComponents[meshRendererComponentIndex].VAO = it.second.VAO;
+					editor->scene.meshRendererComponents[meshRendererComponentIndex].indiceCount = it.second.indices.size();
 					break;
 				}
 			}
 		}
 
 		delete items;
-
 		ImGui::PopStyleColor();
-
 		ImGui::TreePop();
 	}
 
@@ -1041,13 +1058,13 @@ bool EditorGUI::contextMenuPopup(ComponentType type) {
 
 		if (ImGui::Selectable("   Remove")) {
 
-			if(type != ComponentType::Transform)
+			/*if(type != ComponentType::Transform)
 				editor->scene.entities[lastSelectedEntityID].removeComponent(type);
 
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
 
-			return true;
+			return true;*/
 		}
 
 		ImGui::PopStyleColor();
@@ -1177,7 +1194,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Create Empty")) {
 
-				editor->scene.newEntity(transform->children[i]->id, "Empty Entity");
+				editor->scene.newEntity(transform->children[i]->id, "Entity");
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -1302,7 +1319,7 @@ void EditorGUI::hiearchyCreateButton() {
 	{
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
 
-		if (ImGui::Selectable("   Empty Entity")) {
+		if (ImGui::Selectable("   Entity")) {
 
 			editor->scene.newEntity(editor->scene.rootTransform->id, "Entity");
 			// include all the necessary end codes...
@@ -1315,9 +1332,9 @@ void EditorGUI::hiearchyCreateButton() {
 		ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
 		ImGui::Dummy(ImVec2(0, 1));
 
-		if (ImGui::Selectable("   Directional Light")) {
+		if (ImGui::Selectable("   Sun")) {
 
-			editor->scene.newDirectionalLight(editor->scene.rootTransform->id, "Directional_Light");
+			editor->scene.newDirectionalLight(editor->scene.rootTransform->id, "Sun");
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1392,7 +1409,7 @@ void EditorGUI::createFilesPanel() {
 	if (ImGui::TreeNode("MyProject"))
 	{
 		ImGui::Unindent(ImGui::GetStyle().IndentSpacing);
-		EditorGUI::createFoldersRecursively(editor->fileSystem.file);
+		EditorGUI::createFoldersRecursively(editor->fileSystem.rootFile);
 		ImGui::TreePop();
 	}
 

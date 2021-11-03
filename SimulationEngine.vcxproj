@@ -157,10 +157,10 @@
   <ItemGroup>
     <ClCompile Include="source\api\component.cpp" />
     <ClCompile Include="source\api\material.cpp" />
-    <ClCompile Include="source\api\mesh_renderer.cpp" />
+    <ClCompile Include="source\api\mesh.cpp" />
     <ClCompile Include="source\api\model.cpp" />
-    <ClCompile Include="source\api\scene.cpp" />
     <ClCompile Include="source\api\entity.cpp" />
+    <ClCompile Include="source\api\scene.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
     <ClCompile Include="source\api\utility.cpp" />
@@ -184,11 +184,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\api\component.hpp" />
-    <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\material.hpp" />
-    <ClInclude Include="source\api\mesh_renderer.hpp" />
+    <ClInclude Include="source\api\mesh.hpp" />
     <ClInclude Include="source\api\model.hpp" />
     <ClInclude Include="source\api\entity.hpp" />
+    <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
     <ClInclude Include="source\api\utility.hpp" />

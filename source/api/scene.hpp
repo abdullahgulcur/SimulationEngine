@@ -31,15 +31,14 @@ public:
 	std::string name;
 
 	Transform* rootTransform;
-	std::map<int, Entity> entities;
-	std::map<int, Transform> transforms;
+	std::vector<Entity> entities;
 	std::map<int, std::vector<int>> initialSceneGraph;
 
 	std::map<int, AnimationComponent> animationComponents;
 	std::map<int, AnimatorComponent> animatorComponents;
 	std::map<int, ColliderComponent> colliderComponents;
 	std::map<int, LightComponent> lightComponents;
-	std::map<int, MeshRendererComponent> meshRendererComponents;
+	std::vector<MeshRendererComponent> meshRendererComponents;
 	std::map<int, RigidBodyComponent> rigidBodyComponents;
 	std::map<int, ScriptComponent> scriptComponents;
 	std::map<int, TransformComponent> transformComponents;
@@ -61,7 +60,7 @@ public:
 
 	void loadEntities();
 
-	void loadTransforms();
+	void loadTransformAttributes();
 
 	void loadMeshRenderers();
 
@@ -73,9 +72,9 @@ public:
 
 	void moveEntity(int toBeMoved, int moveTo);
 
-	void deleteEntityFromTree(Transform* parent, int id);
+	void getTreeIndices(Transform* transform, std::vector<int>& indices);
 
-	void deleteEntityFromTreeAlternatively(Transform* transform, Transform* parent);
+	void deleteEntityFromTree(Transform* parent, int id);
 
 	void deleteEntityCompletely(int id);
 
@@ -103,7 +102,7 @@ public:
 
 	std::string getLightType(LightType type);
 
-	void saveTransforms();
+	void saveTransformAttributes();
 
 	void saveSceneGraph();
 

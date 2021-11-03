@@ -16,25 +16,25 @@ void Scene::initSceneGraph() {
 		rootTransform->id = 0;
 
 		Entity entitity;
-		entitity.setScene(this);
 		entitity.name = "Root";
 		entitity.transform = rootTransform;
-		entities[rootTransform->id] = entitity;
+		entities.push_back(entitity);
 
 		Scene::saveEditorProperties();
 	}
 	else {
 
 		Scene::loadEntities();
-		//Scene::loadTransforms();
-		//Scene::loadMeshRenderers();
+		Scene::loadMeshRenderers();
 		//Scene::loadLights();
 
-		Scene::generateSceneGraph(rootTransform);
-		//Scene::setTransformsOfComponents();
-		entities[rootTransform->id].transform = rootTransform;
+		entities[0].transform = rootTransform;
 
-		transforms.clear();
+		Scene::generateSceneGraph(rootTransform);
+
+		Scene::loadTransformAttributes();
+
+		entities[rootTransform->id].transform = rootTransform;
 	}
 }
 
@@ -45,10 +45,6 @@ void Scene::generateSceneGraph(Transform* parent) {
 		Transform* transform = new Transform;
 		transform->id = initialSceneGraph[parent->id][i];
 		transform->parent = parent;
-
-		transform->position = transforms[transform->id].position;
-		transform->rotation = transforms[transform->id].rotation;
-		transform->scale = transforms[transform->id].scale;
 
 		(parent->children).push_back(transform);
 
@@ -66,33 +62,33 @@ void Scene::start() {
 	glUseProgram(programID);
 }
 
-void Scene::update() {
+//void Scene::update() {
+//
+//	for (auto const& [key, val] : meshRendererComponents)
+//	{
+//		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
+//
+//		glm::mat4 view = editor->editorCamera.ViewMatrix;
+//		glm::mat4 model = glm::mat4(1.0);
+//		model = glm::translate(model, val.transform->position);
+//		glm::mat4 mvp = projection * view * model;
+//
+//		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+//
+//		glBindVertexArray(val.renderer->VAO);
+//		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
+//		glBindVertexArray(0);
+//	}
+//}
 
-	for (auto const& [key, val] : meshRendererComponents)
-	{
-		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
-
-		glm::mat4 view = editor->editorCamera.ViewMatrix;
-		glm::mat4 model = glm::mat4(1.0);
-		model = glm::translate(model, val.transform->position);
-		glm::mat4 mvp = projection * view * model;
-
-		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
-
-		glBindVertexArray(val.renderer->VAO);
-		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
-		glBindVertexArray(0);
-	}
-}
-
-void Scene::setTransformsOfComponents() {
-
-	for (auto const& [key, val] : meshRendererComponents)
-		meshRendererComponents[key].transform = entities[key].transform;
-
-	for (auto const& [key, val] : lightComponents)
-		lightComponents[key].transform = entities[key].transform;
-}
+//void Scene::setTransformsOfComponents() {
+//
+//	for (auto const& [key, val] : meshRendererComponents)
+//		meshRendererComponents[key].transform = entities[key].transform;
+//
+//	for (auto const& [key, val] : lightComponents)
+//		lightComponents[key].transform = entities[key].transform;
+//}
 
 bool Scene::readSceneGraph() {
 
@@ -135,16 +131,15 @@ void Scene::loadEntities() {
 	root_node = doc.first_node("Entities");
 
 	for (rapidxml::xml_node<>* entity_node = root_node->first_node("Entity"); entity_node; entity_node = entity_node->next_sibling()) {
-		Entity obj;
-		obj.setScene(this);
-		obj.name = entity_node->first_attribute("Name")->value();
-		entities[atoi(entity_node->first_attribute("ID")->value())] = obj;
+		Entity ent;
+		ent.name = entity_node->first_attribute("Name")->value();
+		entities.push_back(ent);
 	}
 }
 
-void Scene::loadTransforms() {
+void Scene::loadTransformAttributes() {
 
-	std::ifstream file("resource/backup/transform_db.xml");
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\transform_db.xml");
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
@@ -156,29 +151,28 @@ void Scene::loadTransforms() {
 
 	root_node = doc.first_node("Transforms");
 
+	int count = 0;
 	for (rapidxml::xml_node<>* transform_node = root_node->first_node("Transform"); transform_node; transform_node = transform_node->next_sibling()) {
-		
-		Transform transform;
 
-		transform.position.x = atof(transform_node->first_node("Position")->first_attribute("X")->value());
-		transform.position.y = atof(transform_node->first_node("Position")->first_attribute("Y")->value());
-		transform.position.z = atof(transform_node->first_node("Position")->first_attribute("Z")->value());
+		entities[count].transform->position.x = atof(transform_node->first_node("Position")->first_attribute("X")->value());
+		entities[count].transform->position.y = atof(transform_node->first_node("Position")->first_attribute("Y")->value());
+		entities[count].transform->position.z = atof(transform_node->first_node("Position")->first_attribute("Z")->value());
 
-		transform.rotation.x = atof(transform_node->first_node("Rotation")->first_attribute("X")->value());
-		transform.rotation.y = atof(transform_node->first_node("Rotation")->first_attribute("Y")->value());
-		transform.rotation.z = atof(transform_node->first_node("Rotation")->first_attribute("Z")->value());
+		entities[count].transform->rotation.x = atof(transform_node->first_node("Rotation")->first_attribute("X")->value());
+		entities[count].transform->rotation.y = atof(transform_node->first_node("Rotation")->first_attribute("Y")->value());
+		entities[count].transform->rotation.z = atof(transform_node->first_node("Rotation")->first_attribute("Z")->value());
 
-		transform.scale.x = atof(transform_node->first_node("Scale")->first_attribute("X")->value());
-		transform.scale.y = atof(transform_node->first_node("Scale")->first_attribute("Y")->value());
-		transform.scale.z = atof(transform_node->first_node("Scale")->first_attribute("Z")->value());
-		
-		transforms[atoi(transform_node->first_attribute("ID")->value())] = transform;
+		entities[count].transform->scale.x = atof(transform_node->first_node("Scale")->first_attribute("X")->value());
+		entities[count].transform->scale.y = atof(transform_node->first_node("Scale")->first_attribute("Y")->value());
+		entities[count].transform->scale.z = atof(transform_node->first_node("Scale")->first_attribute("Z")->value());
+
+		count++;
 	}
 }
 
 void Scene::loadMeshRenderers() {
 
-	std::ifstream file("resource/backup/meshrenderer_db.xml");
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\meshrenderer_db.xml");
 
 	if (file.fail())
 		return;
@@ -191,56 +185,65 @@ void Scene::loadMeshRenderers() {
 
 	doc.parse<0>(&buffer[0]);
 
-	root_node = doc.first_node("MeshRenderers");
+	root_node = doc.first_node("MeshRendererComponents");
 
-	for (rapidxml::xml_node<>* mesh_node = root_node->first_node("Mesh"); mesh_node; mesh_node = mesh_node->next_sibling()) {
+	for (rapidxml::xml_node<>* mesh_node = root_node->first_node("MeshRendererComponent"); mesh_node; mesh_node = mesh_node->next_sibling()) {
 
 		MeshRendererComponent comp;
-		comp.id = atoi(mesh_node->first_attribute("ID")->value());
-		comp.meshName = mesh_node->first_attribute("Name")->value();
-		meshRendererComponents[comp.id] = comp;
-		entities[comp.id].components.push_back(ComponentType::MeshRenderer);
+		comp.entID = atoi(mesh_node->first_attribute("ID")->value());
 
-		for (int i = 0; i < editor->fileSystem.meshes.size(); i++) {
+		bool found = false;
+		for (auto& it : editor->fileSystem.meshes) {
 
-			if (strcmp(comp.meshName.c_str(), editor->fileSystem.meshes[i].name.c_str()) == 0)
-				meshRendererComponents[comp.id].renderer = &editor->fileSystem.meshes[i];
+			if (strcmp(it.second.name.c_str(), mesh_node->first_attribute("Name")->value()) == 0) {
+
+				comp.VAO = it.second.VAO;
+				comp.indiceCount = it.second.indices.size();
+				found = true;
+				break;
+			}
 		}
+		if (!found) {
+			comp.VAO = editor->fileSystem.meshes[0].VAO;
+			comp.VAO = editor->fileSystem.meshes[0].indices.size();
+		}
+		meshRendererComponents.push_back(comp);
+		entities[comp.entID].components.push_back(ComponentType::MeshRenderer);
 	}
 }
 
-void Scene::loadLights() {
-
-	std::ifstream file("resource/backup/light_db.xml");
-
-	if (file.fail())
-		return;
-
-	rapidxml::xml_document<> doc;
-	rapidxml::xml_node<>* root_node = NULL;
-
-	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	buffer.push_back('\0');
-
-	doc.parse<0>(&buffer[0]);
-
-	root_node = doc.first_node("Lights");
-
-	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
-
-		LightComponent comp;
-		comp.id = atoi(light_node->first_attribute("ID")->value());
-		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
-		comp.power = atof(light_node->first_attribute("Power")->value());
-
-		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
-		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
-		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
-
-		lightComponents[comp.id] = comp;
-		entities[comp.id].components.push_back(ComponentType::Light);
-	}
-}
+//void Scene::loadLights() {
+//
+//	std::ifstream file("resource/backup/light_db.xml");
+//
+//	if (file.fail())
+//		return;
+//
+//	rapidxml::xml_document<> doc;
+//	rapidxml::xml_node<>* root_node = NULL;
+//
+//	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+//	buffer.push_back('\0');
+//
+//	doc.parse<0>(&buffer[0]);
+//
+//	root_node = doc.first_node("Lights");
+//
+//	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
+//
+//		LightComponent comp;
+//		comp.id = atoi(light_node->first_attribute("ID")->value());
+//		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
+//		comp.power = atof(light_node->first_attribute("Power")->value());
+//
+//		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
+//		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
+//		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
+//
+//		lightComponents[comp.id] = comp;
+//		entities[comp.id].components.push_back(ComponentType::Light);
+//	}
+//}
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {
 
@@ -277,6 +280,14 @@ void Scene::moveEntity(int toBeMoved, int moveTo) {
 	Scene::deleteEntityFromTree(oldParent, toBeMoved);
 }
 
+void Scene::getTreeIndices(Transform* transform, std::vector<int>& indices) {
+
+	for (int i = 0; i < transform->children.size(); i++)
+		getTreeIndices(transform->children[i], indices);
+
+	indices.push_back(transform->id);
+}
+
 void Scene::deleteEntityFromTree(Transform* parent, int id) {
 
 	for (int i = 0; i < parent->children.size(); i++) {
@@ -289,151 +300,149 @@ void Scene::deleteEntityFromTree(Transform* parent, int id) {
 	}
 }
 
-void Scene::deleteEntityFromTreeAlternatively(Transform* transform, Transform* parent) {
-
-	for (int i = 0; i < parent->children.size(); i++) {
-
-		if (parent->children[i] == transform) {
-
-			parent->children.erase(parent->children.begin() + i);
-			break;
-		}
-	}
-}
-
 void Scene::deleteEntityCompletely(int id) {
 
-	Transform* transform = entities[id].transform;
-	Transform* parent = transform->parent;
+	std::vector<int> indices;
+	Scene::getTreeIndices(entities[id].transform, indices);
+	std::sort(indices.begin(), indices.end(), std::greater<int>());
 
-	Scene::deleteEntityCompletelyRecursively(transform);
-	Scene::deleteEntityFromTreeAlternatively(transform, parent);
-}
+	Transform* parent = entities[id].transform->parent;
+	Scene::deleteEntityFromTree(parent, id);
 
-void Scene::deleteEntityCompletelyRecursively(Transform* transform) {
+	for (int i = 0; i < indices.size(); i++) {
 
-	for (int i = 0; i < transform->children.size(); i++) 
-		Scene::deleteEntityCompletelyRecursively(transform->children[i]);
-
-	for (int i = 0; i < entities[transform->id].components.size(); i++) {
-
-		switch (entities[transform->id].components[i]) {
-
-		case ComponentType::Light: {
-
-			lightComponents.erase(transform->id);
-			break;
-		}
-		case ComponentType::MeshRenderer: {
-
-			meshRendererComponents.erase(transform->id);
-			break;
-		}
-		}
+		delete entities[indices[i]].transform;
+		entities.erase(entities.begin() + indices[i]);
 	}
-	entities.erase(transform->id);
 
-	delete transform;	
+	for (int i = indices[indices.size() - 1]; i < entities.size(); i++)
+		entities[i].transform->id = i;
+
+	//Scene::deleteEntityCompletelyRecursively(transform);
+	//Scene::deleteEntityFromTreeAlternatively(transform, parent);
 }
+
+//void Scene::deleteEntityCompletelyRecursively(Transform* transform) {
+//
+//	for (int i = 0; i < transform->children.size(); i++) 
+//		Scene::deleteEntityCompletelyRecursively(transform->children[i]);
+//
+//	for (int i = 0; i < entities[transform->id].components.size(); i++) {
+//
+//		switch (entities[transform->id].components[i]) {
+//
+//		case ComponentType::Light: {
+//
+//			lightComponents.erase(transform->id);
+//			break;
+//		}
+//		case ComponentType::MeshRenderer: {
+//
+//			meshRendererComponents.erase(transform->id);
+//			break;
+//		}
+//		}
+//	}
+//	entities.erase(transform->id);
+//
+//	delete transform;	
+//}
 
 void Scene::duplicateEntity(int id) {
 
-	Transform* entity = new Transform;
-	entity->id = std::prev(entities.end())->first + 1;
-	entity->parent = entities[id].transform->parent;
-	(entity->parent->children).push_back(entity);
+	Transform* transform = new Transform;
+	transform->id = entities.size();
+	transform->parent = entities[id].transform->parent;
+	(transform->parent->children).push_back(transform);
 
-	Entity obj;
-	obj.setScene(this);
-	obj.name = entities[id].name + "_cpy";
-	obj.transform = entity;
-	entities[entity->id] = obj;
+	Entity ent;
+	ent.name = entities[id].name + "_cpy";
+	ent.transform = transform;
+	entities.push_back(ent);
 
-	for (int i = 0; i < entities[id].components.size(); i++) {
+	//for (int i = 0; i < entities[id].components.size(); i++) {
 
-		switch (entities[id].components[i]) {
+	//	switch (entities[id].components[i]) {
 
-		case ComponentType::Light: {
+	//	case ComponentType::Light: {
 
-			LightComponent comp = lightComponents[id];
-			comp.transform = entity;
-			comp.id = entity->id;
-			lightComponents[comp.id] = comp;
-			entities[entity->id].components.push_back(ComponentType::Light);
-			break;
-		}
-		case ComponentType::MeshRenderer: {
+	//		LightComponent comp = lightComponents[id];
+	//		comp.transform = entity;
+	//		comp.id = entity->id;
+	//		lightComponents[comp.id] = comp;
+	//		entities[entity->id].components.push_back(ComponentType::Light);
+	//		break;
+	//	}
+	//	case ComponentType::MeshRenderer: {
 
-			MeshRendererComponent comp = meshRendererComponents[id];
-			comp.transform = entity;
-			comp.id = entity->id;
-			meshRendererComponents[comp.id] = comp;
-			entities[entity->id].components.push_back(ComponentType::MeshRenderer);
-			break;
-		}	
-		}
-	}
+	//		MeshRendererComponent comp = meshRendererComponents[id];
+	//		comp.transform = entity;
+	//		comp.id = entity->id;
+	//		meshRendererComponents[comp.id] = comp;
+	//		entities[entity->id].components.push_back(ComponentType::MeshRenderer);
+	//		break;
+	//	}	
+	//	}
+	//}
 
-	cloneEntityRecursively(entities[id].transform, entity);
+	cloneEntityRecursively(entities[id].transform, transform);
 }
 
 void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 
 	for (int i = 0; i < base->children.size(); i++) {
 
-		Transform* entity = new Transform;
-		entity->id = std::prev(entities.end())->first + 1;
-		entity->parent = copied;
-		(entity->parent->children).push_back(entity);
+		Transform* transform = new Transform;
+		transform->id = entities.size();
+		transform->parent = copied;
+		(transform->parent->children).push_back(transform);
 
-		Entity obj;
-		obj.setScene(this);
-		obj.name = entities[base->children[i]->id].name;
-		obj.transform = entity;
-		entities[entity->id] = obj;
+		Entity ent;
+		ent.name = entities[base->children[i]->id].name;
+		ent.transform = transform;
+		entities.push_back(ent);
 
-		for (int j = 0; j < entities[base->children[i]->id].components.size(); j++) {
+		//for (int j = 0; j < entities[base->children[i]->id].components.size(); j++) {
 
-			switch (entities[base->children[i]->id].components[j]) {
+		//	switch (entities[base->children[i]->id].components[j]) {
 
-			case ComponentType::Light: {
+		//	case ComponentType::Light: {
 
-				LightComponent comp = lightComponents[base->children[i]->id];
-				comp.transform = entity;
-				comp.id = entity->id;
-				lightComponents[comp.id] = comp;
-				entities[entity->id].components.push_back(ComponentType::Light);
-				break;
-			}
-			case ComponentType::MeshRenderer: {
+		//		LightComponent comp = lightComponents[base->children[i]->id];
+		//		comp.transform = transform;
+		//		comp.id = transform->id;
+		//		lightComponents[comp.id] = comp;
+		//		entities[transform->id].components.push_back(ComponentType::Light);
+		//		break;
+		//	}
+		//	case ComponentType::MeshRenderer: {
 
-				MeshRendererComponent comp = meshRendererComponents[base->children[i]->id];
-				comp.transform = entity;
-				comp.id = entity->id;
-				meshRendererComponents[comp.id] = comp;
-				entities[entity->id].components.push_back(ComponentType::MeshRenderer);
-				break;
-			}
-			}
-		}
-		Scene::cloneEntityRecursively(base->children[i], entity);
+		//		MeshRendererComponent comp = meshRendererComponents[base->children[i]->id];
+		//		comp.transform = transform;
+		//		comp.id = transform->id;
+		//		meshRendererComponents[comp.id] = comp;
+		//		entities[transform->id].components.push_back(ComponentType::MeshRenderer);
+		//		break;
+		//	}
+		//	}
+		//}
+		Scene::cloneEntityRecursively(base->children[i], transform);
 	}
 }
 
 Transform* Scene::newEntity(int parentID, const char* name){
 
-	Transform* entity = new Transform;
-	entity->id = std::prev(entities.end())->first + 1;
-	entity->parent = entities[parentID].transform;
-	(entity->parent->children).push_back(entity);
+	Transform* transform = new Transform;
+	transform->id = entities.size();
+	transform->parent = entities[parentID].transform;
+	(transform->parent->children).push_back(transform);
 
-	Entity obj;
-	obj.setScene(this);
-	obj.name = name;
-	obj.transform = entity;
-	entities[entity->id] = obj;
+	Entity ent;
+	ent.name = name;
+	ent.transform = transform;
+	entities.push_back(ent);
 
-	return entity;
+	return transform;
 }
 
 void Scene::newPointLight(int parentID, const char* name) {
@@ -459,8 +468,8 @@ void Scene::saveEditorProperties() {
 
 	Scene::saveSceneGraph();
 	Scene::saveEntities();
-	//Scene::saveTransforms();
-	//Scene::saveMeshRenderers();
+	Scene::saveTransformAttributes();
+	Scene::saveMeshRenderers();
 	//Scene::saveLights();
 } 
 
@@ -474,23 +483,10 @@ void Scene::saveEntities() {
 
 	rapidxml::xml_node<>* entitiesNode = doc.allocate_node(rapidxml::node_element, "Entities");
 	doc.append_node(entitiesNode);
-	for (std::map<int, Entity>::iterator it = entities.begin(); it != entities.end(); ++it) {
-
-		// this if statement is useless, but risk is reduced...
-		if (it->second.transform == NULL)
-			continue;
+	for (Entity& ent: entities) {
 
 		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
-
-		std::string temp = std::to_string(it->second.transform->id);
-		const char* temp_val = doc.allocate_string(temp.c_str());
-
-		entity->append_attribute(doc.allocate_attribute("ID", temp_val));
-
-		temp_val = doc.allocate_string(it->second.name.c_str());
-
-		entity->append_attribute(doc.allocate_attribute("Name", temp_val));
-
+		entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(ent.name.c_str())));
 		entitiesNode->append_node(entity);
 	}
 
@@ -511,88 +507,91 @@ void Scene::saveMeshRenderers() {
 	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
 	doc.append_node(decl);
 
-	rapidxml::xml_node<>* meshRenderersNode = doc.allocate_node(rapidxml::node_element, "MeshRenderers");
+	rapidxml::xml_node<>* meshRenderersNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponents");
 	doc.append_node(meshRenderersNode);
-	for (std::map<int, MeshRendererComponent>::iterator it = meshRendererComponents.begin(); it != meshRendererComponents.end(); ++it) {
 
-		rapidxml::xml_node<>* meshNode = doc.allocate_node(rapidxml::node_element, "Mesh");
+	for (MeshRendererComponent& comp : editor->scene.meshRendererComponents) {
 
-		std::string temp_str = std::to_string(it->second.id);
-		const char* temp_val = doc.allocate_string(temp_str.c_str());
+		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponent");
 
-		meshNode->append_attribute(doc.allocate_attribute("ID", temp_val));
+		componentNode->append_attribute(doc.allocate_attribute("ID", doc.allocate_string(std::to_string(comp.entID).c_str())));
 
-		temp_val = doc.allocate_string(meshRendererComponents[it->second.id].meshName.c_str());
-		meshNode->append_attribute(doc.allocate_attribute("Name", temp_val));
+		for (auto& it : editor->fileSystem.meshes) {
 
-		meshRenderersNode->append_node(meshNode);
+			if (comp.VAO == it.second.VAO) {
+
+				componentNode->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(it.second.name.c_str())));
+				break;
+			}
+		}
+		meshRenderersNode->append_node(componentNode);
 	}
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/meshrenderer_db.xml");
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\meshrenderer_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
 }
 
-void Scene::saveLights() {
-
-	rapidxml::xml_document<> doc;
-	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
-	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
-	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
-	doc.append_node(decl);
-
-	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
-	doc.append_node(lightsNode);
-	for (std::map<int, LightComponent>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
-
-		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
-
-		std::string temp_str = std::to_string(it->second.id);
-		const char* temp_val = doc.allocate_string(temp_str.c_str());
-
-		lightNode->append_attribute(doc.allocate_attribute("ID", temp_val));
-
-		std::string type = Scene::getLightType(lightComponents[it->second.id].type);
-		temp_val = doc.allocate_string(type.c_str());
-
-		lightNode->append_attribute(doc.allocate_attribute("Type", temp_val));
-
-		temp_str = std::to_string(it->second.power);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		lightNode->append_attribute(doc.allocate_attribute("Power", temp_val));
-
-		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
-
-		temp_str = std::to_string(it->second.color.x);
-		temp_val = doc.allocate_string(temp_str.c_str());
-		colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
-
-		temp_str = std::to_string(it->second.color.y);
-		temp_val = doc.allocate_string(temp_str.c_str());
-		colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-
-		temp_str = std::to_string(it->second.color.z);
-		temp_val = doc.allocate_string(temp_str.c_str());
-		colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-
-		lightNode->append_node(colorNode);
-
-		lightsNode->append_node(lightNode);
-	}
-
-	std::string xml_as_string;
-	rapidxml::print(std::back_inserter(xml_as_string), doc);
-
-	std::ofstream file_stored("resource/backup/light_db.xml");
-	file_stored << doc;
-	file_stored.close();
-	doc.clear();
-}
+//void Scene::saveLights() {
+//
+//	rapidxml::xml_document<> doc;
+//	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+//	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+//	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+//	doc.append_node(decl);
+//
+//	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
+//	doc.append_node(lightsNode);
+//	for (std::map<int, LightComponent>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
+//
+//		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
+//
+//		std::string temp_str = std::to_string(it->second.id);
+//		const char* temp_val = doc.allocate_string(temp_str.c_str());
+//
+//		lightNode->append_attribute(doc.allocate_attribute("ID", temp_val));
+//
+//		std::string type = Scene::getLightType(lightComponents[it->second.id].type);
+//		temp_val = doc.allocate_string(type.c_str());
+//
+//		lightNode->append_attribute(doc.allocate_attribute("Type", temp_val));
+//
+//		temp_str = std::to_string(it->second.power);
+//		temp_val = doc.allocate_string(temp_str.c_str());
+//
+//		lightNode->append_attribute(doc.allocate_attribute("Power", temp_val));
+//
+//		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
+//
+//		temp_str = std::to_string(it->second.color.x);
+//		temp_val = doc.allocate_string(temp_str.c_str());
+//		colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
+//
+//		temp_str = std::to_string(it->second.color.y);
+//		temp_val = doc.allocate_string(temp_str.c_str());
+//		colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
+//
+//		temp_str = std::to_string(it->second.color.z);
+//		temp_val = doc.allocate_string(temp_str.c_str());
+//		colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
+//
+//		lightNode->append_node(colorNode);
+//
+//		lightsNode->append_node(lightNode);
+//	}
+//
+//	std::string xml_as_string;
+//	rapidxml::print(std::back_inserter(xml_as_string), doc);
+//
+//	std::ofstream file_stored("resource/backup/light_db.xml");
+//	file_stored << doc;
+//	file_stored.close();
+//	doc.clear();
+//}
 
 std::string Scene::getLightType(LightType type) {
 
@@ -605,7 +604,7 @@ std::string Scene::getLightType(LightType type) {
 	}
 }
 
-void Scene::saveTransforms() {
+void Scene::saveTransformAttributes() {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -615,88 +614,34 @@ void Scene::saveTransforms() {
 
 	rapidxml::xml_node<>* transformsNode = doc.allocate_node(rapidxml::node_element, "Transforms");
 	doc.append_node(transformsNode);
-	for (std::map<int, Entity>::iterator it = entities.begin(); it != entities.end(); ++it) {
-
-		// this if statement is useless, but risk is reduced...
-		if (it->second.transform == NULL)
-			continue;
+	for (Entity& ent: entities) {
 
 		rapidxml::xml_node<>* transformNode = doc.allocate_node(rapidxml::node_element, "Transform");
-
-		std::string temp_str = std::to_string(it->second.transform->id);
-		const char* temp_val = doc.allocate_string(temp_str.c_str());
-
-		transformNode->append_attribute(doc.allocate_attribute("ID", temp_val));
 		transformsNode->append_node(transformNode);
 
-		// Position
-
 		rapidxml::xml_node<>* positionNode = doc.allocate_node(rapidxml::node_element, "Position");
-
-		temp_str = std::to_string(it->second.transform->position.x);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		positionNode->append_attribute(doc.allocate_attribute("X", temp_val));
-
-		temp_str = std::to_string(it->second.transform->position.y);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		positionNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-
-		temp_str = std::to_string(it->second.transform->position.z);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		positionNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-
+		positionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->position.x).c_str())));
+		positionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->position.y).c_str())));
+		positionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->position.z).c_str())));
 		transformNode->append_node(positionNode);
 
-		// Rotation
-
 		rapidxml::xml_node<>* rotationNode = doc.allocate_node(rapidxml::node_element, "Rotation");
-
-		temp_str = std::to_string(it->second.transform->rotation.x);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		rotationNode->append_attribute(doc.allocate_attribute("X", temp_val));
-
-		temp_str = std::to_string(it->second.transform->rotation.y);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		rotationNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-
-		temp_str = std::to_string(it->second.transform->rotation.z);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		rotationNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-
+		rotationNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->rotation.x).c_str())));
+		rotationNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->rotation.y).c_str())));
+		rotationNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->rotation.z).c_str())));
 		transformNode->append_node(rotationNode);
 
-		// Scale
-
 		rapidxml::xml_node<>* scaleNode = doc.allocate_node(rapidxml::node_element, "Scale");
-
-		temp_str = std::to_string(it->second.transform->scale.x);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		scaleNode->append_attribute(doc.allocate_attribute("X", temp_val));
-
-		temp_str = std::to_string(it->second.transform->scale.y);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		scaleNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-
-		temp_str = std::to_string(it->second.transform->scale.z);
-		temp_val = doc.allocate_string(temp_str.c_str());
-
-		scaleNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-
+		scaleNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->scale.x).c_str())));
+		scaleNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->scale.y).c_str())));
+		scaleNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->scale.z).c_str())));
 		transformNode->append_node(scaleNode);
 	}
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored("resource/backup/transform_db.xml");
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\transform_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();

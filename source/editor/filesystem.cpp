@@ -14,13 +14,13 @@ void FileSystem::initFileSystem() {
 	FileSystem::loadDefaultAssets();
 	FileSystem::initEditorTextures();
 
-	file = new File;
-	file->id = files.size();
-	file->parent = NULL;
+	rootFile = new File;
+	rootFile->id = files.size();
+	rootFile->parent = NULL;
 
 	FileNode fileNode;
 
-	fileNode.addr = file;
+	fileNode.addr = rootFile;
 	fileNode.path = assetsPathExternal + "\\MyProject";
 	fileNode.name = "MyProject";
 	fileNode.extension = "";
@@ -28,7 +28,7 @@ void FileSystem::initFileSystem() {
 	fileNode.textureID = editorTextures.folderBigTextureID;
 	files.push_back(fileNode);
 
-	FileSystem::generateFileStructure(file);
+	FileSystem::generateFileStructure(rootFile);
 
 	FileSystem::loadTextureIDsOfMaterials();
 }
@@ -653,8 +653,8 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 		Model model;
 		model.loadModel(fileNode.path.c_str());
 
-		for (MeshRenderer renderer : model.meshes)
-			meshes.push_back(renderer);
+		for (Mesh mesh : model.meshes)
+			meshes.insert({ mesh.VAO, mesh});
 
 		fileNode.textureID = editorTextures.objectBigTextureID;
 		break;
@@ -736,7 +736,7 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
 void FileSystem::loadDefaultAssets() {
 
-	meshes.push_back(MeshRenderer());
+	meshes.insert({ 0, Mesh() });
 
 	Material mat;
 	materials.insert({ "Default", mat });

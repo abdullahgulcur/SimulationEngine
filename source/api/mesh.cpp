@@ -1,24 +1,20 @@
-#include "api/mesh_renderer.hpp"
+#include "mesh.hpp"
 
-MeshRenderer::MeshRenderer() {
+Mesh::Mesh() {
 
-    name = "null";
-    MeshRenderer::initEmtyBuffers();
+    name = "Null";
+    Mesh::initEmtyBuffers();
 }
 
-MeshRenderer::MeshRenderer(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
 
     this->vertices = vertices;
     this->indices = indices;
     this->name = name;
-
-    if (vertices.size() != 0)
-        MeshRenderer::initBuffers();
-    else
-        MeshRenderer::initEmtyBuffers();
+    Mesh::initBuffers();
 }
 
-void MeshRenderer::initBuffers() {
+void Mesh::initBuffers() {
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -55,7 +51,7 @@ void MeshRenderer::initBuffers() {
     glBindVertexArray(0);
 }
 
-void MeshRenderer::initEmtyBuffers() {
+void Mesh::initEmtyBuffers() {
 
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);

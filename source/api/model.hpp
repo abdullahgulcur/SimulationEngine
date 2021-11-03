@@ -4,7 +4,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "mesh_renderer.hpp"
+#include "mesh.hpp"
 
 #include <string>
 #include <iostream>
@@ -15,7 +15,7 @@ private:
 
 public:
 
-	std::vector<MeshRenderer> meshes;
+	std::vector<Mesh> meshes;
 
 	Model();
 
@@ -23,6 +23,6 @@ public:
 
 	void processNode(aiNode* node, const aiScene* scene);
 
-	MeshRenderer processMesh(aiMesh* mesh, const aiScene* scene);
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
 
 };

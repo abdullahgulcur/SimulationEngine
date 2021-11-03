@@ -14,46 +14,13 @@ private:
 
 public:
 
-	Scene* scene;
-	Editor* editor;
 	std::string name;
 	Transform* transform;
 	std::vector<ComponentType> components;
 
 	Entity();
 
-	void setScene(Scene* scene);
-
-	/*
-	* Add Components
-	*/
-
-	void addAnimationComponent();
-
-	void addAnimatorComponent();
-
-	void addColliderComponent();
+	void addMeshRendererComponent(Mesh& mesh, std::vector<MeshRendererComponent>& m_rendererComponents);
 
 	void addLightComponent();
-
-	void addMeshRendererComponent();
-
-	void addRigidBodyComponent();
-
-	void addScriptComponent();
-
-	/*
-	* Remove Components
-	*/
-
-	void removeComponent(ComponentType type);
-
-	/*
-	* Update Components
-	*/
-
-	void updateLightComponent();
-
-	void updateMeshRendererComponent(MeshRenderer* renderer);
-
 };
