@@ -124,11 +124,11 @@ public:
 
 	void showTransformComponent();
 
-	void showMeshRendererComponent();
+	void showMeshRendererComponent(MeshRenderer& m_renderer);
 
 	void showLightComponent();
 
-	void showMaterialProperties();
+	void showMaterialProperties(Material& material);
 
 	void textureMenuPopup(Material& material, TextureType type, bool& flag);
 

@@ -14,6 +14,7 @@ class Material {
 
 public:
 
+	int fileID;
 	std::string name;
 
 	MaterialType type;

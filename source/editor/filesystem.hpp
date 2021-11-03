@@ -119,7 +119,7 @@ public:
 
 	void readMaterialFile(std::string path, Material& mat);
 
-	void writeMaterialFile(std::string path, Material mat);
+	void writeMaterialFile(std::string path, Material& mat);
 
 	void rename(int id, const char* newName);
 

@@ -25,7 +25,7 @@ void Scene::initSceneGraph() {
 
 		Scene::loadEntities();
 		Scene::loadMeshRenderers();
-		//Scene::loadLights();
+		Scene::loadLights();
 
 		entities[0].transform = rootTransform;
 
@@ -81,15 +81,6 @@ void Scene::start() {
 //		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
 //		glBindVertexArray(0);
 //	}
-//}
-
-//void Scene::setTransformsOfComponents() {
-//
-//	for (auto const& [key, val] : meshRendererComponents)
-//		meshRendererComponents[key].transform = entities[key].transform;
-//
-//	for (auto const& [key, val] : lightComponents)
-//		lightComponents[key].transform = entities[key].transform;
 //}
 
 bool Scene::readSceneGraph() {
@@ -211,38 +202,38 @@ void Scene::loadMeshRenderers() {
 	}
 }
 
-//void Scene::loadLights() {
-//
-//	std::ifstream file("resource/backup/light_db.xml");
-//
-//	if (file.fail())
-//		return;
-//
-//	rapidxml::xml_document<> doc;
-//	rapidxml::xml_node<>* root_node = NULL;
-//
-//	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-//	buffer.push_back('\0');
-//
-//	doc.parse<0>(&buffer[0]);
-//
-//	root_node = doc.first_node("Lights");
-//
-//	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
-//
-//		LightComponent comp;
-//		comp.id = atoi(light_node->first_attribute("ID")->value());
-//		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
-//		comp.power = atof(light_node->first_attribute("Power")->value());
-//
-//		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
-//		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
-//		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
-//
-//		lightComponents[comp.id] = comp;
-//		entities[comp.id].components.push_back(ComponentType::Light);
-//	}
-//}
+void Scene::loadLights() {
+
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\light_db.xml");
+
+	if (file.fail())
+		return;
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("Lights");
+
+	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
+
+		Light comp;
+		comp.entID = atoi(light_node->first_attribute("EntID")->value());
+		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
+		comp.power = atof(light_node->first_attribute("Power")->value());
+
+		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
+		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
+		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
+
+		lightComponents[comp.entID] = comp;
+		entities[comp.entID].components.push_back(ComponentType::Light);
+	}
+}
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {
 
@@ -444,19 +435,19 @@ Transform* Scene::newEntity(int parentID, const char* name){
 	return transform;
 }
 
-//void Scene::newPointLight(int parentID, const char* name) {
-//
-//	Transform* entity = Scene::newEntity(parentID, name);
-//	entities[entity->id].addLightComponent();
-//	lightComponents[entity->id].type = LightType::PointLight;
-//}
+void Scene::newPointLight(int parentID, const char* name) {
 
-//void Scene::newDirectionalLight(int parentID, const char* name) {
-//
-//	Transform* entity = Scene::newEntity(parentID, name);
-//	entities[entity->id].addLightComponent();
-//	lightComponents[entity->id].type = LightType::DirectionalLight;
-//}
+	Transform* entity = Scene::newEntity(parentID, name);
+	entities[entity->id].addLightComponent(lightComponents);
+	lightComponents[entity->id].type = LightType::PointLight;
+}
+
+void Scene::newDirectionalLight(int parentID, const char* name) {
+
+	Transform* entity = Scene::newEntity(parentID, name);
+	entities[entity->id].addLightComponent(lightComponents);
+	lightComponents[entity->id].type = LightType::DirectionalLight;
+}
 
 void Scene::renameEntity(int id, const char* newName) {
 
@@ -469,7 +460,7 @@ void Scene::saveEditorProperties() {
 	Scene::saveEntities();
 	Scene::saveTransformAttributes();
 	Scene::saveMeshRenderers();
-	//Scene::saveLights();
+	Scene::saveLights();
 } 
 
 void Scene::saveEntities() {
@@ -527,62 +518,40 @@ void Scene::saveMeshRenderers() {
 	doc.clear();
 }
 
-//void Scene::saveLights() {
-//
-//	rapidxml::xml_document<> doc;
-//	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
-//	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
-//	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
-//	doc.append_node(decl);
-//
-//	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
-//	doc.append_node(lightsNode);
-//	for (std::map<int, LightComponent>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
-//
-//		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
-//
-//		std::string temp_str = std::to_string(it->second.id);
-//		const char* temp_val = doc.allocate_string(temp_str.c_str());
-//
-//		lightNode->append_attribute(doc.allocate_attribute("ID", temp_val));
-//
-//		std::string type = Scene::getLightType(lightComponents[it->second.id].type);
-//		temp_val = doc.allocate_string(type.c_str());
-//
-//		lightNode->append_attribute(doc.allocate_attribute("Type", temp_val));
-//
-//		temp_str = std::to_string(it->second.power);
-//		temp_val = doc.allocate_string(temp_str.c_str());
-//
-//		lightNode->append_attribute(doc.allocate_attribute("Power", temp_val));
-//
-//		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
-//
-//		temp_str = std::to_string(it->second.color.x);
-//		temp_val = doc.allocate_string(temp_str.c_str());
-//		colorNode->append_attribute(doc.allocate_attribute("X", temp_val));
-//
-//		temp_str = std::to_string(it->second.color.y);
-//		temp_val = doc.allocate_string(temp_str.c_str());
-//		colorNode->append_attribute(doc.allocate_attribute("Y", temp_val));
-//
-//		temp_str = std::to_string(it->second.color.z);
-//		temp_val = doc.allocate_string(temp_str.c_str());
-//		colorNode->append_attribute(doc.allocate_attribute("Z", temp_val));
-//
-//		lightNode->append_node(colorNode);
-//
-//		lightsNode->append_node(lightNode);
-//	}
-//
-//	std::string xml_as_string;
-//	rapidxml::print(std::back_inserter(xml_as_string), doc);
-//
-//	std::ofstream file_stored("resource/backup/light_db.xml");
-//	file_stored << doc;
-//	file_stored.close();
-//	doc.clear();
-//}
+void Scene::saveLights() {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
+	doc.append_node(lightsNode);
+	for (std::unordered_map<unsigned int, Light>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
+
+		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
+		lightNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it->second.entID).c_str())));
+		lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(Scene::getLightType(lightComponents[it->second.entID].type).c_str())));
+		lightNode->append_attribute(doc.allocate_attribute("Power", doc.allocate_string(std::to_string(it->second.power).c_str())));
+
+		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
+		colorNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(it->second.color.x).c_str())));
+		colorNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(it->second.color.y).c_str())));
+		colorNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(it->second.color.z).c_str())));
+		lightNode->append_node(colorNode);
+
+		lightsNode->append_node(lightNode);
+	}
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\light_db.xml");
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+}
 
 std::string Scene::getLightType(LightType type) {
 

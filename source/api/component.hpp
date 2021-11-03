@@ -6,7 +6,7 @@
 
 enum class ComponentType{Light, MeshRenderer, RigidBody, Collider, Transform, Script, Animation, Animator};
 
-enum LightType{ PointLight, DirectionalLight };
+
 
 struct AnimationComponent {
 
@@ -23,13 +23,13 @@ struct ColliderComponent {
 	int entID;
 };
 
-struct LightComponent {
-
-	int entID;
-	LightType type;
-	float power;
-	glm::vec3 color;
-};
+//struct LightComponent {
+//
+//	int entID;
+//	LightType type;
+//	float power;
+//	glm::vec3 color;
+//};
 
 struct MeshRendererComponent {
 

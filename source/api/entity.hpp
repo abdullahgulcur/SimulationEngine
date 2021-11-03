@@ -6,6 +6,8 @@
 #include "transform.hpp"
 #include "component.hpp"
 #include "meshrenderer.hpp"
+#include "light.hpp"
+
 
 class Entity {
 
@@ -21,5 +23,5 @@ public:
 
 	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_map<unsigned int, MeshRenderer>& m_rendererComponents);
 
-	void addLightComponent();
+	void addLightComponent(std::unordered_map<unsigned int, Light>& lightComponents);
 };

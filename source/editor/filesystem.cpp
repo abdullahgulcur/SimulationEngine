@@ -464,7 +464,7 @@ void FileSystem::readMaterialFile(std::string path, Material& mat) {
 	mat.albedoColor.z = atof(root_node->first_node("AlbedoColor")->first_attribute("Z")->value());
 }
 
-void FileSystem::writeMaterialFile(std::string path, Material mat) {
+void FileSystem::writeMaterialFile(std::string path, Material& mat) {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -706,6 +706,7 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 		fileNode.textureID = editorTextures.materialTextureID;
 
 		Material mat;
+		mat.fileID = fileNode.addr->id;
 		readMaterialFile(fileNode.path, mat);
 		//std::string relativePath = fileNode.path;
 		//relativePath.erase(0, assetsPathExternal.length());
