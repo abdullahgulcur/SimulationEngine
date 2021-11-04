@@ -64,24 +64,24 @@ void Scene::start() {
 	glUseProgram(programID);
 }
 
-//void Scene::update() {
-//
-//	for (auto const& [key, val] : meshRendererComponents)
-//	{
-//		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
-//
-//		glm::mat4 view = editor->editorCamera.ViewMatrix;
-//		glm::mat4 model = glm::mat4(1.0);
-//		model = glm::translate(model, val.transform->position);
-//		glm::mat4 mvp = projection * view * model;
-//
-//		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
-//
-//		glBindVertexArray(val.renderer->VAO);
-//		glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
-//		glBindVertexArray(0);
-//	}
-//}
+void Scene::update() {
+
+	//for (auto const& [key, val] : meshRendererComponents)
+	//{
+	//	glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
+
+	//	glm::mat4 view = editor->editorCamera.ViewMatrix;
+	//	glm::mat4 model = glm::mat4(1.0);
+	//	model = glm::translate(model, val.transform->position);
+	//	glm::mat4 mvp = projection * view * model;
+
+	//	glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+	//	glBindVertexArray(val.renderer->VAO);
+	//	glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
+	//	glBindVertexArray(0);
+	//}
+}
 
 bool Scene::readSceneGraph() {
 
@@ -301,42 +301,30 @@ void Scene::deleteEntityCompletely(int id) {
 
 	for (int i = 0; i < indices.size(); i++) {
 
+		for (int j = 0; j < entities[indices[i]].components.size(); j++) {
+
+			switch (entities[indices[i]].components[j]) {
+
+			case ComponentType::Light: {
+
+				lightComponents.erase(indices[i]);
+				break;
+			}
+			case ComponentType::MeshRenderer: {
+
+				meshRendererComponents.erase(indices[i]);
+				break;
+			}
+			}
+		}
+
 		delete entities[indices[i]].transform;
 		entities.erase(entities.begin() + indices[i]);
 	}
 
 	for (int i = indices[indices.size() - 1]; i < entities.size(); i++)
 		entities[i].transform->id = i;
-
-	//Scene::deleteEntityCompletelyRecursively(transform);
-	//Scene::deleteEntityFromTreeAlternatively(transform, parent);
 }
-
-//void Scene::deleteEntityCompletelyRecursively(Transform* transform) {
-//
-//	for (int i = 0; i < transform->children.size(); i++) 
-//		Scene::deleteEntityCompletelyRecursively(transform->children[i]);
-//
-//	for (int i = 0; i < entities[transform->id].components.size(); i++) {
-//
-//		switch (entities[transform->id].components[i]) {
-//
-//		case ComponentType::Light: {
-//
-//			lightComponents.erase(transform->id);
-//			break;
-//		}
-//		case ComponentType::MeshRenderer: {
-//
-//			meshRendererComponents.erase(transform->id);
-//			break;
-//		}
-//		}
-//	}
-//	entities.erase(transform->id);
-//
-//	delete transform;	
-//}
 
 void Scene::duplicateEntity(int id) {
 
@@ -350,30 +338,7 @@ void Scene::duplicateEntity(int id) {
 	ent.transform = transform;
 	entities.push_back(ent);
 
-	//for (int i = 0; i < entities[id].components.size(); i++) {
-
-	//	switch (entities[id].components[i]) {
-
-	//	case ComponentType::Light: {
-
-	//		LightComponent comp = lightComponents[id];
-	//		comp.transform = entity;
-	//		comp.id = entity->id;
-	//		lightComponents[comp.id] = comp;
-	//		entities[entity->id].components.push_back(ComponentType::Light);
-	//		break;
-	//	}
-	//	case ComponentType::MeshRenderer: {
-
-	//		MeshRendererComponent comp = meshRendererComponents[id];
-	//		comp.transform = entity;
-	//		comp.id = entity->id;
-	//		meshRendererComponents[comp.id] = comp;
-	//		entities[entity->id].components.push_back(ComponentType::MeshRenderer);
-	//		break;
-	//	}	
-	//	}
-	//}
+	Scene::cloneComponents(id, transform->id);
 
 	cloneEntityRecursively(entities[id].transform, transform);
 }
@@ -392,31 +357,35 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 		ent.transform = transform;
 		entities.push_back(ent);
 
-		//for (int j = 0; j < entities[base->children[i]->id].components.size(); j++) {
+		Scene::cloneComponents(base->children[i]->id, transform->id);
 
-		//	switch (entities[base->children[i]->id].components[j]) {
-
-		//	case ComponentType::Light: {
-
-		//		LightComponent comp = lightComponents[base->children[i]->id];
-		//		comp.transform = transform;
-		//		comp.id = transform->id;
-		//		lightComponents[comp.id] = comp;
-		//		entities[transform->id].components.push_back(ComponentType::Light);
-		//		break;
-		//	}
-		//	case ComponentType::MeshRenderer: {
-
-		//		MeshRendererComponent comp = meshRendererComponents[base->children[i]->id];
-		//		comp.transform = transform;
-		//		comp.id = transform->id;
-		//		meshRendererComponents[comp.id] = comp;
-		//		entities[transform->id].components.push_back(ComponentType::MeshRenderer);
-		//		break;
-		//	}
-		//	}
-		//}
 		Scene::cloneEntityRecursively(base->children[i], transform);
+	}
+}
+
+void Scene::cloneComponents(int base, int entID) {
+
+	for (int i = 0; i < entities[base].components.size(); i++) {
+
+		switch (entities[base].components[i]) {
+
+		case ComponentType::Light: {
+
+			Light comp = lightComponents[base];
+			comp.entID = entID;
+			lightComponents[comp.entID] = comp;
+			entities[entID].components.push_back(ComponentType::Light);
+			break;
+		}
+		case ComponentType::MeshRenderer: {
+
+			MeshRenderer comp = meshRendererComponents[base];
+			comp.entID = entID;
+			meshRendererComponents[comp.entID] = comp;
+			entities[entID].components.push_back(ComponentType::MeshRenderer);
+			break;
+		}
+		}
 	}
 }
 

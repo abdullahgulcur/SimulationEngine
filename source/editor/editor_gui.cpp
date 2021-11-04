@@ -1075,13 +1075,13 @@ bool EditorGUI::contextMenuPopup(ComponentType type) {
 
 		if (ImGui::Selectable("   Remove")) {
 
-			/*if(type != ComponentType::Transform)
-				editor->scene.entities[lastSelectedEntityID].removeComponent(type);
+			if(type != ComponentType::Transform)
+				editor->scene.entities[lastSelectedEntityID].removeComponent(type, &editor->scene);
 
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
 
-			return true;*/
+			return true;
 		}
 
 		ImGui::PopStyleColor();

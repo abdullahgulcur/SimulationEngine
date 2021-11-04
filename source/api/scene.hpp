@@ -89,6 +89,8 @@ public:
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
 
+	void cloneComponents(int base, int entID);
+
 	Transform* newEntity(int parentID, const char* name);
 
 	void newPointLight(int parentID, const char* name);
