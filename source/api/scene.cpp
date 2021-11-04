@@ -58,29 +58,74 @@ void Scene::generateSceneGraph(Transform* parent) {
 
 void Scene::start() {
 
-	Material mat;
-	programID = mat.LoadShaders("source/shader/tri.vs", "source/shader/tri.fs");
-	mvpMatrixID = glGetUniformLocation(programID, "MVP");
-	glUseProgram(programID);
 }
 
 void Scene::update() {
 
-	//for (auto const& [key, val] : meshRendererComponents)
-	//{
-	//	glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
+	for (auto const& [key, val] : meshRendererComponents)
+	{
+		glUseProgram(val.mat->programID);
 
-	//	glm::mat4 view = editor->editorCamera.ViewMatrix;
-	//	glm::mat4 model = glm::mat4(1.0);
-	//	model = glm::translate(model, val.transform->position);
-	//	glm::mat4 mvp = projection * view * model;
+		glm::vec3 camPos = editor->editorCamera.position;
+		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
+		glm::mat4 view = editor->editorCamera.ViewMatrix;
+		glm::mat4 model = glm::mat4(1.0);
+		glm::vec3 position = entities[val.entID].transform->position;
+		model = glm::translate(model, position);
 
-	//	glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &model[0][0]);
+		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &view[0][0]);
+		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &projection[0][0]);
+		glUniform3fv(val.mat->camPosID, 1, &camPos[0]); // check
 
-	//	glBindVertexArray(val.renderer->VAO);
-	//	glDrawElements(GL_TRIANGLES, val.renderer->indices.size(), GL_UNSIGNED_INT, (void*)0);
-	//	glBindVertexArray(0);
-	//}
+		glUniform1f(val.mat->metallicAmountID, val.mat->metallicAmount);
+		glUniform1f(val.mat->roughnessAmountID, val.mat->roughnessAmount);
+		glUniform1f(val.mat->aoAmountID, val.mat->aoAmount);
+
+		if (val.mat->useAlbedo) {
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, val.mat->albedoTexture);
+			glUniform1i(val.mat->albedoTextureID, 0);
+		}
+		else {
+
+			glUniform3fv(val.mat->albedoColorID, 1, &val.mat->albedoColor[0]);
+		}
+
+		if (val.mat->useNormal) {
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, val.mat->normalTexture);
+			glUniform1i(val.mat->normalTextureID, 1);
+			glUniform1f(val.mat->normalAmountID, val.mat->normalAmount);
+		}
+
+		if (val.mat->useMetallic) {
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, val.mat->metallicTexture);
+			glUniform1i(val.mat->metallicTextureID, 2);
+		}
+
+		if (val.mat->useRoughness) {
+
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, val.mat->roughnessTexture);
+			glUniform1i(val.mat->roughnessTextureID, 3);
+		}
+
+		if (val.mat->useAO) {
+
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, val.mat->aoTexture);
+			glUniform1i(val.mat->aoTextureID, 4);
+		}
+
+		glBindVertexArray(val.mesh->VAO);
+		glDrawElements(GL_TRIANGLES, val.mesh->indices.size(), GL_UNSIGNED_INT, (void*)0);
+		glBindVertexArray(0);
+	}
 }
 
 bool Scene::readSceneGraph() {

@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-class EditorCamera {
+class Camera {
 
 private:
 
@@ -43,9 +43,9 @@ public:
 	GLFWwindow* window;
 	const GLFWvidmode* mode;
 
-	EditorCamera();
+	Camera();
 
-	EditorCamera(GLFWwindow* window, const GLFWvidmode* mode);
+	Camera(GLFWwindow* window, const GLFWvidmode* mode);
 
 	void setWindow(GLFWwindow* window);
 

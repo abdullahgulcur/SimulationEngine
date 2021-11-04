@@ -1,14 +1,14 @@
-#include "editor_camera.hpp"
+#include "camera.hpp"
 
-int EditorCamera::count;
-bool EditorCamera::leftClicked;
-bool EditorCamera::middleClicked;
-bool EditorCamera::rightClicked;
-float EditorCamera::deltaX;
-float EditorCamera::deltaY;
-float EditorCamera::scrollYOffset;
+int Camera::count;
+bool Camera::leftClicked;
+bool Camera::middleClicked;
+bool Camera::rightClicked;
+float Camera::deltaX;
+float Camera::deltaY;
+float Camera::scrollYOffset;
 
-EditorCamera::EditorCamera()
+Camera::Camera()
 {
 	horizontalRotationSpeed *= generalSpeed;
 	verticalRotationSpeed *= generalSpeed;
@@ -19,7 +19,7 @@ EditorCamera::EditorCamera()
 	setAspectRatio(1920, 1080);
 }
 
-EditorCamera::EditorCamera(GLFWwindow* window, const GLFWvidmode* mode)
+Camera::Camera(GLFWwindow* window, const GLFWvidmode* mode)
 {
 	this->window = window;
 	this->mode = mode;
@@ -28,19 +28,19 @@ EditorCamera::EditorCamera(GLFWwindow* window, const GLFWvidmode* mode)
 	setAspectRatio(1920, 1080);
 }
 
-void EditorCamera::setWindow(GLFWwindow* window) {
+void Camera::setWindow(GLFWwindow* window) {
 
 	this->window = window;
 }
 
-void EditorCamera::setMode(const GLFWvidmode* mode) {
+void Camera::setMode(const GLFWvidmode* mode) {
 
 	this->mode = mode;
 
 	setBoundaries();
 }
 
-void EditorCamera::setBoundaries() {
+void Camera::setBoundaries() {
 
 	sceneStartPosX = 0;
 	sceneStartPosY = 0;
@@ -48,54 +48,54 @@ void EditorCamera::setBoundaries() {
 	sceneEndPosY = mode->height;
 }
 
-void EditorCamera::setAspectRatio(float width, float height) {
+void Camera::setAspectRatio(float width, float height) {
 
 	aspectRatio = width / height;
 }
 
-void EditorCamera::mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+void Camera::mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-		EditorCamera::leftClicked = true;
+		Camera::leftClicked = true;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-		EditorCamera::rightClicked = true;
+		Camera::rightClicked = true;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS) {
-		EditorCamera::middleClicked = true;
+		Camera::middleClicked = true;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-		EditorCamera::count = 0;
-		EditorCamera::leftClicked = false;
+		Camera::count = 0;
+		Camera::leftClicked = false;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
-		EditorCamera::count = 0;
-		EditorCamera::rightClicked = false;
+		Camera::count = 0;
+		Camera::rightClicked = false;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE) {
-		EditorCamera::count = 0;
-		EditorCamera::middleClicked = false;
+		Camera::count = 0;
+		Camera::middleClicked = false;
 	}
 
 }
 
-void EditorCamera::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void Camera::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 
 }
 
-void EditorCamera::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+void Camera::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	EditorCamera::scrollYOffset = yoffset;
+	Camera::scrollYOffset = yoffset;
 }
 
-void EditorCamera::computeMatricesFromInputs() {
+void Camera::computeMatricesFromInputs() {
 
 	// glfwGetTime is called only once, the first time this function is called
 	static double lastTime = glfwGetTime();
@@ -112,12 +112,12 @@ void EditorCamera::computeMatricesFromInputs() {
 
 	glfwGetCursorPos(window, &xpos, &ypos);
 
-	EditorCamera::deltaX = xpos - lastX;
-	EditorCamera::deltaY = ypos - lastY;
+	Camera::deltaX = xpos - lastX;
+	Camera::deltaY = ypos - lastY;
 
 	static bool allowed = true;
 
-	if (EditorCamera::rightClicked) {
+	if (Camera::rightClicked) {
 
 		if (count == 0) {
 
@@ -142,10 +142,10 @@ void EditorCamera::computeMatricesFromInputs() {
 				glfwSetCursorPos(window, xpos, sceneEndPosY - 36);
 			}
 
-			horizontalAngle -= horizontalRotationSpeed * EditorCamera::deltaX;
-			verticalAngle -= verticalRotationSpeed * EditorCamera::deltaY;
+			horizontalAngle -= horizontalRotationSpeed * Camera::deltaX;
+			verticalAngle -= verticalRotationSpeed * Camera::deltaY;
 		}
-		EditorCamera::count++;
+		Camera::count++;
 	}
 
 	// Direction : Spherical coordinates to Cartesian coordinates conversion
@@ -155,8 +155,8 @@ void EditorCamera::computeMatricesFromInputs() {
 		cos(verticalAngle) * cos(horizontalAngle)
 	);
 
-	position += direction * EditorCamera::scrollYOffset * scrollSpeed;
-	EditorCamera::scrollYOffset = 0;
+	position += direction * Camera::scrollYOffset * scrollSpeed;
+	Camera::scrollYOffset = 0;
 
 	// Right vector
 	glm::vec3 right = glm::vec3(
@@ -168,9 +168,9 @@ void EditorCamera::computeMatricesFromInputs() {
 	// Up vector
 	glm::vec3 up = glm::cross(right, direction);
 
-	if (EditorCamera::middleClicked) {
+	if (Camera::middleClicked) {
 
-		if (EditorCamera::count == 0) {
+		if (Camera::count == 0) {
 
 			if (xpos < sceneEndPosX + 1 && xpos > sceneStartPosX - 1 && ypos < sceneEndPosY + 1 && ypos > sceneStartPosY - 1)
 				allowed = true;
@@ -194,13 +194,13 @@ void EditorCamera::computeMatricesFromInputs() {
 			}
 
 			// Horizontal movement
-			position -= right * EditorCamera::deltaX * deltaTime * horizontalTranslationSpeed;
+			position -= right * Camera::deltaX * deltaTime * horizontalTranslationSpeed;
 
 			// Vertical movement
-			position += up * EditorCamera::deltaY * deltaTime * verticalTranslationSpeed;
+			position += up * Camera::deltaY * deltaTime * verticalTranslationSpeed;
 		}
 
-		EditorCamera::count++;
+		Camera::count++;
 	}
 
 	float FoV = initialFoV; // Now GLFW 3 requires setting up a callback for this. It's a bit too complicated for this beginner's tutorial, so it's disabled instead.
@@ -219,44 +219,44 @@ void EditorCamera::computeMatricesFromInputs() {
 
 	bool flag = true;
 
-	if (EditorCamera::rightClicked && xpos >= sceneEndPosX - 15) {
+	if (Camera::rightClicked && xpos >= sceneEndPosX - 15) {
 		lastX = sceneStartPosX;
 		flag = false;
 	}
-	if (EditorCamera::rightClicked && xpos < sceneStartPosX) {
+	if (Camera::rightClicked && xpos < sceneStartPosX) {
 		lastX = sceneEndPosX - 16;
 		flag = false;
 	}
 	else if (flag)
 		lastX = xpos;
 
-	if (EditorCamera::rightClicked && ypos >= sceneEndPosY - 35) {
+	if (Camera::rightClicked && ypos >= sceneEndPosY - 35) {
 		lastY = sceneStartPosY;
 		flag = false;
 	}
-	else if (EditorCamera::rightClicked && ypos < sceneStartPosY) {
+	else if (Camera::rightClicked && ypos < sceneStartPosY) {
 		lastY = sceneEndPosY - 36;
 		flag = false;
 	}
 	else if (flag)
 		lastY = ypos;
 
-	if (EditorCamera::middleClicked && xpos >= sceneEndPosX - 15) {
+	if (Camera::middleClicked && xpos >= sceneEndPosX - 15) {
 		lastX = sceneStartPosX;
 		flag = false;
 	}
-	if (EditorCamera::middleClicked && xpos < sceneStartPosX) {
+	if (Camera::middleClicked && xpos < sceneStartPosX) {
 		lastX = sceneEndPosX - 16;
 		flag = false;
 	}
 	else if (flag)
 		lastX = xpos;
 
-	if (EditorCamera::middleClicked && ypos >= sceneEndPosY - 35) {
+	if (Camera::middleClicked && ypos >= sceneEndPosY - 35) {
 		lastY = sceneStartPosY;
 		flag = false;
 	}
-	else if (EditorCamera::middleClicked && ypos < sceneStartPosY) {
+	else if (Camera::middleClicked && ypos < sceneStartPosY) {
 		lastY = sceneEndPosY - 36;
 		flag = false;
 	}

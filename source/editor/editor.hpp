@@ -6,7 +6,7 @@
 #include "filesystem.hpp"
 #include "render.hpp"
 #include "window.hpp"
-#include "editor_camera.hpp"
+#include "camera.hpp"
 #include "editor_gui.hpp"
 #include "model.hpp"
 #include "texture.hpp"
@@ -19,7 +19,7 @@ public:
 
 	Render render;
 	Window window;
-	EditorCamera editorCamera;
+	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
 	//std::vector<Scene> sceneList;
@@ -41,7 +41,7 @@ public:
 
 	//Window getWindow();
 
-	void setEditorCamera(EditorCamera editorCamera);
+	void setEditorCamera(Camera editorCamera);
 
 	//EditorCamera& getEditorCamera();
 

@@ -1,35 +1,64 @@
-#version 330 core
+
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Normal;
 
-//uniform sampler2D albedoMap;
-//uniform sampler2D normalMap;
-//uniform sampler2D metallicMap;
-//uniform sampler2D roughnessMap;
-//uniform sampler2D aoMap;
+//material parameters
 
-//uniform vec3 lightDirection;
-//uniform vec3 lightColor;
-//uniform float lightPower;
+#if USE_ALBEDO
+uniform sampler2D albedoMap;
+#else
+uniform vec3 albedoColor;
+#endif
+
+#if USE_NORMAL
+uniform sampler2D normalMap;
+#endif
+
+#if USE_METALLIC
+uniform sampler2D metallicMap;
+#endif
+
+#if USE_ROUGHNESS
+uniform sampler2D roughnessMap;
+#endif
+
+#if USE_AO
+uniform sampler2D aoMap;
+#endif
+
+#if USE_NORMAL
+uniform float normal_amount;
+#endif
+uniform float metallic_amount;
+uniform float roughness_amount;
+uniform float ao_amount;
+
+
+// lights
+//uniform vec3 lightPositions[4];
+//uniform vec3 lightColors[4];
 
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
+
+
 // ----------------------------------------------------------------------------
 // Easy trick to get tangent-normals to world-space to keep PBR code simplified.
 // Don't worry if you don't get what's going on; you generally want to do normal 
 // mapping the usual way for performance anways; I do plan make a note of this 
 // technique somewhere later in the normal mapping tutorial.
-vec3 getNormalFromMap(sampler2D normalMap, vec2 UV)
+#if USE_NORMAL
+vec3 getNormalFromMap()
 {
-    vec3 tangentNormal = texture(normalMap, UV).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(UV);
-    vec2 st2 = dFdy(UV);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
 
     vec3 N   = normalize(Normal);
     vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
@@ -38,6 +67,7 @@ vec3 getNormalFromMap(sampler2D normalMap, vec2 UV)
 
     return normalize(TBN * tangentNormal);
 }
+#endif
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -50,7 +80,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
 
-    return nom / denom;
+    return nom / max(denom, 0.0000001); // prevent divide by zero for roughness=0.0 and NdotH=1.0
 }
 // ----------------------------------------------------------------------------
 float GeometrySchlickGGX(float NdotV, float roughness)
@@ -82,16 +112,38 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 void main()
 {		
 
-    vec3 lightDirection = vec3(0, 0.5, -0.5);
-    vec3 lightColor = vec3(1,1,1);
-    float lightPower = 10;
+    #if USE_ALBEDO
+    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
+    #else
+    vec3 albedo = albedoColor;
+    #endif
 
-    vec3 albedo     = vec3(1,1,1)//pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-    float metallic  = 0.1;//texture(metallicMap, TexCoords).r;
-    float roughness = 0.3;//texture(roughnessMap, TexCoords).r;
-    float ao        = 0.1;//texture(aoMap, TexCoords).r;
+    #if USE_METALLIC
+    float metallicTexColor = texture(metallicMap, TexCoords).r;
+    float metallic = metallicTexColor + (1 - metallicTexColor) * metallic_amount;
+    #else
+    float metallic = metallic_amount;
+    #endif
 
-    vec3 N = normalize(Normal);//getNormalFromMap(normalMap, TexCoords);
+    #if USE_ROUGHNESS
+    float roughnessTexColor = texture(roughnessMap, TexCoords).r;
+    float roughness = roughnessTexColor + (1 - roughnessTexColor) * roughness_amount;
+    #else
+    float roughness = roughness_amount;
+    #endif
+
+    #if USE_AO
+    float aoTexColor = texture(aoMap, TexCoords).r;
+    float ao = aoTexColor + (1 - aoTexColor) * ao_amount;
+    #else
+    float ao = ao_amount;
+    #endif
+
+    #if USE_NORMAL
+    vec3 N = getNormalFromMap();
+    #else
+    vec3 N = normalize(Normal);
+    #endif
     vec3 V = normalize(camPos - WorldPos);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
@@ -101,22 +153,25 @@ void main()
 
     // reflectance equation
     vec3 Lo = vec3(0.0);
-
-    //vec3 L = normalize(lightPosition - WorldPos); // probably light direction
-    vec3 L = lightDirection; // probably light direction
+   // for(int i = 0; i < 4; ++i) 
+    //{
+    // calculate per-light radiance
+    vec3 L = vec3(0,0,1);//normalize(lightPositions[i] - WorldPos);
     vec3 H = normalize(V + L);
-    //float distance = length(lightPosition - WorldPos);
-    //float attenuation = 1.0 / (distance * distance);
-    vec3 radiance = lightColor * lightPower;//attenuation;
+    //float distance = length(lightPositions[i] - WorldPos);
+    float attenuation = 1.0 / 5; //(distance * distance);
+
+    vec3 lightColor = vec3(1,1,1);
+    vec3 radiance = lightColor * attenuation;
 
     // Cook-Torrance BRDF
     float NDF = DistributionGGX(N, H, roughness);   
     float G   = GeometrySmith(N, V, L, roughness);      
-    vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
            
     vec3 numerator    = NDF * G * F; 
-    float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // 0.001 to prevent divide by zero.
-    vec3 specular = numerator / denominator;
+    float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+    vec3 specular = numerator / max(denominator, 0.001); // prevent divide by zero for NdotV=0.0 or NdotL=0.0
         
     // kS is equal to Fresnel
     vec3 kS = F;
@@ -134,19 +189,18 @@ void main()
 
     // add to outgoing radiance Lo
     Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
-
+   // }   
+    
     // ambient lighting (note that the next IBL tutorial will replace 
     // this ambient lighting with environment lighting).
     vec3 ambient = vec3(0.03) * albedo * ao;
-    
+
     vec3 color = ambient + Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2)); 
-
-    color  *= ao + (1 - ao) * (1 - 0.8); // 0.8 degeri effect, [0,1] araliginda olacak. artarsa karanliklasir
 
     FragColor = vec4(color, 1.0);
 }

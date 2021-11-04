@@ -40,33 +40,33 @@ void FileSystem::loadTextureIDsOfMaterials() {
 
 		auto found = textures.find(it.second.albedoTexturePath);
 		if (found != textures.end())
-			it.second.albedoTextureID = found->second.textureID;
+			it.second.albedoTexture = found->second.textureID;
 		else
-			it.second.albedoTextureID = textures["Null"].textureID;
+			it.second.albedoTexture = textures["Null"].textureID;
 		
 		found = textures.find(it.second.normalTexturePath);
 		if (found != textures.end())
-			it.second.normalTextureID = found->second.textureID;
+			it.second.normalTexture = found->second.textureID;
 		else
-			it.second.normalTextureID = textures["Null"].textureID;
+			it.second.normalTexture = textures["Null"].textureID;
 
 		found = textures.find(it.second.metallicTexturePath);
 		if (found != textures.end())
-			it.second.metallicTextureID = found->second.textureID;
+			it.second.metallicTexture = found->second.textureID;
 		else
-			it.second.metallicTextureID = textures["Null"].textureID;
+			it.second.metallicTexture = textures["Null"].textureID;
 
 		found = textures.find(it.second.roughnessTexturePath);
 		if (found != textures.end())
-			it.second.roughnessTextureID = found->second.textureID;
+			it.second.roughnessTexture = found->second.textureID;
 		else
-			it.second.roughnessTextureID = textures["Null"].textureID;
+			it.second.roughnessTexture = textures["Null"].textureID;
 
 		found = textures.find(it.second.aoTexturePath);
 		if (found != textures.end())
-			it.second.aoTextureID = found->second.textureID;
+			it.second.aoTexture = found->second.textureID;
 		else
-			it.second.aoTextureID = textures["Null"].textureID;
+			it.second.aoTexture = textures["Null"].textureID;
 	}
 }
 
@@ -458,10 +458,13 @@ void FileSystem::readMaterialFile(std::string path, Material& mat) {
 	mat.normalAmount = atof(root_node->first_node("Amount")->first_attribute("Normal")->value());
 	mat.metallicAmount = atof(root_node->first_node("Amount")->first_attribute("Metallic")->value());
 	mat.roughnessAmount = atof(root_node->first_node("Amount")->first_attribute("Roughness")->value());
+	mat.aoAmount = atof(root_node->first_node("Amount")->first_attribute("AO")->value());
 
 	mat.albedoColor.x = atof(root_node->first_node("AlbedoColor")->first_attribute("X")->value());
 	mat.albedoColor.y = atof(root_node->first_node("AlbedoColor")->first_attribute("Y")->value());
 	mat.albedoColor.z = atof(root_node->first_node("AlbedoColor")->first_attribute("Z")->value());
+
+	mat.compileShaders();
 }
 
 void FileSystem::writeMaterialFile(std::string path, Material& mat) {
@@ -513,6 +516,7 @@ void FileSystem::writeMaterialFile(std::string path, Material& mat) {
 	amountNode->append_attribute(doc.allocate_attribute("Normal", doc.allocate_string(std::to_string(mat.normalAmount).c_str())));
 	amountNode->append_attribute(doc.allocate_attribute("Metallic", doc.allocate_string(std::to_string(mat.metallicAmount).c_str())));
 	amountNode->append_attribute(doc.allocate_attribute("Roughness", doc.allocate_string(std::to_string(mat.roughnessAmount).c_str())));
+	amountNode->append_attribute(doc.allocate_attribute("AO", doc.allocate_string(std::to_string(mat.aoAmount).c_str())));
 	materialNode->append_node(amountNode);
 
 	rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "AlbedoColor");
@@ -778,6 +782,7 @@ void FileSystem::loadDefaultAssets() {
 
 	Material mat;
 	mat.name = "Default";
+	mat.compileShaders();
 	materials.insert({ "Default", mat });
 
 	Texture texture;

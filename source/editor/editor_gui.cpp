@@ -855,14 +855,14 @@ void EditorGUI::showMaterialProperties(Material& material) {
 
 		ImGui::PushID(1);
 
-		ImTextureID textId = !material.useAlbedo ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.albedoTextureID;
+		ImTextureID textId = !material.useAlbedo ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.albedoTexture;
 		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 			ImGui::OpenPopup("texture_menu_popup");
 			popupFlag = true;
 		}
 
 		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Albedo Map"); ImGui::SameLine(150);
+		ImGui::Text("Albedo Map"); ImGui::SameLine(160);
 
 		ImVec4 color = ImVec4(material.albedoColor.x, material.albedoColor.y, material.albedoColor.z, 1.0f);
 		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
@@ -886,14 +886,18 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::PopID();
 		ImGui::PushID(2);
 
-		textId = !material.useNormal ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.normalTextureID;
+		textId = !material.useNormal ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.normalTexture;
 		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 			ImGui::OpenPopup("texture_menu_popup");
 			popupFlag = true;
 		}
 
+		float& slider_n = material.normalAmount;
 		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Normal Map");
+		ImGui::Text("Normal Map"); ImGui::SameLine(160);
+		ImGui::SetNextItemWidth(width - 180);
+		if (ImGui::SliderFloat("##2", &slider_n, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+			fileChangedInInspector = true;
 
 		EditorGUI::textureMenuPopup(material, TextureType::normal, popupFlag);
 
@@ -901,7 +905,7 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::PushID(3);
 
 
-		textId = !material.useMetallic ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.metallicTextureID;
+		textId = !material.useMetallic ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.metallicTexture;
 		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 			ImGui::OpenPopup("texture_menu_popup");
 			popupFlag = true;
@@ -911,7 +915,7 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 		ImGui::Text("Metallic Map"); ImGui::SameLine(160);
 		ImGui::SetNextItemWidth(width - 180);
-		if(ImGui::SliderFloat("##2", &slider_m, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		if(ImGui::SliderFloat("##3", &slider_m, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
 			fileChangedInInspector = true;
 
 
@@ -920,7 +924,7 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::PopID();
 		ImGui::PushID(4);
 
-		textId = !material.useRoughness ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.roughnessTextureID;
+		textId = !material.useRoughness ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.roughnessTexture;
 		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 			ImGui::OpenPopup("texture_menu_popup");
 			popupFlag = true;
@@ -930,7 +934,7 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 		ImGui::Text("Roughness Map"); ImGui::SameLine(160);
 		ImGui::SetNextItemWidth(width - 180);
-		if(ImGui::SliderFloat("##3", &slider_r, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		if(ImGui::SliderFloat("##4", &slider_r, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
 			fileChangedInInspector = true;
 
 		EditorGUI::textureMenuPopup(material, TextureType::roughness, popupFlag);
@@ -938,14 +942,18 @@ void EditorGUI::showMaterialProperties(Material& material) {
 		ImGui::PopID();
 		ImGui::PushID(5);
 
-		textId = !material.useAO ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.aoTextureID;
+		textId = !material.useAO ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.aoTexture;
 		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 			ImGui::OpenPopup("texture_menu_popup");
 			popupFlag = true;
 		}
 
+		float& slider_ao = material.aoAmount;
 		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("AO Map");
+		ImGui::Text("AO Map"); ImGui::SameLine(160);
+		ImGui::SetNextItemWidth(width - 180);
+		if (ImGui::SliderFloat("##5", &slider_ao, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+			fileChangedInInspector = true;
 
 		EditorGUI::textureMenuPopup(material, TextureType::ao, popupFlag);
 
@@ -987,42 +995,82 @@ void EditorGUI::textureMenuPopup(Material& material, TextureType type, bool& fla
 					switch (type) {
 					case TextureType::albedo: {
 
-						material.albedoTextureID = it.second.textureID;
+						material.albedoTexture = it.second.textureID;
 						material.albedoTexturePath = it.first;
-						material.useAlbedo = std::strcmp(it.first.c_str(), "Null") != 0;
-						
+
+						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
+
+						if (material.useAlbedo && nullSelected || !material.useAlbedo && !nullSelected) {
+
+							material.useAlbedo = !nullSelected;
+							material.deleteProgram();
+							material.compileShaders();
+						}
+
 						break;
 					}
 					case TextureType::normal: {
 
-						material.normalTextureID = it.second.textureID;
+						material.normalTexture = it.second.textureID;
 						material.normalTexturePath = it.first;
-						material.useNormal = std::strcmp(it.first.c_str(), "Null") != 0;
-						
+
+						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
+
+						if (material.useNormal && nullSelected || !material.useNormal && !nullSelected) {
+
+							material.useNormal = !nullSelected;
+							material.deleteProgram();
+							material.compileShaders();
+						}
+
 						break;
 					}
 					case TextureType::metallic: {
 
-						material.metallicTextureID = it.second.textureID;
+						material.metallicTexture = it.second.textureID;
 						material.metallicTexturePath = it.first;
-						material.useMetallic = std::strcmp(it.first.c_str(), "Null") != 0;
 						
+						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
+
+						if (material.useMetallic && nullSelected || !material.useMetallic && !nullSelected) {
+
+							material.useMetallic = !nullSelected;
+							material.deleteProgram();
+							material.compileShaders();
+						}
+
 						break;
 					}
 					case TextureType::roughness: {
 
-						material.roughnessTextureID = it.second.textureID;
+						material.roughnessTexture = it.second.textureID;
 						material.roughnessTexturePath = it.first;
-						material.useRoughness = std::strcmp(it.first.c_str(), "Null") != 0;
 						
+						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
+
+						if (material.useRoughness && nullSelected || !material.useRoughness && !nullSelected) {
+
+							material.useRoughness = !nullSelected;
+							material.deleteProgram();
+							material.compileShaders();
+						}
+
 						break;
 					}
 					case TextureType::ao: {
 
-						material.aoTextureID = it.second.textureID;
+						material.aoTexture = it.second.textureID;
 						material.aoTexturePath = it.first;
-						material.useAO = std::strcmp(it.first.c_str(), "Null") != 0;
 						
+						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
+
+						if (material.useAO && nullSelected || !material.useAO && !nullSelected) {
+
+							material.useAO = !nullSelected;
+							material.deleteProgram();
+							material.compileShaders();
+						}
+
 						break;
 					}
 					}

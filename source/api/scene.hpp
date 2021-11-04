@@ -27,8 +27,8 @@ private:
 
 	Editor* editor;
 
-	unsigned int programID;
-	GLuint mvpMatrixID;
+	//unsigned int programID;
+	//GLuint mvpMatrixID;
 
 public:
 

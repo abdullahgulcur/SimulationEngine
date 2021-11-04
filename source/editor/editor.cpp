@@ -25,7 +25,7 @@ void Editor::startEditorScreen() {
 	editorCamera.setMode(window.mode);
 	window.renderToTexture();
 
-	//scene.start();
+	scene.start();
 }
 
 void Editor::stayOpen() {
@@ -41,7 +41,7 @@ void Editor::stayOpen() {
 
 	editorGUI.newFrameImGui();
 
-	//scene.update();
+	scene.update();
 
 	//drawAllAxis();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -90,7 +90,7 @@ void Editor::setWindow(Window window) { this->window = window; }
 
 //Window Editor::getWindow() { return window; }
 
-void Editor::setEditorCamera(EditorCamera editorCamera) { this->editorCamera = editorCamera; }
+void Editor::setEditorCamera(Camera editorCamera) { this->editorCamera = editorCamera; }
 
 //EditorCamera& Editor::getEditorCamera() { return editorCamera; }
 

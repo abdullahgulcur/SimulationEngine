@@ -169,7 +169,7 @@
     <ClCompile Include="source\component\light.cpp" />
     <ClCompile Include="source\component\meshrenderer.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
-    <ClCompile Include="source\editor\editor_camera.cpp" />
+    <ClCompile Include="source\editor\camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
     <ClCompile Include="source\editor\loadsystem.cpp" />
@@ -202,7 +202,7 @@
     <ClInclude Include="source\component\light.hpp" />
     <ClInclude Include="source\component\meshrenderer.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
-    <ClInclude Include="source\editor\editor_camera.hpp" />
+    <ClInclude Include="source\editor\camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />
     <ClInclude Include="source\editor\loadsystem.hpp" />
@@ -221,8 +221,8 @@
     <ClInclude Include="source\include\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="source\shader\PBR.fs" />
-    <None Include="source\shader\PBR.vs" />
+    <None Include="source\shader\PBR.frag" />
+    <None Include="source\shader\PBR.vertex" />
     <None Include="source\shader\tri.fs" />
     <None Include="source\shader\tri.vs" />
   </ItemGroup>

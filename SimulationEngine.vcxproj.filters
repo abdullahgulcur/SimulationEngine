@@ -30,7 +30,7 @@
     <ClCompile Include="source\editor\window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\editor\editor_camera.cpp">
+    <ClCompile Include="source\editor\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\api\transform.cpp">
@@ -122,7 +122,7 @@
     <ClInclude Include="source\editor\window.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\editor\editor_camera.hpp">
+    <ClInclude Include="source\editor\camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\mesh.hpp">
@@ -207,7 +207,7 @@
   <ItemGroup>
     <None Include="source\shader\tri.vs" />
     <None Include="source\shader\tri.fs" />
-    <None Include="source\shader\PBR.fs" />
-    <None Include="source\shader\PBR.vs" />
+    <None Include="source\shader\PBR.frag" />
+    <None Include="source\shader\PBR.vertex" />
   </ItemGroup>
 </Project>

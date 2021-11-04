@@ -4,6 +4,37 @@ Material::Material() {
 
 	type = MaterialType::pbr;
 	albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	//programID = LoadShaders("source/shader/PBR.vertex", "source/shader/PBR.frag");
+
+	//Material::loadUniforms();
+}
+
+void Material::compileShaders() {
+
+	programID = LoadShaders("source/shader/PBR.vertex", "source/shader/PBR.frag");
+	Material::loadUniforms();
+}
+
+void Material::loadUniforms() {
+
+	mID = glGetUniformLocation(programID, "M");
+	vID = glGetUniformLocation(programID, "V");
+	pID = glGetUniformLocation(programID, "P");
+
+	albedoColorID = glGetUniformLocation(programID, "albedoColor");
+	albedoTextureID = glGetUniformLocation(programID, "albedoMap");
+	normalTextureID = glGetUniformLocation(programID, "normalMap");
+	metallicTextureID = glGetUniformLocation(programID, "metallicMap");
+	roughnessTextureID = glGetUniformLocation(programID, "roughnessMap");
+	aoTextureID = glGetUniformLocation(programID, "aoMap");
+
+	normalAmountID = glGetUniformLocation(programID, "normal_amount");
+	metallicAmountID = glGetUniformLocation(programID, "metallic_amount");
+	roughnessAmountID = glGetUniformLocation(programID, "roughness_amount");
+	aoAmountID = glGetUniformLocation(programID, "ao_amount");
+
+	camPosID = glGetUniformLocation(programID, "camPos");
 }
 
 GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
@@ -55,10 +86,19 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 		printf("%s\n", &VertexShaderErrorMessage[0]);
 	}
 
+	char const* fragmentShaderArr[2];
+	std::string macro = "#version 330 core\n#define USE_ALBEDO " + std::to_string(useAlbedo) + "\n"; //1\n";
+	macro += "#define USE_NORMAL " + std::to_string(useNormal) + "\n";
+	macro += "#define USE_METALLIC " + std::to_string(useMetallic) + "\n";
+	macro += "#define USE_ROUGHNESS " + std::to_string(useRoughness) + "\n";
+	macro += "#define USE_AO " + std::to_string(useAO) + "\n";
+	char const* FragmentSourcePointer = FragmentShaderCode.c_str();
+	fragmentShaderArr[0] = macro.c_str();
+	fragmentShaderArr[1] = FragmentSourcePointer;
+
 	// Compile Fragment Shader
 	printf("Compiling shader : %s\n", fragment_file_path);
-	char const* FragmentSourcePointer = FragmentShaderCode.c_str();
-	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer, NULL);
+	glShaderSource(FragmentShaderID, 2, fragmentShaderArr, NULL);
 	glCompileShader(FragmentShaderID);
 
 	// Check Fragment Shader
@@ -95,8 +135,7 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 	return ProgramID;
 }
 
-void Material::loadMaterial(const char* mat_file_path) {
+void Material::deleteProgram() {
 
-
-
+	glDeleteProgram(programID);
 }
