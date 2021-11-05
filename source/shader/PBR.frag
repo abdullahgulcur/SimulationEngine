@@ -35,6 +35,11 @@ uniform float metallic_amount;
 uniform float roughness_amount;
 uniform float ao_amount;
 
+uniform vec3 dirLightDirections[DIR_LIGHT_COUNT];
+uniform vec3 dirLightColors[DIR_LIGHT_COUNT];
+
+uniform vec3 pointLightPositions[POINT_LIGHT_COUNT];
+uniform vec3 pointLightColors[POINT_LIGHT_COUNT];
 
 // lights
 //uniform vec3 lightPositions[4];
@@ -43,7 +48,6 @@ uniform float ao_amount;
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
-
 
 // ----------------------------------------------------------------------------
 // Easy trick to get tangent-normals to world-space to keep PBR code simplified.
@@ -156,10 +160,10 @@ void main()
    // for(int i = 0; i < 4; ++i) 
     //{
     // calculate per-light radiance
-    vec3 L = vec3(0,0,1);//normalize(lightPositions[i] - WorldPos);
+    vec3 L = vec3(1,1,1);//normalize(lightPositions[i] - WorldPos);
     vec3 H = normalize(V + L);
     //float distance = length(lightPositions[i] - WorldPos);
-    float attenuation = 1.0 / 5; //(distance * distance);
+    float attenuation = 1.0 / 3; //(distance * distance);
 
     vec3 lightColor = vec3(1,1,1);
     vec3 radiance = lightColor * attenuation;

@@ -1234,7 +1234,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, " %d", transform->children[i]->id); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 

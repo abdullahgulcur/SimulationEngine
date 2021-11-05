@@ -27,6 +27,8 @@ public:
 	std::string metallicTexturePath;
 	std::string roughnessTexturePath;
 	std::string aoTexturePath;
+	unsigned int dirLightCount = 0;
+	unsigned int pointLightCount = 0;
 
 	glm::vec3 albedoColor;
 	unsigned int albedoTexture;
@@ -59,7 +61,6 @@ public:
 	unsigned int aoAmountID;
 
 	unsigned int camPosID;
-
 
 	Material();
 

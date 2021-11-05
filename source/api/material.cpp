@@ -92,6 +92,10 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 	macro += "#define USE_METALLIC " + std::to_string(useMetallic) + "\n";
 	macro += "#define USE_ROUGHNESS " + std::to_string(useRoughness) + "\n";
 	macro += "#define USE_AO " + std::to_string(useAO) + "\n";
+
+	macro += "#define DIR_LIGHT_COUNT " + std::to_string(dirLightCount + 1) + "\n";
+	macro += "#define POINT_LIGHT_COUNT " + std::to_string(pointLightCount + 1) + "\n";
+
 	char const* FragmentSourcePointer = FragmentShaderCode.c_str();
 	fragmentShaderArr[0] = macro.c_str();
 	fragmentShaderArr[1] = FragmentSourcePointer;

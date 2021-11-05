@@ -205,8 +205,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="source\shader\tri.vs" />
-    <None Include="source\shader\tri.fs" />
     <None Include="source\shader\PBR.frag" />
     <None Include="source\shader\PBR.vertex" />
   </ItemGroup>

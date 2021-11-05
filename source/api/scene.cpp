@@ -62,6 +62,11 @@ void Scene::start() {
 
 void Scene::update() {
 
+	for (auto const& [key, val] : lightComponents) {
+
+
+	}
+
 	for (auto const& [key, val] : meshRendererComponents)
 	{
 		glUseProgram(val.mat->programID);
@@ -70,13 +75,15 @@ void Scene::update() {
 		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
 		glm::mat4 view = editor->editorCamera.ViewMatrix;
 		glm::mat4 model = glm::mat4(1.0);
-		glm::vec3 position = entities[val.entID].transform->position;
-		model = glm::translate(model, position);
+		model = glm::translate(model, entities[val.entID].transform->position);
+		model = glm::scale(model, entities[val.entID].transform->scale);
 
 		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &model[0][0]);
 		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &view[0][0]);
 		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &projection[0][0]);
-		glUniform3fv(val.mat->camPosID, 1, &camPos[0]); // check
+		glUniform3fv(val.mat->camPosID, 1, &camPos[0]);
+
+		//glm::vec3 sunDirections = new glm::vec3
 
 		glUniform1f(val.mat->metallicAmountID, val.mat->metallicAmount);
 		glUniform1f(val.mat->roughnessAmountID, val.mat->roughnessAmount);

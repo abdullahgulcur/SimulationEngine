@@ -419,6 +419,7 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	}
 
 	Material mat;
+	mat.compileShaders();
 	mat.name = files[subFile->id].name;
 	//std::string relativePath = files[subFile->id].path;
 	//relativePath.erase(0, assetsPathExternal.length());
