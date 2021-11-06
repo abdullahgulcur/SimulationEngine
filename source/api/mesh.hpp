@@ -11,32 +11,24 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoord;
-    glm::vec3 tangent;
-    glm::vec3 bitangent;
 };
+
+class FileSystem;
 
 class Mesh {
 
 private:
 
-    
-
 public:
 
-    std::string name;
-
     unsigned int VAO;
-    unsigned int VBO;
-    unsigned int EBO;
-
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
+    unsigned int indiceSize;
 
     Mesh();
 
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name);
+    Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem);
 
-    void initBuffers();
+    void initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem);
 
     void initEmtyBuffers();
 };

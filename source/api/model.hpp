@@ -9,6 +9,8 @@
 #include <string>
 #include <iostream>
 
+class FileSystem;
+
 class Model {
 
 private:
@@ -17,12 +19,12 @@ public:
 
 	std::vector<Mesh> meshes;
 
-	Model();
+	Model(std::string const& path, FileSystem* fileSystem);
 
-	void loadModel(std::string const& path);
+	void loadModel(std::string const& path, FileSystem* fileSystem);
 
-	void processNode(aiNode* node, const aiScene* scene);
+	void processNode(aiNode* node, const aiScene* scene, FileSystem* fileSystem);
 
-	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene, FileSystem* fileSystem);
 
 };

@@ -9,7 +9,8 @@ public:
 
 	unsigned int entID;
 
-	Mesh* mesh;
+	int VAO;
+	int indiceSize;
 	Material* mat;
 
 	MeshRenderer();

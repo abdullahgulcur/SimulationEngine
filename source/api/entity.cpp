@@ -20,7 +20,8 @@ void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_
 
 	MeshRenderer component;
 	component.entID = transform->id;
-	component.mesh = mesh;
+	component.VAO = mesh->VAO;
+	component.indiceSize = mesh->indiceSize;
 	component.mat = mat;
 
 	m_rendererComponents.insert({ component.entID, component });

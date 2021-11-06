@@ -74,10 +74,15 @@ public:
 
 	std::string assetsPathExternal;
 
+	unsigned int nullMeshVAO;
+
 	File* rootFile;
 	std::vector<FileNode> files;
 
-	std::unordered_map<std::string, Mesh> meshes;
+	std::unordered_map<unsigned int, std::string> meshNames;
+	std::unordered_map<std::string, unsigned int> meshVAOs;
+
+	std::unordered_map<unsigned int, Mesh> meshes;
 	std::unordered_map<std::string, Material> materials;
 	std::unordered_map<std::string, Texture> textures;
 

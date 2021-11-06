@@ -417,7 +417,7 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			Mesh* mesh = &editor->fileSystem.meshes["Null"];
+			Mesh* mesh = &editor->fileSystem.meshes[editor->fileSystem.nullMeshVAO];
 			Material* mat = &editor->fileSystem.materials["Default"];
 			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, mat, editor->scene.meshRendererComponents);
 		}
@@ -650,22 +650,25 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		const char* meshName = m_renderer.mesh->name.c_str();
+		//const char* meshName = editor->fileSystem.meshNames[m_renderer.VAO].c_str();
+		unsigned int vao = m_renderer.VAO;
 		const char* matName = m_renderer.mat->name.c_str();
 
 		int size_meshes = editor->fileSystem.meshes.size();
 		int size_mats = editor->fileSystem.materials.size();
-		const char** meshItems = new const char* [size_meshes];
+		const char** meshNames = new const char* [size_meshes];
+		unsigned int* meshVAOs = new unsigned int [size_meshes];
 		const char** matItems = new const char* [size_mats];
 
 		int meshIndex = -1;
 		int matIndex = -1;
 
 		int i = 0;
-		for (auto& it : editor->fileSystem.meshes) {
+		for (auto& it : editor->fileSystem.meshNames) {
 
-			meshItems[i] = it.second.name.c_str();
-			if (strcmp(meshName, meshItems[i]) == 0)
+			meshNames[i] = it.second.c_str();
+			meshVAOs[i] = it.first;
+			if (it.first == vao)
 				meshIndex = i;
 			i++;
 		}
@@ -676,10 +679,9 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 		ImGui::SetNextItemWidth(width - 130);
 
-		if (ImGui::Combo("##0", &meshIndex, meshItems, size_meshes)) {
-
-			std::string meshName = meshItems[meshIndex];
-			m_renderer.mesh = &editor->fileSystem.meshes[meshName];
+		if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
+			m_renderer.VAO = meshVAOs[meshIndex];
+			m_renderer.indiceSize = editor->fileSystem.meshes[m_renderer.VAO].indiceSize;
 		}
 
 		i = 0;
@@ -701,7 +703,8 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 			std::string matName = matItems[matIndex];
 			m_renderer.mat = &editor->fileSystem.materials[matName];
 		}
-		delete meshItems;
+		delete meshNames;
+		delete meshVAOs;
 		delete matItems;
 
 		ImGui::PopStyleColor();

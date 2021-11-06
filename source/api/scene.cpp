@@ -183,8 +183,8 @@ void Scene::update() {
 			glUniform1i(val.mat->aoTextureID, 4);
 		}
 
-		glBindVertexArray(val.mesh->VAO);
-		glDrawElements(GL_TRIANGLES, val.mesh->indices.size(), GL_UNSIGNED_INT, (void*)0);
+		glBindVertexArray(val.VAO);
+		glDrawElements(GL_TRIANGLES, val.indiceSize, GL_UNSIGNED_INT, (void*)0);
 		glBindVertexArray(0);
 	}
 }
@@ -291,11 +291,15 @@ void Scene::loadMeshRenderers() {
 		MeshRenderer m_renderer;
 		m_renderer.entID = atoi(mesh_node->first_attribute("EntID")->value());
 
-		auto meshFound = editor->fileSystem.meshes.find(mesh_node->first_attribute("MeshName")->value());
-		if (meshFound != editor->fileSystem.meshes.end())
-			m_renderer.mesh = &meshFound->second;
-		else
-			m_renderer.mesh = &editor->fileSystem.meshes["Null"];
+		auto meshFound = editor->fileSystem.meshVAOs.find(mesh_node->first_attribute("MeshName")->value());
+		if (meshFound != editor->fileSystem.meshVAOs.end()) {
+			m_renderer.VAO = meshFound->second;
+			m_renderer.indiceSize = editor->fileSystem.meshes[m_renderer.VAO].indiceSize;
+		}
+		else {
+			m_renderer.VAO = editor->fileSystem.meshVAOs["Null"];
+			m_renderer.indiceSize = 0;
+		}
 
 		auto matFound = editor->fileSystem.materials.find(mesh_node->first_attribute("MatName")->value());
 		if (matFound != editor->fileSystem.materials.end())
@@ -619,7 +623,7 @@ void Scene::saveMeshRenderers() {
 	
 		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponent");
 		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.second.entID).c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(it.second.mesh->name.c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(editor->fileSystem.meshNames[it.second.VAO].c_str())));
 		componentNode->append_attribute(doc.allocate_attribute("MatName", doc.allocate_string(it.second.mat->name.c_str())));
 		meshRenderersNode->append_node(componentNode);
 	}

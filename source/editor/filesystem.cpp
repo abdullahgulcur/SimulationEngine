@@ -693,11 +693,10 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	}
 	case FileType::object: {
 
-		Model model;
-		model.loadModel(fileNode.path.c_str());
+		Model model(fileNode.path.c_str(), this);
 
 		for (Mesh mesh : model.meshes)
-			meshes.insert({ mesh.name, mesh});
+			meshes.insert({ mesh.VAO, mesh });
 
 		fileNode.textureID = editorTextures.objectBigTextureID;
 		break;
@@ -780,7 +779,11 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
 void FileSystem::loadDefaultAssets() {
 
-	meshes.insert({ "Null", Mesh()});
+	Mesh mesh;
+	nullMeshVAO = mesh.VAO;
+	meshNames.insert({ mesh.VAO, "Null" });
+	meshVAOs.insert({ "Null", mesh.VAO });
+	meshes.insert({ mesh.VAO, mesh });
 
 	Material mat;
 	mat.name = "Default";

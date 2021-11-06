@@ -1,54 +1,48 @@
 #include "mesh.hpp"
+#include "filesystem.hpp"
 
 Mesh::Mesh() {
 
-    name = "Null";
+    this->indiceSize = 0;
     Mesh::initEmtyBuffers();
 }
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::string name) {
+Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem) {
 
-    this->vertices = vertices;
-    this->indices = indices;
-    this->name = name;
-    Mesh::initBuffers();
+    this->indiceSize = indices.size();
+    Mesh::initBuffers(vertices, indices, name, fileSystem);
 }
 
-void Mesh::initBuffers() {
+void Mesh::initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem) {
 
     glGenVertexArrays(1, &VAO);
+
+    unsigned int VBO;
     glGenBuffers(1, &VBO);
+    unsigned int EBO;
     glGenBuffers(1, &EBO);
 
     glBindVertexArray(VAO);
-    // load data into vertex buffers
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // A great thing about structs is that their memory layout is sequential for all its items.
-    // The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
-    // again translates to 3/2 floats which translates to a byte array.
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
-    // set the vertex attribute pointers
-    // vertex Positions
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    // vertex normals
+
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    // vertex texture coords
+
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
-    // vertex tangent
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    // vertex bitangent
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
 
     glBindVertexArray(0);
+
+    fileSystem->meshNames.insert({ VAO, name });
+    fileSystem->meshVAOs.insert({ name, VAO });
 }
 
 void Mesh::initEmtyBuffers() {
