@@ -411,7 +411,7 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Light")) {
 
-			editor->scene.entities[lastSelectedEntityID].addLightComponent(editor->scene.lightComponents);
+			editor->scene.entities[lastSelectedEntityID].addLightComponent(editor->scene.lightComponents, &editor->scene);
 		}
 		ImGui::Separator();
 

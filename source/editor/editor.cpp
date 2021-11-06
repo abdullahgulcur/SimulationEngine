@@ -49,6 +49,8 @@ void Editor::stayOpen() {
 	editorGUI.createPanels();
 	editorGUI.renderImGui();
 
+
+
 	window.end();
 }
 

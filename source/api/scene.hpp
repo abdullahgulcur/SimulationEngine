@@ -34,6 +34,9 @@ public:
 
 	std::string name;
 
+	int dirLightCount = 0;
+	int pointLightCount = 0;
+
 	Transform* rootTransform;
 	std::vector<Entity> entities;
 	std::map<int, std::vector<int>> initialSceneGraph;
@@ -72,6 +75,8 @@ public:
 	void loadLights();
 
 	bool subEntityCheck(Transform* child, Transform* parent);
+
+	void recompileAllMaterials();
 
 	bool subEntityAndItselfCheck(Transform* child, Transform* parent);
 

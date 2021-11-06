@@ -22,9 +22,11 @@ public:
 
 	Entity();
 
+	~Entity();
+
 	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_map<unsigned int, MeshRenderer>& m_rendererComponents);
 
-	void addLightComponent(std::unordered_map<unsigned int, Light>& lightComponents);
+	void addLightComponent(std::unordered_map<unsigned int, Light>& lightComponents, Scene* scene);
 
 	void removeComponent(ComponentType type, Scene* scene);
 };

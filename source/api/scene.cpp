@@ -27,6 +27,11 @@ void Scene::initSceneGraph() {
 		Scene::loadMeshRenderers();
 		Scene::loadLights();
 
+		
+
+		// compile shaders again...
+
+
 		entities[0].transform = rootTransform;
 
 		Scene::generateSceneGraph(rootTransform);
@@ -62,11 +67,6 @@ void Scene::start() {
 
 void Scene::update() {
 
-	for (auto const& [key, val] : lightComponents) {
-
-
-	}
-
 	for (auto const& [key, val] : meshRendererComponents)
 	{
 		glUseProgram(val.mat->programID);
@@ -83,7 +83,61 @@ void Scene::update() {
 		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &projection[0][0]);
 		glUniform3fv(val.mat->camPosID, 1, &camPos[0]);
 
-		//glm::vec3 sunDirections = new glm::vec3
+		std::vector<glm::vec3> p_lightSourceColors;
+		std::vector<glm::vec3> p_lightSourcePositions;
+		std::vector<float> p_lightSourcePowers;
+
+		std::vector<glm::vec3> d_lightSourceColors;
+		std::vector<glm::vec3> d_lightSourceDirections;
+		std::vector<float> d_lightSourcePowers;
+
+		for (auto const& [l_key, l_val] : lightComponents) {
+
+			if (l_val.type == LightType::PointLight) {
+
+				p_lightSourceColors.push_back(l_val.color);
+				p_lightSourcePositions.push_back(entities[l_val.entID].transform->position);
+				p_lightSourcePowers.push_back(l_val.power);
+			}
+			else {
+
+				d_lightSourceColors.push_back(l_val.color);
+				d_lightSourceDirections.push_back(entities[l_val.entID].transform->rotation);
+				d_lightSourcePowers.push_back(l_val.power);
+			}
+		}
+
+		for (int i = 0; i < p_lightSourceColors.size(); i++) {
+
+			std::string tempLPos = "pointLightPositions[" + std::to_string(i);
+			tempLPos += "]";
+
+			std::string tempLCol = "pointLightColors[" + std::to_string(i);
+			tempLCol += "]";
+
+			std::string tempLPow = "pointLightPowers[" + std::to_string(i);
+			tempLPow += "]";
+
+			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos.c_str()), 1, &p_lightSourcePositions[i][0]);
+			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol.c_str()), 1, &p_lightSourceColors[i][0]);
+			glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow.c_str()), p_lightSourcePowers[i]);
+		}
+
+		for (int i = 0; i < d_lightSourceColors.size(); i++) {
+
+			std::string tempLPos = "dirLightDirections[" + std::to_string(i);
+			tempLPos += "]";
+
+			std::string tempLCol = "dirLightColors[" + std::to_string(i);
+			tempLCol += "]";
+
+			std::string tempLPow = "dirLightPowers[" + std::to_string(i);
+			tempLPow += "]";
+
+			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos.c_str()), 1, &d_lightSourceDirections[i][0]);
+			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol.c_str()), 1, &d_lightSourceColors[i][0]);
+			glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow.c_str()), d_lightSourcePowers[i]);
+		}
 
 		glUniform1f(val.mat->metallicAmountID, val.mat->metallicAmount);
 		glUniform1f(val.mat->roughnessAmountID, val.mat->roughnessAmount);
@@ -275,7 +329,18 @@ void Scene::loadLights() {
 
 		Light comp;
 		comp.entID = atoi(light_node->first_attribute("EntID")->value());
-		comp.type = strcmp(light_node->first_attribute("Type")->value(), "Point") == 0 ? LightType::PointLight : LightType::DirectionalLight;
+
+		if (strcmp(light_node->first_attribute("Type")->value(), "Point") == 0){
+
+			pointLightCount++;
+			comp.type = LightType::PointLight;
+		}
+		else {
+
+			dirLightCount++;
+			comp.type = LightType::DirectionalLight;
+		}
+		
 		comp.power = atof(light_node->first_attribute("Power")->value());
 
 		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
@@ -284,6 +349,18 @@ void Scene::loadLights() {
 
 		lightComponents[comp.entID] = comp;
 		entities[comp.entID].components.push_back(ComponentType::Light);
+	}
+
+	Scene::recompileAllMaterials();
+}
+
+void Scene::recompileAllMaterials() {
+
+	for (auto& val : editor->fileSystem.materials) {
+
+		val.second.pointLightCount = pointLightCount;
+		val.second.dirLightCount = dirLightCount;
+		val.second.compileShaders();
 	}
 }
 
@@ -359,12 +436,18 @@ void Scene::deleteEntityCompletely(int id) {
 
 			case ComponentType::Light: {
 
-				lightComponents.erase(indices[i]);
+				if (lightComponents[indices[i]].type == LightType::DirectionalLight)
+					dirLightCount--;
+				else
+					pointLightCount--;
+
+				lightComponents.erase(indices[i]); // remove component kullan oc, destreucot???
+				Scene::recompileAllMaterials();
 				break;
 			}
 			case ComponentType::MeshRenderer: {
 
-				meshRendererComponents.erase(indices[i]);
+				meshRendererComponents.erase(indices[i]); // remove component kullan oc
 				break;
 			}
 			}
@@ -423,6 +506,13 @@ void Scene::cloneComponents(int base, int entID) {
 
 		case ComponentType::Light: {
 
+			if (lightComponents[base].type == LightType::DirectionalLight)
+				dirLightCount++;
+			else
+				pointLightCount++;
+
+			Scene::recompileAllMaterials();
+
 			Light comp = lightComponents[base];
 			comp.entID = entID;
 			lightComponents[comp.entID] = comp;
@@ -458,15 +548,19 @@ Transform* Scene::newEntity(int parentID, const char* name){
 
 void Scene::newPointLight(int parentID, const char* name) {
 
+	pointLightCount++;
+
 	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent(lightComponents);
+	entities[entity->id].addLightComponent(lightComponents, this);
 	lightComponents[entity->id].type = LightType::PointLight;
 }
 
 void Scene::newDirectionalLight(int parentID, const char* name) {
 
+	dirLightCount++;
+
 	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent(lightComponents);
+	entities[entity->id].addLightComponent(lightComponents, this);
 	lightComponents[entity->id].type = LightType::DirectionalLight;
 }
 

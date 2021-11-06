@@ -421,6 +421,7 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	Material mat;
 	mat.compileShaders();
 	mat.name = files[subFile->id].name;
+	mat.fileID = files[subFile->id].addr->id;
 	//std::string relativePath = files[subFile->id].path;
 	//relativePath.erase(0, assetsPathExternal.length());
 	materials.insert({ mat.name, mat });
