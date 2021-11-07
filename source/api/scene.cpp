@@ -67,7 +67,7 @@ void Scene::start() {
 
 void Scene::update() {
 
-	for (auto const& [key, val] : meshRendererComponents)
+	for (auto const& val : meshRendererComponents)
 	{
 		glUseProgram(val.mat->programID);
 
@@ -91,7 +91,7 @@ void Scene::update() {
 		std::vector<glm::vec3> d_lightSourceDirections;
 		std::vector<float> d_lightSourcePowers;
 
-		for (auto const& [l_key, l_val] : lightComponents) {
+		for (auto const& l_val: lightComponents) {
 
 			if (l_val.type == LightType::PointLight) {
 
@@ -288,27 +288,27 @@ void Scene::loadMeshRenderers() {
 
 	for (rapidxml::xml_node<>* mesh_node = root_node->first_node("MeshRendererComponent"); mesh_node; mesh_node = mesh_node->next_sibling()) {
 
-		MeshRenderer m_renderer;
-		m_renderer.entID = atoi(mesh_node->first_attribute("EntID")->value());
+		MeshRenderer m_rendererComp;
+		m_rendererComp.entID = atoi(mesh_node->first_attribute("EntID")->value());
 
 		auto meshFound = editor->fileSystem.meshVAOs.find(mesh_node->first_attribute("MeshName")->value());
 		if (meshFound != editor->fileSystem.meshVAOs.end()) {
-			m_renderer.VAO = meshFound->second;
-			m_renderer.indiceSize = editor->fileSystem.meshes[m_renderer.VAO].indiceSize;
+			m_rendererComp.VAO = meshFound->second;
+			m_rendererComp.indiceSize = editor->fileSystem.meshes[m_rendererComp.VAO].indiceSize;
 		}
 		else {
-			m_renderer.VAO = editor->fileSystem.meshVAOs["Null"];
-			m_renderer.indiceSize = 0;
+			m_rendererComp.VAO = editor->fileSystem.meshVAOs["Null"];
+			m_rendererComp.indiceSize = 0;
 		}
 
 		auto matFound = editor->fileSystem.materials.find(mesh_node->first_attribute("MatName")->value());
 		if (matFound != editor->fileSystem.materials.end())
-			m_renderer.mat = &matFound->second;
+			m_rendererComp.mat = &matFound->second;
 		else
-			m_renderer.mat = &editor->fileSystem.materials["Default"];
+			m_rendererComp.mat = &editor->fileSystem.materials["Default"];
 
-		entities[m_renderer.entID].components.push_back(ComponentType::MeshRenderer);
-		meshRendererComponents.insert({ m_renderer.entID, m_renderer });
+		meshRendererComponents.push_back(m_rendererComp);
+		entities[m_rendererComp.entID].m_rendererComponentIndex = meshRendererComponents.size() - 1;
 	}
 }
 
@@ -331,28 +331,28 @@ void Scene::loadLights() {
 
 	for (rapidxml::xml_node<>* light_node = root_node->first_node("Light"); light_node; light_node = light_node->next_sibling()) {
 
-		Light comp;
-		comp.entID = atoi(light_node->first_attribute("EntID")->value());
+		Light lightComp;
+		lightComp.entID = atoi(light_node->first_attribute("EntID")->value());
 
 		if (strcmp(light_node->first_attribute("Type")->value(), "Point") == 0){
 
 			pointLightCount++;
-			comp.type = LightType::PointLight;
+			lightComp.type = LightType::PointLight;
 		}
 		else {
 
 			dirLightCount++;
-			comp.type = LightType::DirectionalLight;
+			lightComp.type = LightType::DirectionalLight;
 		}
 		
-		comp.power = atof(light_node->first_attribute("Power")->value());
+		lightComp.power = atof(light_node->first_attribute("Power")->value());
 
-		comp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
-		comp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
-		comp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
+		lightComp.color.x = atof(light_node->first_node("Color")->first_attribute("X")->value());
+		lightComp.color.y = atof(light_node->first_node("Color")->first_attribute("Y")->value());
+		lightComp.color.z = atof(light_node->first_node("Color")->first_attribute("Z")->value());
 
-		lightComponents[comp.entID] = comp;
-		entities[comp.entID].components.push_back(ComponentType::Light);
+		lightComponents.push_back(lightComp);
+		entities[lightComp.entID].lightComponentIndex = lightComponents.size() - 1;
 	}
 
 	Scene::recompileAllMaterials();
@@ -403,12 +403,12 @@ void Scene::moveEntity(int toBeMoved, int moveTo) {
 	Scene::deleteEntityFromTree(oldParent, toBeMoved);
 }
 
-void Scene::getTreeIndices(Transform* transform, std::vector<int>& indices) {
+void Scene::getTreeIndices(Transform* transform, std::set<int, std::greater<int>>& indices) {
 
 	for (int i = 0; i < transform->children.size(); i++)
 		getTreeIndices(transform->children[i], indices);
 
-	indices.push_back(transform->id);
+	indices.insert(transform->id);
 }
 
 void Scene::deleteEntityFromTree(Transform* parent, int id) {
@@ -425,44 +425,71 @@ void Scene::deleteEntityFromTree(Transform* parent, int id) {
 
 void Scene::deleteEntityCompletely(int id) {
 
-	std::vector<int> indices;
+	std::set<int, std::greater<int>> indices;
 	Scene::getTreeIndices(entities[id].transform, indices);
-	std::sort(indices.begin(), indices.end(), std::greater<int>());
 
 	Transform* parent = entities[id].transform->parent;
 	Scene::deleteEntityFromTree(parent, id);
 
-	for (int i = 0; i < indices.size(); i++) {
+	std::vector<Entity> newEntList;
 
-		for (int j = 0; j < entities[indices[i]].components.size(); j++) {
+	std::vector<std::pair<int, int>> m_renderer_transform_PairList;
+	std::vector<std::pair<int, int>> light_transform_PairList;
 
-			switch (entities[indices[i]].components[j]) {
+	int counter = 0;
+	for (Entity& ent : entities) {
 
-			case ComponentType::Light: {
+		if (indices.count(ent.transform->id) == 0) {
 
-				if (lightComponents[indices[i]].type == LightType::DirectionalLight)
-					dirLightCount--;
-				else
-					pointLightCount--;
+			ent.transform->id = counter;
+			newEntList.push_back(ent);
 
-				lightComponents.erase(indices[i]); // remove component kullan oc, destreucot???
-				Scene::recompileAllMaterials();
-				break;
+			if (ent.m_rendererComponentIndex != -1) {
+
+				std::pair<int, int> pair;
+				pair.first = ent.m_rendererComponentIndex;
+				pair.second = ent.transform->id;
+				m_renderer_transform_PairList.push_back(pair);
 			}
-			case ComponentType::MeshRenderer: {
 
-				meshRendererComponents.erase(indices[i]); // remove component kullan oc
-				break;
+			if (ent.lightComponentIndex != -1) {
+
+				std::pair<int, int> pair;
+				pair.first = ent.lightComponentIndex;
+				pair.second = ent.transform->id;
+				light_transform_PairList.push_back(pair);
 			}
-			}
+			counter++;
 		}
-
-		delete entities[indices[i]].transform;
-		entities.erase(entities.begin() + indices[i]);
 	}
 
-	for (int i = indices[indices.size() - 1]; i < entities.size(); i++)
-		entities[i].transform->id = i;
+	entities = newEntList;
+
+	std::vector<MeshRenderer> newMeshRendererComponentList;
+	std::vector<Light> newLightComponentList;
+
+	counter = 0;
+	for (auto& pair : m_renderer_transform_PairList) {
+
+		newMeshRendererComponentList.push_back(meshRendererComponents[pair.first]);
+		newMeshRendererComponentList[counter].entID = pair.second;
+		entities[pair.second].m_rendererComponentIndex = counter;
+		counter++;
+	}
+	meshRendererComponents = newMeshRendererComponentList;
+		
+
+	counter = 0;
+	for (auto& pair : light_transform_PairList) {
+
+		newLightComponentList.push_back(lightComponents[pair.first]);
+		newLightComponentList[counter].entID = pair.second;
+		entities[pair.second].lightComponentIndex = counter;
+		counter++;
+	}
+	lightComponents = newLightComponentList;
+
+	Scene::recompileAllMaterials();
 }
 
 void Scene::duplicateEntity(int id) {
@@ -504,34 +531,27 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 
 void Scene::cloneComponents(int base, int entID) {
 
-	for (int i = 0; i < entities[base].components.size(); i++) {
+	if (entities[base].m_rendererComponentIndex != -1) {
 
-		switch (entities[base].components[i]) {
+		MeshRenderer comp = meshRendererComponents[entities[base].m_rendererComponentIndex];
+		comp.entID = entID;
+		meshRendererComponents.push_back(comp);
+		entities[entID].m_rendererComponentIndex = meshRendererComponents.size() - 1;
+	}
 
-		case ComponentType::Light: {
+	if (entities[base].lightComponentIndex != -1) {
 
-			if (lightComponents[base].type == LightType::DirectionalLight)
-				dirLightCount++;
-			else
-				pointLightCount++;
+		if (lightComponents[entities[base].lightComponentIndex].type == LightType::DirectionalLight)
+			dirLightCount++;
+		else
+			pointLightCount++;
 
-			Scene::recompileAllMaterials();
+		Scene::recompileAllMaterials();
 
-			Light comp = lightComponents[base];
-			comp.entID = entID;
-			lightComponents[comp.entID] = comp;
-			entities[entID].components.push_back(ComponentType::Light);
-			break;
-		}
-		case ComponentType::MeshRenderer: {
-
-			MeshRenderer comp = meshRendererComponents[base];
-			comp.entID = entID;
-			meshRendererComponents[comp.entID] = comp;
-			entities[entID].components.push_back(ComponentType::MeshRenderer);
-			break;
-		}
-		}
+		Light comp = lightComponents[entities[base].lightComponentIndex];
+		comp.entID = entID;
+		lightComponents.push_back(comp);
+		entities[entID].lightComponentIndex = lightComponents.size() - 1;
 	}
 }
 
@@ -550,22 +570,10 @@ Transform* Scene::newEntity(int parentID, const char* name){
 	return transform;
 }
 
-void Scene::newPointLight(int parentID, const char* name) {
-
-	pointLightCount++;
+void Scene::newLight(int parentID, const char* name, LightType type) {
 
 	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent(lightComponents, this);
-	lightComponents[entity->id].type = LightType::PointLight;
-}
-
-void Scene::newDirectionalLight(int parentID, const char* name) {
-
-	dirLightCount++;
-
-	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent(lightComponents, this);
-	lightComponents[entity->id].type = LightType::DirectionalLight;
+	entities[entity->id].addLightComponent(lightComponents, this, type);
 }
 
 void Scene::renameEntity(int id, const char* newName) {
@@ -622,9 +630,9 @@ void Scene::saveMeshRenderers() {
 	for (auto& it : editor->scene.meshRendererComponents) {
 	
 		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponent");
-		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.second.entID).c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(editor->fileSystem.meshNames[it.second.VAO].c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("MatName", doc.allocate_string(it.second.mat->name.c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(editor->fileSystem.meshNames[it.VAO].c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MatName", doc.allocate_string(it.mat->name.c_str())));
 		meshRenderersNode->append_node(componentNode);
 	}
 
@@ -647,17 +655,17 @@ void Scene::saveLights() {
 
 	rapidxml::xml_node<>* lightsNode = doc.allocate_node(rapidxml::node_element, "Lights");
 	doc.append_node(lightsNode);
-	for (std::unordered_map<unsigned int, Light>::iterator it = lightComponents.begin(); it != lightComponents.end(); ++it) {
+	for (auto& it : editor->scene.lightComponents) {
 
 		rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
-		lightNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it->second.entID).c_str())));
-		lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(Scene::getLightType(lightComponents[it->second.entID].type).c_str())));
-		lightNode->append_attribute(doc.allocate_attribute("Power", doc.allocate_string(std::to_string(it->second.power).c_str())));
+		lightNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
+		lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(Scene::getLightType(lightComponents[entities[it.entID].lightComponentIndex].type).c_str())));
+		lightNode->append_attribute(doc.allocate_attribute("Power", doc.allocate_string(std::to_string(it.power).c_str())));
 
 		rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");
-		colorNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(it->second.color.x).c_str())));
-		colorNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(it->second.color.y).c_str())));
-		colorNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(it->second.color.z).c_str())));
+		colorNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(it.color.x).c_str())));
+		colorNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(it.color.y).c_str())));
+		colorNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(it.color.z).c_str())));
 		lightNode->append_node(colorNode);
 
 		lightsNode->append_node(lightNode);

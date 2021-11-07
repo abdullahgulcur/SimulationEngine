@@ -7,16 +7,12 @@ Entity::Entity() {
 
 Entity::~Entity() {
 
-	//std::cout << "\nEntity fucked up with the id " << transform->id << " !!!\n" << std::endl;
 }
 
-void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_map<unsigned int, MeshRenderer>& m_rendererComponents) {
+void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents) {
 
-	for (int i = 0; i < components.size(); i++) {
-
-		if (components[i] == ComponentType::MeshRenderer)
-			return;
-	}
+	if (m_rendererComponentIndex != -1)
+		return;
 
 	MeshRenderer component;
 	component.entID = transform->id;
@@ -24,28 +20,28 @@ void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_
 	component.indiceSize = mesh->indiceSize;
 	component.mat = mat;
 
-	m_rendererComponents.insert({ component.entID, component });
-
-	components.push_back(ComponentType::MeshRenderer);
+	m_rendererComponents.push_back(component);
+	m_rendererComponentIndex = m_rendererComponents.size() - 1;
 }
 
-void Entity::addLightComponent(std::unordered_map<unsigned int, Light>& lightComponents, Scene* scene) {
+void Entity::addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type) {
 
-	for (int i = 0; i < components.size(); i++) {
-	
-		if (components[i] == ComponentType::Light)
-			return;
-	}
+	if (lightComponentIndex != -1)
+		return;
 	
 	Light component;
 	component.entID = transform->id;
-	component.type = LightType::DirectionalLight;
+	component.type = type;
 	component.power = 40.f;
 	component.color = glm::vec3(1.f, 1.f, 1.f);
 
-	lightComponents.insert({ component.entID, component });
+	lightComponents.push_back(component);
+	lightComponentIndex = lightComponents.size() - 1;
 
-	components.push_back(ComponentType::Light);
+	if (type == LightType::PointLight)
+		scene->pointLightCount++;
+	else
+		scene->dirLightCount++;
 
 	scene->recompileAllMaterials();
 }
@@ -56,27 +52,29 @@ void Entity::removeComponent(ComponentType type, Scene* scene) {
 
 	case ComponentType::Light : {
 
-		if (scene->lightComponents[transform->id].type == LightType::DirectionalLight)
+		if (scene->lightComponents[lightComponentIndex].type == LightType::DirectionalLight)
 			scene->dirLightCount--;
 		else
 			scene->pointLightCount--;
 
-		scene->lightComponents.erase(transform->id);
+		for (int i = lightComponentIndex; i < scene->lightComponents.size() - 1; i++)
+			scene->entities[scene->lightComponents[i + 1].entID].lightComponentIndex--;
+
+		scene->lightComponents.erase(scene->lightComponents.begin() + lightComponentIndex);
+		lightComponentIndex = -1;
+
 		scene->recompileAllMaterials();
 		break;
 	}
 	case ComponentType::MeshRenderer : {
 
-		scene->meshRendererComponents.erase(transform->id);
+		for (int i = m_rendererComponentIndex; i < scene->meshRendererComponents.size() - 1; i++)
+			scene->entities[scene->meshRendererComponents[i + 1].entID].m_rendererComponentIndex--;
+
+		scene->meshRendererComponents.erase(scene->meshRendererComponents.begin() + m_rendererComponentIndex);
+		m_rendererComponentIndex = -1;
 		break;
 	}
 	}
 
-	for (int i = 0; i < components.size(); i++) {
-
-		if (components[i] == type) {
-			components.erase(components.begin() + i);
-			return;
-		}
-	}
 }

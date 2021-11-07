@@ -191,7 +191,7 @@ void EditorGUI::updateStateMachine() {
 			Material mat;
 			if (lastSelectedEntityID != -1) {
 				
-				MeshRenderer & m_renderer = editor->scene.meshRendererComponents[lastSelectedEntityID];
+				MeshRenderer & m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
 				mat = *m_renderer.mat;
 			}
 			else
@@ -337,20 +337,16 @@ void EditorGUI::createInspectorPanel() {
 
 		EditorGUI::showTransformComponent();
 
-		for (int i = 0; i < editor->scene.entities[lastSelectedEntityID].components.size(); i++) {
+		if (editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex != -1) {
 
-			if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::MeshRenderer) {
-
-				MeshRenderer& m_renderer = editor->scene.meshRendererComponents[lastSelectedEntityID];
-				Material& material = *m_renderer.mat;
-				EditorGUI::showMeshRendererComponent(m_renderer);
-				EditorGUI::showMaterialProperties(material);
-			}
-			else if (editor->scene.entities[lastSelectedEntityID].components[i] == ComponentType::Light) {
-
-				EditorGUI::showLightComponent();
-			}
+			MeshRenderer& m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
+			Material& material = *m_renderer.mat;
+			EditorGUI::showMeshRendererComponent(m_renderer);
+			EditorGUI::showMaterialProperties(material);
 		}
+
+		if (editor->scene.entities[lastSelectedEntityID].lightComponentIndex != -1)
+			EditorGUI::showLightComponent();
 
 		ImGui::PopStyleColor(); // for the separator
 
@@ -759,7 +755,7 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::PushItemWidth(80);
 
-		int item = editor->scene.lightComponents[lastSelectedEntityID].type == LightType::DirectionalLight ? 0 : 1;
+		int item = editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type == LightType::DirectionalLight ? 0 : 1;
 		const char* items[] = { "Directional", "Point" };
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
@@ -767,7 +763,26 @@ void EditorGUI::showLightComponent() {
 		ImGui::SetNextItemWidth(width - 180);
 		if (ImGui::Combo("##0", &item, items, IM_ARRAYSIZE(items))) {
 
-			editor->scene.lightComponents[lastSelectedEntityID].type = item == 0 ? LightType::DirectionalLight : LightType::PointLight;
+			if (editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type == LightType::DirectionalLight) {
+
+				if (item == 1) {
+
+					editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type = LightType::PointLight;
+					editor->scene.dirLightCount--;
+					editor->scene.pointLightCount++;
+					editor->scene.recompileAllMaterials();
+				}
+			}
+			else {
+
+				if (item == 0) {
+
+					editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type = LightType::DirectionalLight;
+					editor->scene.dirLightCount++;
+					editor->scene.pointLightCount--;
+					editor->scene.recompileAllMaterials();
+				}
+			}
 		}
 
 		ImGui::PopStyleColor();
@@ -776,9 +791,9 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::SameLine(95);
 
-		float power = editor->scene.lightComponents[lastSelectedEntityID].power;
+		float power = editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].power;
 		if (ImGui::DragFloat("##1", &power, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.lightComponents[lastSelectedEntityID].power = power;
+			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].power = power;
 
 		ImGui::Text("Color");
 
@@ -786,9 +801,9 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 
-		ImVec4 color = ImVec4(editor->scene.lightComponents[lastSelectedEntityID].color.x,
-			editor->scene.lightComponents[lastSelectedEntityID].color.y,
-			editor->scene.lightComponents[lastSelectedEntityID].color.z, 1.f);
+		ImVec4 color = ImVec4(editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.x,
+			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.y,
+			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.z, 1.f);
 
 		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
 		static ImVec4 backup_color;
@@ -801,7 +816,7 @@ void EditorGUI::showLightComponent() {
 		if (ImGui::BeginPopup("mypicker"))
 		{
 			ImGui::ColorPicker4("##3", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-			editor->scene.lightComponents[lastSelectedEntityID].color = glm::vec3(color.x, color.y, color.z);
+			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color = glm::vec3(color.x, color.y, color.z);
 
 			ImGui::EndPopup();
 		}
@@ -1237,7 +1252,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, " %d", transform->children[i]->id); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
@@ -1409,7 +1424,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			editor->scene.newDirectionalLight(editor->scene.rootTransform->id, "Sun");
+			editor->scene.newLight(editor->scene.rootTransform->id, "Sun", LightType::DirectionalLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1418,7 +1433,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			editor->scene.newPointLight(editor->scene.rootTransform->id, "Point_Light");
+			editor->scene.newLight(editor->scene.rootTransform->id, "Point_Light", LightType::PointLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();

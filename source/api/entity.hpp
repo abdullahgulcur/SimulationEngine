@@ -18,15 +18,17 @@ public:
 
 	std::string name;
 	Transform* transform;
-	std::vector<ComponentType> components;
+
+	unsigned int m_rendererComponentIndex = -1;
+	unsigned int lightComponentIndex = -1;
 
 	Entity();
 
 	~Entity();
 
-	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::unordered_map<unsigned int, MeshRenderer>& m_rendererComponents);
+	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents);
 
-	void addLightComponent(std::unordered_map<unsigned int, Light>& lightComponents, Scene* scene);
+	void addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type = LightType::DirectionalLight);
 
 	void removeComponent(ComponentType type, Scene* scene);
 };

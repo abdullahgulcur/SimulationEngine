@@ -262,8 +262,8 @@ void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousName
 
 		for (auto& iter : editor->scene.meshRendererComponents) {
 
-			if (strcmp(iter.second.mat->name.c_str(), previousName.c_str()) == 0)
-				keys.push_back(iter.second.entID);
+			if (strcmp(iter.mat->name.c_str(), previousName.c_str()) == 0)
+				keys.push_back(iter.entID);
 		}
 
 		Material mat = materials[previousName];
@@ -316,8 +316,8 @@ void FileSystem::deleteFileCompletely(int id) {
 			std::vector<int> keys;
 			for (auto& iter : editor->scene.meshRendererComponents) {
 
-				if (strcmp(iter.second.mat->name.c_str(), files[id].name.c_str()) == 0)
-					keys.push_back(iter.second.entID);
+				if (strcmp(iter.mat->name.c_str(), files[id].name.c_str()) == 0)
+					keys.push_back(iter.entID);
 			}
 
 			for (int i = 0; i < keys.size(); i++)

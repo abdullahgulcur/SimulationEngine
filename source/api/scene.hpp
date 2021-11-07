@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <set>
 
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
@@ -27,9 +28,6 @@ private:
 
 	Editor* editor;
 
-	//unsigned int programID;
-	//GLuint mvpMatrixID;
-
 public:
 
 	std::string name;
@@ -41,15 +39,8 @@ public:
 	std::vector<Entity> entities;
 	std::map<int, std::vector<int>> initialSceneGraph;
 
-	//std::map<int, AnimationComponent> animationComponents;
-	//std::map<int, AnimatorComponent> animatorComponents;
-	//std::map<int, ColliderComponent> colliderComponents;
-	//std::map<int, RigidBodyComponent> rigidBodyComponents;
-	//std::map<int, ScriptComponent> scriptComponents;
-	//std::map<int, TransformComponent> transformComponents;
-
-	std::unordered_map<unsigned int, MeshRenderer> meshRendererComponents;
-	std::unordered_map<unsigned int, Light> lightComponents;
+	std::vector<MeshRenderer> meshRendererComponents;
+	std::vector<Light> lightComponents;
 
 
 	Scene();
@@ -82,7 +73,7 @@ public:
 
 	void moveEntity(int toBeMoved, int moveTo);
 
-	void getTreeIndices(Transform* transform, std::vector<int>& indices);
+	void getTreeIndices(Transform* transform, std::set<int, std::greater<int>>& indices);
 
 	void deleteEntityFromTree(Transform* parent, int id);
 
@@ -98,9 +89,7 @@ public:
 
 	Transform* newEntity(int parentID, const char* name);
 
-	void newPointLight(int parentID, const char* name);
-
-	void newDirectionalLight(int parentID, const char* name);
+	void newLight(int parentID, const char* name, LightType type);
 
 	void renameEntity(int id, const char* newName);
 
