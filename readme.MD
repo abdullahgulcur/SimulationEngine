@@ -1,3 +1,5 @@
 ## Screenshots
 
-<img src="images/tables.png" width = "1920" height = "1040">
+### General Overview
+
+<img src="images/tables.png" width = "960" height = "520">
