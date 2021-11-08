@@ -19,6 +19,7 @@
 #include "meshrenderer.hpp"
 #include "light.hpp"
 
+#include <glm/gtx/matrix_decompose.hpp>
 
 class Editor;
 
@@ -47,7 +48,9 @@ public:
 
 	void initSceneGraph();
 
-	void generateSceneGraph(Transform* transform);
+	void generateSceneGraph();
+
+	void generateSceneGraphRecursively(Transform* transform);
 
 	void start();
 
@@ -91,7 +94,7 @@ public:
 
 	void newLight(int parentID, const char* name, LightType type);
 
-	void renameEntity(int id, const char* newName);
+	void renameEntity(int id, char* newName);
 
 	void saveEditorProperties();
 

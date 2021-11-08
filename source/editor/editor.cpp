@@ -19,7 +19,6 @@ void Editor::startEditorScreen() {
 	editorGUI.setEditor(this);
 	editorGUI.setFiles(&fileSystem.files);
 
-	//editorGUI.setSceneList(sceneList[0]);
 	editorGUI.initImGui();
 	editorCamera.setWindow(window.GLFW_window);
 	editorCamera.setMode(window.mode);
@@ -43,57 +42,16 @@ void Editor::stayOpen() {
 
 	scene.update();
 
-	//drawAllAxis();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	editorGUI.createPanels();
 	editorGUI.renderImGui();
 
-
-
 	window.end();
-}
-
-void Editor::drawAllAxis() {
-
-	glm::mat4 ModelMatrix = glm::mat4(1.0);
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf((const GLfloat*)&editorCamera.ProjectionMatrix[0]);
-	glMatrixMode(GL_MODELVIEW);
-	glm::mat4 MV = editorCamera.ViewMatrix * ModelMatrix;
-	glLoadMatrixf((const GLfloat*)&MV[0]);
-
-	glUseProgram(0);
-
-	glBegin(GL_LINES);
-	glm::vec3 origin(0, 0, 0);
-	glColor3f(1, 0, 0);
-	glVertex3fv(&origin.x);
-	origin += glm::vec3(1, 0, 0) * 100.0f;
-	glVertex3fv(&origin.x);
-	origin -= glm::vec3(1, 0, 0) * 100.0f;
-	glColor3f(0, 1, 0);
-	glVertex3fv(&origin.x);
-	origin += glm::vec3(0, 1, 0) * 100.0f;
-	glVertex3fv(&origin.x);
-	origin -= glm::vec3(0, 1, 0) * 100.0f;
-	glColor3f(0, 0, 1);
-	glVertex3fv(&origin.x);
-	origin += glm::vec3(0, 0, 1) * 100.0f;
-	glVertex3fv(&origin.x);
-	glEnd();
 }
 
 void Editor::setRender(Render render) { this->render = render; }
 
-//Render Editor::getRender() { return render; }
-
 void Editor::setWindow(Window window) { this->window = window; }
 
-//Window Editor::getWindow() { return window; }
-
 void Editor::setEditorCamera(Camera editorCamera) { this->editorCamera = editorCamera; }
-
-//EditorCamera& Editor::getEditorCamera() { return editorCamera; }
-
-//void Editor::addScene(Scene scene) { sceneList.push_back(scene); }

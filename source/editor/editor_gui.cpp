@@ -449,7 +449,7 @@ void EditorGUI::showEntityName() {
 	ImGui::SameLine();
 
 	char str0[32] = "";
-	strcat(str0, (char*)editor->scene.entities[lastSelectedEntityID].name.c_str());
+	strcat(str0, editor->scene.entities[lastSelectedEntityID].name);
 	ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 	ImVec2 textSize = ImGui::CalcTextSize(str0);
 
@@ -505,9 +505,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float pos_x = editor->scene.entities[lastSelectedEntityID].transform->position.x;
-		if (ImGui::DragFloat("##0", &pos_x, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->position.x = pos_x;
+		float pos_x = editor->scene.entities[lastSelectedEntityID].transform->localPosition.x;
+		if (ImGui::DragFloat("##0", &pos_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localPosition.x = pos_x;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -516,9 +518,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float pos_y = editor->scene.entities[lastSelectedEntityID].transform->position.y;
-		if (ImGui::DragFloat("##1", &pos_y, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->position.y = pos_y;
+		float pos_y = editor->scene.entities[lastSelectedEntityID].transform->localPosition.y;
+		if (ImGui::DragFloat("##1", &pos_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localPosition.y = pos_y;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -527,9 +531,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float pos_z = editor->scene.entities[lastSelectedEntityID].transform->position.z;
-		if (ImGui::DragFloat("##2", &pos_z, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->position.z = pos_z;
+		float pos_z = editor->scene.entities[lastSelectedEntityID].transform->localPosition.z;
+		if (ImGui::DragFloat("##2", &pos_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localPosition.z = pos_z;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 
@@ -538,9 +544,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float rot_x = editor->scene.entities[lastSelectedEntityID].transform->rotation.x;
-		if(ImGui::DragFloat("##3", &rot_x, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->rotation.x = rot_x;
+		float rot_x = editor->scene.entities[lastSelectedEntityID].transform->localRotation.x;
+		if (ImGui::DragFloat("##3", &rot_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localRotation.x = rot_x;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -549,9 +557,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float rot_y = editor->scene.entities[lastSelectedEntityID].transform->rotation.y;
-		if(ImGui::DragFloat("##4", &rot_y, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->rotation.y = rot_y;
+		float rot_y = editor->scene.entities[lastSelectedEntityID].transform->localRotation.y;
+		if (ImGui::DragFloat("##4", &rot_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localRotation.y = rot_y;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -560,9 +570,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float rot_z = editor->scene.entities[lastSelectedEntityID].transform->rotation.z;
-		if(ImGui::DragFloat("##5", &rot_z, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->rotation.z = rot_z;
+		float rot_z = editor->scene.entities[lastSelectedEntityID].transform->localRotation.z;
+		if (ImGui::DragFloat("##5", &rot_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localRotation.z = rot_z;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 
@@ -571,9 +583,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float scale_x = editor->scene.entities[lastSelectedEntityID].transform->scale.x;
-		if (ImGui::DragFloat("##6", &scale_x, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->scale.x = scale_x;
+		float scale_x = editor->scene.entities[lastSelectedEntityID].transform->localScale.x;
+		if (ImGui::DragFloat("##6", &scale_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localScale.x = scale_x;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -582,9 +596,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float scale_y = editor->scene.entities[lastSelectedEntityID].transform->scale.y;
-		if(ImGui::DragFloat("##7", &scale_y, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->scale.y = scale_y;
+		float scale_y = editor->scene.entities[lastSelectedEntityID].transform->localScale.y;
+		if (ImGui::DragFloat("##7", &scale_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localScale.y = scale_y;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -593,9 +609,11 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
 		ImGui::PushItemWidth((width - 140) / 3);
 
-		float scale_z = editor->scene.entities[lastSelectedEntityID].transform->scale.z;
-		if (ImGui::DragFloat("##8", &scale_z, 0.01f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->scale.z = scale_z;
+		float scale_z = editor->scene.entities[lastSelectedEntityID].transform->localScale.z;
+		if (ImGui::DragFloat("##8", &scale_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+			editor->scene.entities[lastSelectedEntityID].transform->localScale.z = scale_z;
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		}
 
 		ImGui::PopStyleColor();
 
@@ -1328,7 +1346,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 		if (ImGui::BeginDragDropSource())
 		{
 			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &transform->children[i]->id, sizeof(int));
-			ImGui::Text(editor->scene.entities[transform->children[i]->id].name.c_str());
+			ImGui::Text(editor->scene.entities[transform->children[i]->id].name);
 			ImGui::EndDragDropSource();
 		}
 
@@ -1365,12 +1383,9 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 		if (renameEntityID == transform->children[i]->id) {
 
-			char temp[3];
-			temp[0] = '#';
-			temp[1] = '#';
-			temp[2] = '\0';
+			char temp[3] = { '#','#', '\0' };
 			char str0[32] = "";
-			strcat(str0, (char*)editor->scene.entities[transform->children[i]->id].name.c_str());
+			strcat(str0, editor->scene.entities[transform->children[i]->id].name);
 			ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
 			ImGui::SetKeyboardFocusHere(0);
 			ImVec2 textSize = ImGui::CalcTextSize(str0);
@@ -1386,9 +1401,9 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 		else {
 
 			if (lastSelectedEntityID == transform->children[i]->id)
-				ImGui::TextColored(textSelectedColor, editor->scene.entities[transform->children[i]->id].name.c_str());
+				ImGui::TextColored(textSelectedColor, editor->scene.entities[transform->children[i]->id].name);
 			else
-				ImGui::Text(editor->scene.entities[transform->children[i]->id].name.c_str());
+				ImGui::Text(editor->scene.entities[transform->children[i]->id].name);
 		}
 
 		if (nodeOpen && hasChildren)
@@ -1869,10 +1884,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 
 			if (renameItemID == file->subfiles[i]->id) {
 
-				char temp[3];
-				temp[0] = '#';
-				temp[1] = '#';
-				temp[2] = '\0';
+				char temp[3] = { '#','#', '\0' };
 				char str0[32] = "";
 				strcat(str0, (char*)(*files)[file->subfiles[i]->id].name.c_str());
 				ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;

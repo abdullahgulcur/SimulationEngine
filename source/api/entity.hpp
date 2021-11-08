@@ -16,15 +16,19 @@ private:
 
 public:
 
-	std::string name;
+	char* name;
 	Transform* transform;
 
 	unsigned int m_rendererComponentIndex = -1;
 	unsigned int lightComponentIndex = -1;
 
-	Entity();
+	Entity(const char* name, std::vector<Entity>& entities);
+
+	Entity(const char* name, Transform* transform, std::vector<Entity>& entities);
 
 	~Entity();
+
+	void addTransformComponent(Transform* transform);
 
 	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents);
 

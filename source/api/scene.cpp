@@ -12,52 +12,33 @@ void Scene::initSceneGraph() {
 
 	if (!Scene::readSceneGraph()) {
 
-		rootTransform->parent = NULL;
-		rootTransform->id = 0;
-
-		Entity entitity;
-		entitity.name = "Root";
-		entitity.transform = rootTransform;
-		entities.push_back(entitity);
-
+		Entity entitity((const char*)"Root", rootTransform, entities);
 	}
 	else {
 
 		Scene::loadEntities();
 		Scene::loadMeshRenderers();
 		Scene::loadLights();
-
-		
-
-		// compile shaders again...
-
-
-		entities[0].transform = rootTransform;
-
-		Scene::generateSceneGraph(rootTransform);
-
+		Scene::generateSceneGraph();
 		Scene::loadTransformAttributes();
-
-		entities[rootTransform->id].transform = rootTransform;
 	}
 
 	Scene::saveEditorProperties();
-
 }
 
-void Scene::generateSceneGraph(Transform* parent) {
+void Scene::generateSceneGraph() {
+
+	entities[rootTransform->id].addTransformComponent(rootTransform);
+	Scene::generateSceneGraphRecursively(rootTransform);
+}
+
+void Scene::generateSceneGraphRecursively(Transform* parent) {
 
 	for (int i = 0; i < initialSceneGraph[parent->id].size(); i++) {
 
-		Transform* transform = new Transform;
-		transform->id = initialSceneGraph[parent->id][i];
-		transform->parent = parent;
-
-		(parent->children).push_back(transform);
-
-		entities[transform->id].transform = transform;
-
-		Scene::generateSceneGraph(transform);
+		Transform* transform = new Transform(parent, initialSceneGraph[parent->id][i]);
+		entities[transform->id].addTransformComponent(transform);
+		Scene::generateSceneGraphRecursively(transform);
 	}
 }
 
@@ -74,9 +55,11 @@ void Scene::update() {
 		glm::vec3 camPos = editor->editorCamera.position;
 		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
 		glm::mat4 view = editor->editorCamera.ViewMatrix;
-		glm::mat4 model = glm::mat4(1.0);
-		model = glm::translate(model, entities[val.entID].transform->position);
-		model = glm::scale(model, entities[val.entID].transform->scale);
+		//glm::mat4 model = glm::mat4(1.0);
+		//model = glm::translate(model, entities[val.entID].transform->position);
+		//model = glm::scale(model, entities[val.entID].transform->scale);
+
+		glm::mat4 model = entities[val.entID].transform->model;
 
 		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &model[0][0]);
 		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &view[0][0]);
@@ -96,13 +79,13 @@ void Scene::update() {
 			if (l_val.type == LightType::PointLight) {
 
 				p_lightSourceColors.push_back(l_val.color);
-				p_lightSourcePositions.push_back(entities[l_val.entID].transform->position);
+				p_lightSourcePositions.push_back(entities[l_val.entID].transform->getWorldPosition());
 				p_lightSourcePowers.push_back(l_val.power);
 			}
 			else {
 
 				d_lightSourceColors.push_back(l_val.color);
-				d_lightSourceDirections.push_back(entities[l_val.entID].transform->rotation);
+				d_lightSourceDirections.push_back(entities[l_val.entID].transform->localRotation);
 				d_lightSourcePowers.push_back(l_val.power);
 			}
 		}
@@ -229,11 +212,8 @@ void Scene::loadEntities() {
 
 	root_node = doc.first_node("Entities");
 
-	for (rapidxml::xml_node<>* entity_node = root_node->first_node("Entity"); entity_node; entity_node = entity_node->next_sibling()) {
-		Entity ent;
-		ent.name = entity_node->first_attribute("Name")->value();
-		entities.push_back(ent);
-	}
+	for (rapidxml::xml_node<>* entity_node = root_node->first_node("Entity"); entity_node; entity_node = entity_node->next_sibling())
+		Entity ent(entity_node->first_attribute("Name")->value(), entities);
 }
 
 void Scene::loadTransformAttributes() {
@@ -253,20 +233,22 @@ void Scene::loadTransformAttributes() {
 	int count = 0;
 	for (rapidxml::xml_node<>* transform_node = root_node->first_node("Transform"); transform_node; transform_node = transform_node->next_sibling()) {
 
-		entities[count].transform->position.x = atof(transform_node->first_node("Position")->first_attribute("X")->value());
-		entities[count].transform->position.y = atof(transform_node->first_node("Position")->first_attribute("Y")->value());
-		entities[count].transform->position.z = atof(transform_node->first_node("Position")->first_attribute("Z")->value());
+		entities[count].transform->localPosition.x = atof(transform_node->first_node("Position")->first_attribute("X")->value());
+		entities[count].transform->localPosition.y = atof(transform_node->first_node("Position")->first_attribute("Y")->value());
+		entities[count].transform->localPosition.z = atof(transform_node->first_node("Position")->first_attribute("Z")->value());
 
-		entities[count].transform->rotation.x = atof(transform_node->first_node("Rotation")->first_attribute("X")->value());
-		entities[count].transform->rotation.y = atof(transform_node->first_node("Rotation")->first_attribute("Y")->value());
-		entities[count].transform->rotation.z = atof(transform_node->first_node("Rotation")->first_attribute("Z")->value());
+		entities[count].transform->localRotation.x = atof(transform_node->first_node("Rotation")->first_attribute("X")->value());
+		entities[count].transform->localRotation.y = atof(transform_node->first_node("Rotation")->first_attribute("Y")->value());
+		entities[count].transform->localRotation.z = atof(transform_node->first_node("Rotation")->first_attribute("Z")->value());
 
-		entities[count].transform->scale.x = atof(transform_node->first_node("Scale")->first_attribute("X")->value());
-		entities[count].transform->scale.y = atof(transform_node->first_node("Scale")->first_attribute("Y")->value());
-		entities[count].transform->scale.z = atof(transform_node->first_node("Scale")->first_attribute("Z")->value());
+		entities[count].transform->localScale.x = atof(transform_node->first_node("Scale")->first_attribute("X")->value());
+		entities[count].transform->localScale.y = atof(transform_node->first_node("Scale")->first_attribute("Y")->value());
+		entities[count].transform->localScale.z = atof(transform_node->first_node("Scale")->first_attribute("Z")->value());
 
 		count++;
 	}
+
+	rootTransform->updateSelfAndChild();
 }
 
 void Scene::loadMeshRenderers() {
@@ -400,6 +382,13 @@ void Scene::moveEntity(int toBeMoved, int moveTo) {
 	Transform* oldParent = entities[toBeMoved].transform->parent;
 	entities[toBeMoved].transform->parent = entities[moveTo].transform;
 	(entities[moveTo].transform->children).push_back(entities[toBeMoved].transform);
+	entities[toBeMoved].transform->updateSelfAndChildTransforms();
+	//entities[toBeMoved].transform->localScale = entities[toBeMoved].transform->scale / entities[toBeMoved].transform->parent->scale;
+	//entities[toBeMoved].transform->localPosition = entities[toBeMoved].transform->position - entities[toBeMoved].transform->parent->position;
+	//entities[toBeMoved].transform->localPosition *= (entities[toBeMoved].transform->scale / entities[toBeMoved].transform->parent->scale);
+
+	
+
 	Scene::deleteEntityFromTree(oldParent, toBeMoved);
 }
 
@@ -430,6 +419,12 @@ void Scene::deleteEntityCompletely(int id) {
 
 	Transform* parent = entities[id].transform->parent;
 	Scene::deleteEntityFromTree(parent, id);
+
+	for (auto& iter : indices) {
+
+		//delete entities[iter].name;
+		//delete entities[iter].transform;
+	}
 
 	std::vector<Entity> newEntList;
 
@@ -488,43 +483,32 @@ void Scene::deleteEntityCompletely(int id) {
 		counter++;
 	}
 	lightComponents = newLightComponentList;
-
 	Scene::recompileAllMaterials();
 }
 
 void Scene::duplicateEntity(int id) {
 
-	Transform* transform = new Transform;
-	transform->id = entities.size();
-	transform->parent = entities[id].transform->parent;
-	(transform->parent->children).push_back(transform);
+	Transform* transform = new Transform(entities[id].transform->parent, entities[id].transform, entities.size());
 
-	Entity ent;
-	ent.name = entities[id].name + "_cpy";
-	ent.transform = transform;
-	entities.push_back(ent);
+	char* name = new char[strlen(entities[id].name) + 5];
+	strcpy((char*)name, entities[id].name);
+	strcat((char*)name, "_cpy\0");
+	Entity ent(name, transform, entities);
 
 	Scene::cloneComponents(id, transform->id);
-
 	cloneEntityRecursively(entities[id].transform, transform);
+
+	transform->updateSelfAndChild();
 }
 
 void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 
 	for (int i = 0; i < base->children.size(); i++) {
 
-		Transform* transform = new Transform;
-		transform->id = entities.size();
-		transform->parent = copied;
-		(transform->parent->children).push_back(transform);
-
-		Entity ent;
-		ent.name = entities[base->children[i]->id].name;
-		ent.transform = transform;
-		entities.push_back(ent);
+		Transform* transform = new Transform(copied, base->children[i], entities.size());
+		Entity ent(entities[base->children[i]->id].name, transform, entities);
 
 		Scene::cloneComponents(base->children[i]->id, transform->id);
-
 		Scene::cloneEntityRecursively(base->children[i], transform);
 	}
 }
@@ -557,15 +541,8 @@ void Scene::cloneComponents(int base, int entID) {
 
 Transform* Scene::newEntity(int parentID, const char* name){
 
-	Transform* transform = new Transform;
-	transform->id = entities.size();
-	transform->parent = entities[parentID].transform;
-	(transform->parent->children).push_back(transform);
-
-	Entity ent;
-	ent.name = name;
-	ent.transform = transform;
-	entities.push_back(ent);
+	Transform* transform = new Transform(entities[parentID].transform, entities.size());
+	Entity ent(name, transform, entities);
 
 	return transform;
 }
@@ -576,9 +553,9 @@ void Scene::newLight(int parentID, const char* name, LightType type) {
 	entities[entity->id].addLightComponent(lightComponents, this, type);
 }
 
-void Scene::renameEntity(int id, const char* newName) {
+void Scene::renameEntity(int id, char* newName) {
 
-	entities[id].name = newName;
+	strcpy(entities[id].name, newName);
 }
 
 void Scene::saveEditorProperties() {
@@ -603,7 +580,7 @@ void Scene::saveEntities() {
 	for (Entity& ent: entities) {
 
 		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
-		entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(ent.name.c_str())));
+		entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(ent.name)));
 		entitiesNode->append_node(entity);
 	}
 
@@ -707,21 +684,21 @@ void Scene::saveTransformAttributes() {
 		transformsNode->append_node(transformNode);
 
 		rapidxml::xml_node<>* positionNode = doc.allocate_node(rapidxml::node_element, "Position");
-		positionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->position.x).c_str())));
-		positionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->position.y).c_str())));
-		positionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->position.z).c_str())));
+		positionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->localPosition.x).c_str())));
+		positionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->localPosition.y).c_str())));
+		positionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->localPosition.z).c_str())));
 		transformNode->append_node(positionNode);
 
 		rapidxml::xml_node<>* rotationNode = doc.allocate_node(rapidxml::node_element, "Rotation");
-		rotationNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->rotation.x).c_str())));
-		rotationNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->rotation.y).c_str())));
-		rotationNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->rotation.z).c_str())));
+		rotationNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->localRotation.x).c_str())));
+		rotationNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->localRotation.y).c_str())));
+		rotationNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->localRotation.z).c_str())));
 		transformNode->append_node(rotationNode);
 
 		rapidxml::xml_node<>* scaleNode = doc.allocate_node(rapidxml::node_element, "Scale");
-		scaleNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->scale.x).c_str())));
-		scaleNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->scale.y).c_str())));
-		scaleNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->scale.z).c_str())));
+		scaleNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(ent.transform->localScale.x).c_str())));
+		scaleNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(ent.transform->localScale.y).c_str())));
+		scaleNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(ent.transform->localScale.z).c_str())));
 		transformNode->append_node(scaleNode);
 	}
 
@@ -737,7 +714,6 @@ void Scene::saveTransformAttributes() {
 void Scene::saveSceneGraph() {
 
 	std::ofstream MyFile(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenegraph_db.txt");
-
 	std::ostringstream fileTextStream;
 
 	std::queue<Transform*> entQueue;

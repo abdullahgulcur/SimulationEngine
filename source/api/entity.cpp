@@ -1,12 +1,30 @@
 #include "entity.hpp"
 #include "scene.hpp"
 
-Entity::Entity() {
+Entity::Entity(const char* name, std::vector<Entity>& entities) {
 
+	this->name = new char[strlen(name) + 1];
+	strcpy(this->name, name);
+	this->name[strlen(name)] = '\0';
+	std::cout << name << std::endl;
+	entities.push_back(*this);
+}
+
+Entity::Entity(const char* name, Transform* transform, std::vector<Entity>& entities) {
+
+	this->name = new char[strlen(name)];
+	strcpy(this->name, name);
+	this->transform = transform;
+	entities.push_back(*this);
 }
 
 Entity::~Entity() {
 
+}
+
+void Entity::addTransformComponent(Transform* transform) {
+
+	this->transform = transform;
 }
 
 void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents) {
