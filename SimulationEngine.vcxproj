@@ -178,6 +178,11 @@
     <ClCompile Include="source\editor\savingsystem.cpp" />
     <ClCompile Include="source\editor\window.cpp" />
     <ClCompile Include="source\include\GLM\detail\glm.cpp" />
+    <ClCompile Include="source\include\imguizmo\GraphEditor.cpp" />
+    <ClCompile Include="source\include\imguizmo\ImCurveEdit.cpp" />
+    <ClCompile Include="source\include\imguizmo\ImGradient.cpp" />
+    <ClCompile Include="source\include\imguizmo\ImGuizmo.cpp" />
+    <ClCompile Include="source\include\imguizmo\ImSequencer.cpp" />
     <ClCompile Include="source\include\imgui\imgui.cpp" />
     <ClCompile Include="source\include\imgui\imgui_draw.cpp" />
     <ClCompile Include="source\include\imgui\imgui_impl_glfw.cpp" />
@@ -497,6 +502,12 @@
     <ClInclude Include="source\include\GLM\vec3.hpp" />
     <ClInclude Include="source\include\GLM\vec4.hpp" />
     <ClInclude Include="source\include\GLM\vector_relational.hpp" />
+    <ClInclude Include="source\include\imguizmo\GraphEditor.h" />
+    <ClInclude Include="source\include\imguizmo\ImCurveEdit.h" />
+    <ClInclude Include="source\include\imguizmo\ImGradient.h" />
+    <ClInclude Include="source\include\imguizmo\ImGuizmo.h" />
+    <ClInclude Include="source\include\imguizmo\ImSequencer.h" />
+    <ClInclude Include="source\include\imguizmo\ImZoomSlider.h" />
     <ClInclude Include="source\include\imgui\imconfig.h" />
     <ClInclude Include="source\include\imgui\imgui.h" />
     <ClInclude Include="source\include\imgui\imgui_impl_glfw.h" />

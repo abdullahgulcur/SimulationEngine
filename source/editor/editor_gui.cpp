@@ -714,8 +714,7 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 
 		if (ImGui::Combo("##1", &matIndex, matItems, size_mats)) {
 
-			std::string matName = matItems[matIndex];
-			m_renderer.mat = &editor->fileSystem.materials[matName];
+			m_renderer.mat = &editor->fileSystem.materials[matItems[matIndex]];
 		}
 		delete meshNames;
 		delete meshVAOs;

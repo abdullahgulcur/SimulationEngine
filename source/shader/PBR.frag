@@ -51,11 +51,6 @@ uniform vec3 camPos;
 
 const float PI = 3.14159265359;
 
-// ----------------------------------------------------------------------------
-// Easy trick to get tangent-normals to world-space to keep PBR code simplified.
-// Don't worry if you don't get what's going on; you generally want to do normal 
-// mapping the usual way for performance anways; I do plan make a note of this 
-// technique somewhere later in the normal mapping tutorial.
 #if USE_NORMAL
 vec3 getNormalFromMap()
 {
@@ -74,7 +69,7 @@ vec3 getNormalFromMap()
     return normalize(TBN * tangentNormal);
 }
 #endif
-// ----------------------------------------------------------------------------
+
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a = roughness*roughness;
@@ -86,9 +81,9 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
 
-    return nom / max(denom, 0.0000001); // prevent divide by zero for roughness=0.0 and NdotH=1.0
+    return nom / max(denom, 0.0000001);
 }
-// ----------------------------------------------------------------------------
+
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
@@ -99,7 +94,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 
     return nom / denom;
 }
-// ----------------------------------------------------------------------------
+
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
@@ -109,15 +104,14 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
     return ggx1 * ggx2;
 }
-// ----------------------------------------------------------------------------
+
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
 }
-// ----------------------------------------------------------------------------
+
 void main()
 {		
-
     #if USE_ALBEDO
     vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
     #else
@@ -157,7 +151,6 @@ void main()
     vec3 Lo = vec3(0.0);
 
     #if DIR_LIGHT_COUNT != 0
-
     for(int i = 0; i < DIR_LIGHT_COUNT; ++i) 
     {
         vec3 L = normalize(dirLightDirections[i]);
@@ -176,13 +169,9 @@ void main()
         float NdotL = max(dot(N, L), 0.0);
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }   
-
     #endif
 
-    //------ POINT LIGHT
-
     #if POINT_LIGHT_COUNT != 0
-
     for(int i = 0; i < POINT_LIGHT_COUNT; ++i) 
     {
         vec3 L = normalize(pointLightPositions[i] - WorldPos);
@@ -202,7 +191,6 @@ void main()
         float NdotL = max(dot(N, L), 0.0);
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }   
-
     #endif
     
     vec3 ambient = vec3(0.03) * albedo * ao;
