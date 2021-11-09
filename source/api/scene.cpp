@@ -51,75 +51,75 @@ void Scene::update() {
 	for (auto const& val : meshRendererComponents)
 	{
 		glUseProgram(val.mat->programID);
+		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &entities[val.entID].transform->model[0][0]);
+		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+		glUniform3fv(val.mat->camPosID, 1, &editor->editorCamera.position[0]);
 
-		glm::vec3 camPos = editor->editorCamera.position;
-		glm::mat4 projection = editor->editorCamera.ProjectionMatrix;
-		glm::mat4 view = editor->editorCamera.ViewMatrix;
-		//glm::mat4 model = glm::mat4(1.0);
-		//model = glm::translate(model, entities[val.entID].transform->position);
-		//model = glm::scale(model, entities[val.entID].transform->scale);
-
-		glm::mat4 model = entities[val.entID].transform->model;
-
-		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &model[0][0]);
-		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &view[0][0]);
-		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &projection[0][0]);
-		glUniform3fv(val.mat->camPosID, 1, &camPos[0]);
-
-		std::vector<glm::vec3> p_lightSourceColors;
-		std::vector<glm::vec3> p_lightSourcePositions;
-		std::vector<float> p_lightSourcePowers;
-
-		std::vector<glm::vec3> d_lightSourceColors;
-		std::vector<glm::vec3> d_lightSourceDirections;
-		std::vector<float> d_lightSourcePowers;
-
-		for (auto const& l_val: lightComponents) {
+		int dlightCounter = 0;
+		int plightCounter = 0;
+		for (auto const& l_val : lightComponents) {
 
 			if (l_val.type == LightType::PointLight) {
 
-				p_lightSourceColors.push_back(l_val.color);
-				p_lightSourcePositions.push_back(entities[l_val.entID].transform->getWorldPosition());
-				p_lightSourcePowers.push_back(l_val.power);
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", plightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "pointLightPositions[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "pointLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "pointLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos), 1, &entities[l_val.entID].transform->getWorldPosition()[0]);
+				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol), 1, &l_val.color[0]);
+				glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow), l_val.power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				plightCounter++;
 			}
 			else {
 
-				d_lightSourceColors.push_back(l_val.color);
-				d_lightSourceDirections.push_back(entities[l_val.entID].transform->localRotation);
-				d_lightSourcePowers.push_back(l_val.power);
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", dlightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "dirLightDirections[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "dirLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "dirLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos), 1, &entities[l_val.entID].transform->localRotation[0]);
+				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol), 1, &l_val.color[0]);
+				glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow), l_val.power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				dlightCounter++;
 			}
-		}
-
-		for (int i = 0; i < p_lightSourceColors.size(); i++) {
-
-			std::string tempLPos = "pointLightPositions[" + std::to_string(i);
-			tempLPos += "]";
-
-			std::string tempLCol = "pointLightColors[" + std::to_string(i);
-			tempLCol += "]";
-
-			std::string tempLPow = "pointLightPowers[" + std::to_string(i);
-			tempLPow += "]";
-
-			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos.c_str()), 1, &p_lightSourcePositions[i][0]);
-			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol.c_str()), 1, &p_lightSourceColors[i][0]);
-			glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow.c_str()), p_lightSourcePowers[i]);
-		}
-
-		for (int i = 0; i < d_lightSourceColors.size(); i++) {
-
-			std::string tempLPos = "dirLightDirections[" + std::to_string(i);
-			tempLPos += "]";
-
-			std::string tempLCol = "dirLightColors[" + std::to_string(i);
-			tempLCol += "]";
-
-			std::string tempLPow = "dirLightPowers[" + std::to_string(i);
-			tempLPow += "]";
-
-			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos.c_str()), 1, &d_lightSourceDirections[i][0]);
-			glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol.c_str()), 1, &d_lightSourceColors[i][0]);
-			glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow.c_str()), d_lightSourcePowers[i]);
 		}
 
 		glUniform1f(val.mat->metallicAmountID, val.mat->metallicAmount);
