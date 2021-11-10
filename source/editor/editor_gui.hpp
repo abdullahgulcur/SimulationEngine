@@ -5,9 +5,16 @@
 #include <string>
 #include <stack>
 
+#include <GLM/gtc/type_ptr.hpp>
+
+#include <math.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+
+#include <imguizmo/imguizmo.h>
+
 
 class Editor;
 
@@ -81,6 +88,9 @@ public:
 	/*
 	* TEXTURE IDs
 	*/
+
+	ImGuizmo::OPERATION optype = ImGuizmo::OPERATION::TRANSLATE;
+
 	unsigned int openFolderTextureID;
 	unsigned int closedFolderTextureID;
 	unsigned int plusTextureID;
@@ -113,6 +123,8 @@ public:
 	void createPanels();
 
 	void createScenePanel();
+
+	void setTransformOperation();
 
 	void createConsolePanel();
 

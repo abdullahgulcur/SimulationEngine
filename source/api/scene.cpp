@@ -382,7 +382,7 @@ void Scene::moveEntity(int toBeMoved, int moveTo) {
 	Transform* oldParent = entities[toBeMoved].transform->parent;
 	entities[toBeMoved].transform->parent = entities[moveTo].transform;
 	(entities[moveTo].transform->children).push_back(entities[toBeMoved].transform);
-	entities[toBeMoved].transform->updateSelfAndChildTransforms();
+	entities[toBeMoved].transform->updateSelfAndChildTransforms(3);
 	//entities[toBeMoved].transform->localScale = entities[toBeMoved].transform->scale / entities[toBeMoved].transform->parent->scale;
 	//entities[toBeMoved].transform->localPosition = entities[toBeMoved].transform->position - entities[toBeMoved].transform->parent->position;
 	//entities[toBeMoved].transform->localPosition *= (entities[toBeMoved].transform->scale / entities[toBeMoved].transform->parent->scale);

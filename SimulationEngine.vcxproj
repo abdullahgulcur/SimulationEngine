@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClCompile Include="source\api\component.cpp" />
     <ClCompile Include="source\api\material.cpp" />
+    <ClCompile Include="source\api\math.cpp" />
     <ClCompile Include="source\api\mesh.cpp" />
     <ClCompile Include="source\api\model.cpp" />
     <ClCompile Include="source\api\entity.cpp" />
@@ -172,6 +173,7 @@
     <ClCompile Include="source\editor\camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
+    <ClCompile Include="source\editor\input.cpp" />
     <ClCompile Include="source\editor\loadsystem.cpp" />
     <ClCompile Include="source\editor\log.cpp" />
     <ClCompile Include="source\editor\render.cpp" />
@@ -193,6 +195,7 @@
   <ItemGroup>
     <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\material.hpp" />
+    <ClInclude Include="source\api\math.hpp" />
     <ClInclude Include="source\api\mesh.hpp" />
     <ClInclude Include="source\api\model.hpp" />
     <ClInclude Include="source\api\entity.hpp" />
@@ -211,6 +214,7 @@
     <ClInclude Include="source\editor\camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />
+    <ClInclude Include="source\editor\input.hpp" />
     <ClInclude Include="source\editor\loadsystem.hpp" />
     <ClInclude Include="source\editor\log.hpp" />
     <ClInclude Include="source\editor\render.hpp" />

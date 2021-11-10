@@ -29,6 +29,9 @@ void EditorGUI::newFrameImGui() {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
+
+	EditorGUI::setTransformOperation();
 }
 
 void EditorGUI::renderImGui() {
@@ -241,7 +244,7 @@ void EditorGUI::updateStateMachine() {
 
 		////
 
-		if (!entityClicked && !inspectorHovered)
+		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing())
 			lastSelectedEntityID = -1;
 	}
 }
@@ -299,8 +302,56 @@ void EditorGUI::createScenePanel() {
 	ImTextureID textureId = (ImTextureID)(editor->window.textureColorbuffer);
 	ImGui::Image(textureId, windowSize, ImVec2(0, 1), ImVec2(1, 0));
 
-	ImGui::End();
+	//gizmo
+
+	if (lastSelectedEntityID != -1) {
+
+		ImGuizmo::SetOrthographic(false);
+		ImGuizmo::SetDrawlist();
+
+		float windowWidth = (float)ImGui::GetWindowWidth();
+		float windowHeight = (float)ImGui::GetWindowHeight();
+
+		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
+		glm::mat4& model = editor->scene.entities[lastSelectedEntityID].transform->model;
+		ImGuizmo::Manipulate(glm::value_ptr(editor->editorCamera.ViewMatrix), glm::value_ptr(editor->editorCamera.ProjectionMatrix),
+			optype, ImGuizmo::LOCAL, glm::value_ptr(model));
+
+		if (ImGuizmo::IsUsing()) {
+
+			int optype = 0;
+
+			switch (this->optype) {
+
+			case ImGuizmo::OPERATION::TRANSLATE:
+				optype = 0;
+				break;
+			case ImGuizmo::OPERATION::ROTATE:
+				optype = 1;
+				break;
+			case ImGuizmo::OPERATION::SCALE:
+				optype = 2;
+				break;
+			}
+
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChildTransforms(optype);
+		}
+	}
+
 	ImGui::PopStyleVar();
+	ImGui::End();
+}
+
+void EditorGUI::setTransformOperation() {
+
+	if(ImGui::IsKeyPressed('T'))
+		optype = ImGuizmo::OPERATION::TRANSLATE;
+
+	if (ImGui::IsKeyPressed('R'))
+		optype = ImGuizmo::OPERATION::ROTATE;
+
+	if (ImGui::IsKeyPressed('S'))
+		optype = ImGuizmo::OPERATION::SCALE;
 }
 
 //----- CONSOLE MENU -----
@@ -506,7 +557,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float pos_x = editor->scene.entities[lastSelectedEntityID].transform->localPosition.x;
-		if (ImGui::DragFloat("##0", &pos_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##0", &pos_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localPosition.x = pos_x;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -519,7 +570,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float pos_y = editor->scene.entities[lastSelectedEntityID].transform->localPosition.y;
-		if (ImGui::DragFloat("##1", &pos_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##1", &pos_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localPosition.y = pos_y;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -532,7 +583,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float pos_z = editor->scene.entities[lastSelectedEntityID].transform->localPosition.z;
-		if (ImGui::DragFloat("##2", &pos_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##2", &pos_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localPosition.z = pos_z;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -545,7 +596,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float rot_x = editor->scene.entities[lastSelectedEntityID].transform->localRotation.x;
-		if (ImGui::DragFloat("##3", &rot_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##3", &rot_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localRotation.x = rot_x;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -558,7 +609,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float rot_y = editor->scene.entities[lastSelectedEntityID].transform->localRotation.y;
-		if (ImGui::DragFloat("##4", &rot_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##4", &rot_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localRotation.y = rot_y;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -571,7 +622,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float rot_z = editor->scene.entities[lastSelectedEntityID].transform->localRotation.z;
-		if (ImGui::DragFloat("##5", &rot_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##5", &rot_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localRotation.z = rot_z;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -584,7 +635,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float scale_x = editor->scene.entities[lastSelectedEntityID].transform->localScale.x;
-		if (ImGui::DragFloat("##6", &scale_x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##6", &scale_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localScale.x = scale_x;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -597,7 +648,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float scale_y = editor->scene.entities[lastSelectedEntityID].transform->localScale.y;
-		if (ImGui::DragFloat("##7", &scale_y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##7", &scale_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localScale.y = scale_y;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
@@ -610,7 +661,7 @@ void EditorGUI::showTransformComponent() {
 		ImGui::PushItemWidth((width - 140) / 3);
 
 		float scale_z = editor->scene.entities[lastSelectedEntityID].transform->localScale.z;
-		if (ImGui::DragFloat("##8", &scale_z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##8", &scale_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
 			editor->scene.entities[lastSelectedEntityID].transform->localScale.z = scale_z;
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}

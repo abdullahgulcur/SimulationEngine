@@ -44,6 +44,10 @@ void Window::startGLOptions() {
 	glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
 	glfwSetDropCallback(GLFW_window, drop_callback);
 
+	//
+	glfwSetKeyCallback(GLFW_window, Input::key_callback);
+
+
 	glfwPollEvents();
 	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);

@@ -42,48 +42,36 @@ glm::mat4 Transform::getLocalModelMatrix()
 		glm::radians(localRotation.z),
 		glm::vec3(0.0f, 0.0f, 1.0f));
 
-	const glm::mat4 roationMatrix = transformY * transformX * transformZ;
+	//const glm::mat4 roationMatrix = transformY * transformX * transformZ;
+	const glm::mat4 roationMatrix = transformZ * transformY * transformX;
 
 	return glm::translate(glm::mat4(1.0f), localPosition) *
 		roationMatrix *
 		glm::scale(glm::mat4(1.0f), localScale);
 }
 
-void Transform::updateSelfAndChildTransforms()
+void Transform::updateSelfAndChildTransforms(int type)
 {
-	//localPosition = glm::vec3(0, 0, 0);
-	//localRotation = glm::vec3(0, 0, 0);
-	//localScale = glm::vec3(1, 1, 1);
-
+	glm::mat4 localTransform = glm::inverse(parent->model) * model;
 
 	glm::vec3 scale;
-	glm::quat rotation;
-	glm::vec3 translation;
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::decompose(model, scale, rotation, translation, skew, perspective);
+	glm::vec3 rotation;
+	glm::vec3 position;
+	Math::decompose(localTransform, scale, rotation, position);
+	
+	localScale = scale;
+	localRotation = rotation * (180.f / glm::pi<float>());
+	localPosition = position;
 
-	glm::vec3 scale_parent;
-	glm::quat rotation_parent;
-	glm::vec3 translation_parent;
-	glm::vec3 skew_parent;
-	glm::vec4 perspective_parent;
-	glm::decompose(parent->model, scale_parent, rotation_parent, translation_parent, skew_parent, perspective_parent);
-
-	//// buggy
-	//localScale = scale / scale_parent;
-	////localPosition = (translation - translation_parent) / parent->localScale;
-	localPosition = translation - translation_parent;
-	////
-	//localRotation = glm::degrees(glm::eulerAngles(rotation)) - glm::degrees(glm::eulerAngles(rotation_parent));
-
-	Transform::updateSelfAndChild();
+	Transform::updateSelfAndChildRecursively();
 }
 
 void Transform::updateSelfAndChild()
 {
-	if (parent != NULL)
+	if (parent != NULL) {
+
 		model = parent->model * getLocalModelMatrix();
+	}
 
 	Transform::updateSelfAndChildRecursively();
 }

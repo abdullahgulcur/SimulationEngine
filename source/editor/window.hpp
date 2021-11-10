@@ -1,6 +1,8 @@
 #pragma once
 #include "GLfW/glfw3.h"
 
+#include "input.hpp"
+
 class Editor;
 
 class Window {

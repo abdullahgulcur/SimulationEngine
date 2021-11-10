@@ -5,6 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
+#include <math.hpp>
+
 class Transform {
 
 private:
@@ -34,7 +36,7 @@ public:
 
 	glm::mat4 getLocalModelMatrix();
 
-	void updateSelfAndChildTransforms();
+	void updateSelfAndChildTransforms(int type);
 
 	void updateSelfAndChild();
 
