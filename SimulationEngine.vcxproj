@@ -191,8 +191,10 @@
     <ClCompile Include="source\include\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="source\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="source\include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="source\include\lodepng\lodepng.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource.h" />
     <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\material.hpp" />
     <ClInclude Include="source\api\math.hpp" />
@@ -521,6 +523,7 @@
     <ClInclude Include="source\include\imgui\imstb_rectpack.h" />
     <ClInclude Include="source\include\imgui\imstb_textedit.h" />
     <ClInclude Include="source\include\imgui\imstb_truetype.h" />
+    <ClInclude Include="source\include\lodepng\lodepng.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="readme.MD" />
@@ -665,6 +668,14 @@
     <None Include="source\include\GLM\gtx\wrap.inl" />
     <None Include="source\shader\PBR.frag" />
     <None Include="source\shader\PBR.vertex" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\Users\Abdullah\Desktop\appicon.bmp" />
+    <Image Include="..\..\Users\Abdullah\Downloads\appicon.ico" />
+    <Image Include="..\..\Users\Abdullah\Downloads\material.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

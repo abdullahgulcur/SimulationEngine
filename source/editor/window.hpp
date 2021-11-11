@@ -29,6 +29,8 @@ public:
 
 	void startGLOptions();
 
+	void loadTitleBarIcon();
+
 	void clear();
 
 	void end();

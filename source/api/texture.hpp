@@ -7,6 +7,9 @@
 
 #include <GL/glew.h>
 
+#include <lodepng/lodepng.h>
+
+
 #define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
 #define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
 #define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
@@ -24,6 +27,10 @@ public:
 	Texture();
 
 	unsigned int loadDDS(const char* imagepath);
+
+	unsigned char* loadBMP(const char* imagepath);
+
+	unsigned char* loadPNG(const char* imagepath, unsigned& width, unsigned& height);
 
 	void setTextureID(const char* imagepath);
 

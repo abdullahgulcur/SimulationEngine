@@ -120,6 +120,8 @@ public:
 
 	void updateStateMachine();
 
+	void mainMenuBar();
+
 	void createPanels();
 
 	void createScenePanel();

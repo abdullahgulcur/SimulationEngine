@@ -123,6 +123,9 @@
     <ClCompile Include="source\editor\input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\include\lodepng\lodepng.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -1109,6 +1112,12 @@
     <ClInclude Include="source\editor\input.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\include\lodepng\lodepng.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\shader\PBR.frag" />
@@ -1531,5 +1540,21 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="readme.MD" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\Users\Abdullah\Desktop\appicon.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\Users\Abdullah\Downloads\appicon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\Users\Abdullah\Downloads\material.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

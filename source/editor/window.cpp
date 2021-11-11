@@ -44,9 +44,7 @@ void Window::startGLOptions() {
 	glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
 	glfwSetDropCallback(GLFW_window, drop_callback);
 
-	//
-	glfwSetKeyCallback(GLFW_window, Input::key_callback);
-
+	Window::loadTitleBarIcon();
 
 	glfwPollEvents();
 	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
@@ -54,6 +52,19 @@ void Window::startGLOptions() {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
+}
+
+void Window::loadTitleBarIcon() {
+
+	Texture texture;
+	GLFWimage image;
+	unsigned width;
+	unsigned height;
+	image.pixels = texture.loadPNG("resource/icons/material.png", width, height);
+	image.width = width;
+	image.height = height;
+	glfwSetWindowIcon(GLFW_window, 1, &image);
+	delete image.pixels;
 }
 
 void Window::clear() {
