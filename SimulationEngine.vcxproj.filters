@@ -126,6 +126,12 @@
     <ClCompile Include="source\include\lodepng\lodepng.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\api\shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\editor\mousepick.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -1118,6 +1124,12 @@
     <ClInclude Include="source\include\lodepng\lodepng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\api\shader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\editor\mousepick.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\shader\PBR.frag" />
@@ -1540,6 +1552,8 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="readme.MD" />
+    <None Include="source\shader\ObjectPick.frag" />
+    <None Include="source\shader\ObjectPick.vertex" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

@@ -8,6 +8,8 @@ Scene::Scene() {
 
 void Scene::initSceneGraph() {
 
+	mousepick.init();
+
 	rootTransform = new Transform;
 
 	if (!Scene::readSceneGraph()) {

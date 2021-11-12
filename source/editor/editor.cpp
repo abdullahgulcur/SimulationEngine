@@ -25,16 +25,16 @@ void Editor::startEditorScreen() {
 	window.renderToTexture();
 
 	scene.start();
+
+
 }
 
 void Editor::stayOpen() {
 
 	window.handleCallBacks();
-
 	editorCamera.computeMatricesFromInputs();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
-	glViewport(0, 0, window.mode->width, window.mode->height);
 
 	window.clear();
 
@@ -47,7 +47,15 @@ void Editor::stayOpen() {
 	editorGUI.createPanels();
 	editorGUI.renderImGui();
 
+	double x = 0;
+	double y = 0;
+	glfwGetCursorPos(window.GLFW_window, &x, &y);
+
+	//std::cout << "Pos x: " << x << "y: " << y << "\n";
+
 	window.end();
+
+
 }
 
 void Editor::setRender(Render render) { this->render = render; }

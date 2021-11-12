@@ -37,7 +37,6 @@ private:
 	int renameItemID = -1;
 
 	// Scene Graph
-	int lastSelectedEntityID = -1;
 	int renameEntityID = -1;
 
 	ImVec2 cursorPosWhenFirstClickedItem;
@@ -76,6 +75,10 @@ private:
 	bool inspectorHovered = false;
 	bool fileChangedInInspector = false;
 
+	ImVec2 scenePos;
+	ImVec2 sceneRegion;
+	bool gizmoClicked = false;
+
 public:
 
 	/*
@@ -84,6 +87,7 @@ public:
 
 	// File System
 	int lastClickedItemID = 1;
+	int lastSelectedEntityID = -1;
 
 	/*
 	* TEXTURE IDs

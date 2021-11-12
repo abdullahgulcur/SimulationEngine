@@ -15,11 +15,13 @@
 #include "entity.hpp"
 #include "component.hpp"
 #include "material.hpp"
+#include "mousepick.hpp"
 
 #include "meshrenderer.hpp"
 #include "light.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
+
 
 class Editor;
 
@@ -43,6 +45,7 @@ public:
 	std::vector<MeshRenderer> meshRendererComponents;
 	std::vector<Light> lightComponents;
 
+	MousePick mousepick;
 
 	Scene();
 

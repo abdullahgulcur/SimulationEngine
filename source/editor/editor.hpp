@@ -22,7 +22,6 @@ public:
 	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
-	//std::vector<Scene> sceneList;
 	Scene scene;
 
 	Editor();
@@ -35,15 +34,7 @@ public:
 
 	void setRender(Render render);
 
-	//Render getRender();
-
 	void setWindow(Window window);
 
-	//Window getWindow();
-
 	void setEditorCamera(Camera editorCamera);
-
-	//EditorCamera& getEditorCamera();
-
-	//void addScene(Scene scene);
 };

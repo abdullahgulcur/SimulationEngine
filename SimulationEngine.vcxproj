@@ -162,6 +162,7 @@
     <ClCompile Include="source\api\model.cpp" />
     <ClCompile Include="source\api\entity.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
+    <ClCompile Include="source\api\shader.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
     <ClCompile Include="source\api\utility.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="source\editor\input.cpp" />
     <ClCompile Include="source\editor\loadsystem.cpp" />
     <ClCompile Include="source\editor\log.cpp" />
+    <ClCompile Include="source\editor\mousepick.cpp" />
     <ClCompile Include="source\editor\render.cpp" />
     <ClCompile Include="source\editor\savingsystem.cpp" />
     <ClCompile Include="source\editor\window.cpp" />
@@ -202,6 +204,7 @@
     <ClInclude Include="source\api\model.hpp" />
     <ClInclude Include="source\api\entity.hpp" />
     <ClInclude Include="source\api\scene.hpp" />
+    <ClInclude Include="source\api\shader.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
     <ClInclude Include="source\api\utility.hpp" />
@@ -219,6 +222,7 @@
     <ClInclude Include="source\editor\input.hpp" />
     <ClInclude Include="source\editor\loadsystem.hpp" />
     <ClInclude Include="source\editor\log.hpp" />
+    <ClInclude Include="source\editor\mousepick.hpp" />
     <ClInclude Include="source\editor\render.hpp" />
     <ClInclude Include="source\editor\savingsystem.hpp" />
     <ClInclude Include="source\editor\window.hpp" />
@@ -666,6 +670,8 @@
     <None Include="source\include\GLM\gtx\vector_angle.inl" />
     <None Include="source\include\GLM\gtx\vector_query.inl" />
     <None Include="source\include\GLM\gtx\wrap.inl" />
+    <None Include="source\shader\ObjectPick.frag" />
+    <None Include="source\shader\ObjectPick.vertex" />
     <None Include="source\shader\PBR.frag" />
     <None Include="source\shader\PBR.vertex" />
   </ItemGroup>

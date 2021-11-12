@@ -9,7 +9,7 @@ public:
 
 	unsigned int entID;
 
-	int VAO;
+	unsigned int VAO;
 	int indiceSize;
 	Material* mat;
 

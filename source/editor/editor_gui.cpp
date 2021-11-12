@@ -37,13 +37,6 @@ void EditorGUI::newFrameImGui() {
 void EditorGUI::renderImGui() {
 
 	ImGui::Render();
-
-	int display_w, display_h;
-	glfwGetFramebufferSize(editor->window.GLFW_window, &display_w, &display_h);
-	glViewport(0, 0, display_w, display_h);
-	//glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-	//glClear(GL_COLOR_BUFFER_BIT);
-
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -234,6 +227,7 @@ void EditorGUI::updateStateMachine() {
 
 	if (ImGui::IsMouseClicked(ImGuiPopupFlags_MouseButtonLeft)) {
 
+		
 
 		mouseLeftPressed = true;
 
@@ -246,6 +240,22 @@ void EditorGUI::updateStateMachine() {
 
 		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing())
 			lastSelectedEntityID = -1;
+
+		if (!ImGuizmo::IsUsing()) {
+
+			ImVec2 mousePos = ImGui::GetMousePos();
+
+			float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
+			float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
+
+			mX = (mX / sceneRegion.x) * 1920;
+			mY = 1080 - (mY / sceneRegion.y) * (1080);
+
+			if(mX != 0 && mY != 0)
+				editor->scene.mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, mY);
+		}
+
+		
 	}
 }
 
@@ -337,10 +347,11 @@ void EditorGUI::createScenePanel() {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::Begin("Scene");
 
-	ImVec2 region = ImGui::GetContentRegionAvail();
-	ImVec2 windowSize(region.x, region.y);
+	scenePos = ImGui::GetCursorScreenPos();
+	sceneRegion = ImGui::GetContentRegionAvail();
+	ImVec2 windowSize(sceneRegion.x, sceneRegion.y);
 
-	editor->editorCamera.setAspectRatio(region.x, region.y);
+	editor->editorCamera.setAspectRatio(sceneRegion.x, sceneRegion.y);
 
 	ImTextureID textureId = (ImTextureID)(editor->window.textureColorbuffer);
 	ImGui::Image(textureId, windowSize, ImVec2(0, 1), ImVec2(1, 0));
@@ -1270,10 +1281,21 @@ bool EditorGUI::contextMenuPopup(ComponentType type) {
 
 void EditorGUI::createAppPanel() {
 
+	ImVec2 mousePos = ImGui::GetMousePos();
+
 	ImGui::Begin("Statistics");
 
 	ImGui::Text("App average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Text("Mouse x: %.1f y: %.1f", ImGui::GetMousePos().x, ImGui::GetMousePos().y);
+	ImGui::Text("Mouse x: %.1f y: %.1f", mousePos.x, mousePos.y);
+
+	float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
+	float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
+	
+	mX = (mX / sceneRegion.x) * 1920;
+	mY = (mY / sceneRegion.y) * 1080;
+
+	ImGui::Text("Mouse (Scene) x: %.1f y: %.1f", mX, mY);
+
 
 	if (ImGui::Button("Save", ImVec2(60, 20))) {
 
