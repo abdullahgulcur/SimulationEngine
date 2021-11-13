@@ -20,19 +20,14 @@ void Editor::startEditorScreen() {
 	editorGUI.setFiles(&fileSystem.files);
 
 	editorGUI.initImGui();
-	editorCamera.setWindow(window.GLFW_window);
-	editorCamera.setMode(window.mode);
-	window.renderToTexture();
+	window.frameBufferForSceneViewport();
 
 	scene.start();
-
-
 }
 
 void Editor::stayOpen() {
 
 	window.handleCallBacks();
-	editorCamera.computeMatricesFromInputs();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
 
@@ -51,11 +46,9 @@ void Editor::stayOpen() {
 	double y = 0;
 	glfwGetCursorPos(window.GLFW_window, &x, &y);
 
-	//std::cout << "Pos x: " << x << "y: " << y << "\n";
-
 	window.end();
 
-
+	editorCamera.computeMatricesFromInputs(this);
 }
 
 void Editor::setRender(Render render) { this->render = render; }

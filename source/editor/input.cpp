@@ -1,33 +1,56 @@
 #include "input.hpp"
 
-namespace Input {
+bool Input::keyPressed(char keyCode) {
 
-	void Input::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	return ImGui::IsKeyPressed(keyCode);
+}
 
-		if (key == GLFW_KEY_T && action == GLFW_PRESS)
-			Input::key_t = true;
+bool Input::keyDown(char keyCode) {
 
-		if (key == GLFW_KEY_R && action == GLFW_PRESS)
-			Input::key_r = true;
+	return ImGui::IsKeyDown(keyCode);
+}
 
-		if (key == GLFW_KEY_S && action == GLFW_PRESS)
-			Input::key_s = true;
+bool Input::keyReleased(char keyCode) {
 
-		if (key == GLFW_KEY_T && action == GLFW_RELEASE)
-			Input::key_t = false;
+	return ImGui::IsKeyReleased(keyCode);
+}
 
-		if (key == GLFW_KEY_R && action == GLFW_RELEASE)
-			Input::key_r = false;
+bool Input::mouseClicked(int button) {
 
-		if (key == GLFW_KEY_S && action == GLFW_RELEASE)
-			Input::key_s = false;
+	return ImGui::IsMouseClicked(button);
+}
 
+bool Input::mouseDown(int button) {
 
-		if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_PRESS)
-			Input::control = true;
+	Input::mouseAnyButtonDown = true;
+	return ImGui::IsMouseDown(button);
+}
 
-		if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_RELEASE)
-			Input::control = false;
+bool Input::mouseDoubleClicked(int button)
+{
+	return ImGui::IsMouseDoubleClicked(button);
+}
 
-	}
+bool Input::mouseReleased(int button)
+{
+	Input::mouseAnyButtonDown = false;
+	return ImGui::IsMouseReleased(button);
+}
+
+float Input::mouseScroolDelta()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	return io.MouseWheel;
+}
+
+glm::vec2 Input::getMousePosition()
+{
+	ImVec2 pos = ImGui::GetMousePos();
+	return glm::vec2(pos.x, pos.y);
+}
+
+void Input::setMousePosition(glm::vec2 mousePos)
+{
+	ImGuiIO& io = ImGui::GetIO();
+	io.MousePos = ImVec2(mousePos.x, mousePos.y);
 }

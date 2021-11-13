@@ -249,10 +249,10 @@ void EditorGUI::updateStateMachine() {
 			float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
 
 			mX = (mX / sceneRegion.x) * 1920;
-			mY = 1080 - (mY / sceneRegion.y) * (1080);
+			mY = (mY / sceneRegion.y) * 1080;
 
 			if(mX != 0 && mY != 0)
-				editor->scene.mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, mY);
+				editor->scene.mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
 		}
 
 		
@@ -327,6 +327,8 @@ void EditorGUI::createPanels() {
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 	}
 
+	//io.mouse
+
 	EditorGUI::mainMenuBar();
 	EditorGUI::createInspectorPanel();
 	EditorGUI::createAppPanel();
@@ -351,7 +353,7 @@ void EditorGUI::createScenePanel() {
 	sceneRegion = ImGui::GetContentRegionAvail();
 	ImVec2 windowSize(sceneRegion.x, sceneRegion.y);
 
-	editor->editorCamera.setAspectRatio(sceneRegion.x, sceneRegion.y);
+	//editor->editorCamera.setAspectRatio(sceneRegion.x, sceneRegion.y);
 
 	ImTextureID textureId = (ImTextureID)(editor->window.textureColorbuffer);
 	ImGui::Image(textureId, windowSize, ImVec2(0, 1), ImVec2(1, 0));

@@ -39,9 +39,9 @@ void Window::startGLOptions() {
 	glfwSetInputMode(GLFW_window, GLFW_STICKY_KEYS, GL_TRUE);
 	glfwSetInputMode(GLFW_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	glfwSetMouseButtonCallback(GLFW_window, editor->editorCamera.mouse_button_callback);
-	glfwSetKeyCallback(GLFW_window, editor->editorCamera.key_callback);
-	glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
+	//glfwSetMouseButtonCallback(GLFW_window, editor->editorCamera.mouse_button_callback);
+	//glfwSetKeyCallback(GLFW_window, editor->editorCamera.key_callback);
+	//glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
 	glfwSetDropCallback(GLFW_window, drop_callback);
 
 	Window::loadTitleBarIcon();
@@ -100,19 +100,17 @@ void Window::terminateGLFW() {
 	glfwTerminate();
 }
 
-void Window::renderToTexture() {
+void Window::frameBufferForSceneViewport() {
 
 	glGenFramebuffers(1, &framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-	//unsigned int textureColorbuffer;
 	glGenTextures(1, &textureColorbuffer);
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, mode->width, mode->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
 
 	unsigned int rbo;
@@ -138,20 +136,10 @@ void Window::drop_callback(GLFWwindow* window, int count, const char** paths)
 
 void Window::setWindow(GLFWwindow* window) { this->GLFW_window = window; }
 
-//GLFWwindow* Window::getGLFWwindow() { return window; }
-
 void Window::setTitle(const char* title) { this->title = title; }
-
-//const char* Window::getTitle() { return title; }
 
 void Window::setGLFWvidmode(GLFWvidmode* mode) { this->mode = mode; }
 
-//const GLFWvidmode* Window::getGLFWvidmode() { return mode; }
-
 void Window::setGLFWmonitor(GLFWmonitor* monitor) { this->monitor = monitor; }
 
-//GLFWmonitor* Window::getGLFWmonitor() { return monitor; }
-
 void Window::setEditor(Editor* editor) { this->editor = editor; }
-
-//Editor* Window::getEditor() { return editor; }

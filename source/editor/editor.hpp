@@ -10,6 +10,7 @@
 #include "editor_gui.hpp"
 #include "model.hpp"
 #include "texture.hpp"
+#include "input.hpp"
 
 class Editor {
 

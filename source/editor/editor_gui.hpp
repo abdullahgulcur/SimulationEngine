@@ -75,11 +75,13 @@ private:
 	bool inspectorHovered = false;
 	bool fileChangedInInspector = false;
 
-	ImVec2 scenePos;
-	ImVec2 sceneRegion;
+	
 	bool gizmoClicked = false;
 
 public:
+
+	ImVec2 scenePos;
+	ImVec2 sceneRegion;
 
 	/*
 	* INDEX VARIABLES

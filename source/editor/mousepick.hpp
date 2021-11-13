@@ -18,8 +18,6 @@ public:
 	unsigned int viewMatrixID;
 	unsigned int projectionMatrixID;
 
-	MousePick();
-
 	void init();
 
 	void detect(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY);

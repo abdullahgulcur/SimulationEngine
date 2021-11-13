@@ -41,27 +41,17 @@ public:
 
 	void terminateGLFW();
 
-	void renderToTexture();
+	void frameBufferForSceneViewport();
 
 	void setWindow(GLFWwindow* window);
 
-	//GLFWwindow* getGLFWwindow();
-
 	void setTitle(const char* title);
-
-	//const char* getTitle();
 
 	void setGLFWvidmode(GLFWvidmode* mode);
 
-	//const GLFWvidmode* getGLFWvidmode();
-
 	void setGLFWmonitor(GLFWmonitor* monitor);
 
-	//GLFWmonitor* getGLFWmonitor();
-
 	void setEditor(Editor* editor);
-
-	//Editor* getEditor();
 
 	static void drop_callback(GLFWwindow* window, int count, const char** paths);
 

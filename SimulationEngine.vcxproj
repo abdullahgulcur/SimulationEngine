@@ -96,7 +96,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common;$(ProjectDir)source/component</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -114,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/common;$(ProjectDir)source/component</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -528,6 +528,10 @@
     <ClInclude Include="source\include\imgui\imstb_textedit.h" />
     <ClInclude Include="source\include\imgui\imstb_truetype.h" />
     <ClInclude Include="source\include\lodepng\lodepng.h" />
+    <ClInclude Include="source\include\rapidXML\rapidxml.hpp" />
+    <ClInclude Include="source\include\rapidXML\rapidxml_iterators.hpp" />
+    <ClInclude Include="source\include\rapidXML\rapidxml_print.hpp" />
+    <ClInclude Include="source\include\rapidXML\rapidxml_utils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="readme.MD" />
@@ -679,9 +683,7 @@
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\Users\Abdullah\Desktop\appicon.bmp" />
     <Image Include="..\..\Users\Abdullah\Downloads\appicon.ico" />
-    <Image Include="..\..\Users\Abdullah\Downloads\material.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

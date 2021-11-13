@@ -1130,6 +1130,18 @@
     <ClInclude Include="source\editor\mousepick.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\include\rapidXML\rapidxml.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\include\rapidXML\rapidxml_iterators.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\include\rapidXML\rapidxml_print.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\include\rapidXML\rapidxml_utils.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\shader\PBR.frag" />
@@ -1561,13 +1573,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\Users\Abdullah\Desktop\appicon.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="..\..\Users\Abdullah\Downloads\appicon.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\Users\Abdullah\Downloads\material.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
