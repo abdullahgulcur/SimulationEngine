@@ -9,8 +9,10 @@ void Editor::startEditorScreen() {
 	window.startGLFW();
 	render.startGLEW();
 	window.startGLOptions();
+	
 	fileSystem.initFileSystem();
 	fileSystem.setEditor(this);
+	SaveLoadSystem::loadSceneCamera(this);
 	scene.setEditor(this);
 	scene.initSceneGraph();
 

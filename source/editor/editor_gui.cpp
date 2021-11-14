@@ -162,9 +162,9 @@ void EditorGUI::loadTextures() {
 	materialSmallTextureID = texture.loadDDS("resource/icons/materialSmall.DDS");
 }
 
-void EditorGUI::updateStateMachine() {
+void EditorGUI::handleInputs() {
 
-	if (ImGui::IsMouseDoubleClicked(ImGuiPopupFlags_MouseButtonLeft)) {
+	if (Input::mouseDoubleClicked(0)) {
 
 		entered = true;
 
@@ -180,7 +180,7 @@ void EditorGUI::updateStateMachine() {
 		}
 	}
 
-	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonLeft)) {
+	if (Input::mouseReleased(0)) {
 
 		if (fileChangedInInspector) {
 
@@ -216,18 +216,15 @@ void EditorGUI::updateStateMachine() {
 		fileTreeClicked = false;
 
 		entityClicked = false;
-
 	}
 
-	if (ImGui::IsMouseReleased(ImGuiPopupFlags_MouseButtonRight)) {
+	if (Input::mouseReleased(1)) {
 
 		if (!panelRightItemClicked)
 			lastSelectedItemID = -1;
 	}
 
-	if (ImGui::IsMouseClicked(ImGuiPopupFlags_MouseButtonLeft)) {
-
-		
+	if (Input::mouseClicked(0)) {
 
 		mouseLeftPressed = true;
 
@@ -235,8 +232,6 @@ void EditorGUI::updateStateMachine() {
 			lastSelectedItemID = -1;
 
 		panelRightItemTab = false;
-
-		////
 
 		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing())
 			lastSelectedEntityID = -1;
@@ -254,8 +249,38 @@ void EditorGUI::updateStateMachine() {
 			if(mX != 0 && mY != 0)
 				editor->scene.mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
 		}
+	}
 
-		
+	if (ImGui::GetIO().KeyCtrl) {
+
+		if (ImGui::IsKeyPressed('D')) {
+
+			if (lastSelectedEntityID != -1)
+				lastSelectedEntityID = editor->scene.duplicateEntity(lastSelectedEntityID);
+
+			if (lastSelectedItemID != -1)
+				lastSelectedItemID = editor->fileSystem.duplicateFile(lastSelectedItemID);
+		}
+
+		if (ImGui::IsKeyPressed('S')) {
+
+			editor->scene.saveEditorProperties();
+		}
+	}
+
+	if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) {
+
+		if (lastSelectedEntityID != -1) {
+
+			editor->scene.deleteEntityCompletely(lastSelectedEntityID);
+			lastSelectedEntityID = -1;
+		}
+
+		if (lastSelectedItemID != -1) {
+
+			editor->fileSystem.deleteFileCompletely(lastSelectedItemID);
+			lastSelectedItemID = -1;
+		}
 	}
 }
 
@@ -337,7 +362,7 @@ void EditorGUI::createPanels() {
 	EditorGUI::createScenePanel();
 	EditorGUI::createConsolePanel();
 
-	EditorGUI::updateStateMachine();
+	EditorGUI::handleInputs();
 
 	ImGui::End();
 }
@@ -1298,12 +1323,6 @@ void EditorGUI::createAppPanel() {
 
 	ImGui::Text("Mouse (Scene) x: %.1f y: %.1f", mX, mY);
 
-
-	if (ImGui::Button("Save", ImVec2(60, 20))) {
-
-		editor->scene.saveEditorProperties();
-	}
-
 	ImGui::End();
 }
 
@@ -1369,6 +1388,8 @@ void EditorGUI::createHierarchyPanel() {
 
 void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
+	static bool showChildren = true;
+
 	for (int i = 0; i < transform->children.size(); i++) {
 
 		ImGui::Indent(15);
@@ -1383,15 +1404,15 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 		if (lastSelectedEntityID != -1 && editor->scene.subEntityCheck(editor->scene.entities[lastSelectedEntityID].transform, transform->children[i])) {
 
-			if (childrenCheckFlag)
+			if (showChildren)
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, " %d", transform->children[i]->id); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
-			childrenCheckFlag = false;
+			showChildren = false;
 			entityClicked = true;
 
 			if (!ImGui::IsItemToggledOpen())
@@ -1412,7 +1433,8 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Create Empty")) {
 
-				editor->scene.newEntity(transform->children[i]->id, "Entity");
+				lastSelectedEntityID = editor->scene.newEntity(transform->children[i]->id, "Entity")->id;
+				showChildren = true;
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -1436,7 +1458,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Duplicate")) {
 
-				editor->scene.duplicateEntity(transform->children[i]->id);
+				lastSelectedEntityID = editor->scene.duplicateEntity(transform->children[i]->id);
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -1471,7 +1493,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
 			{
-				childrenCheckFlag = true;
+				showChildren = true;
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
 				editor->scene.moveEntity(payload_n, transform->children[i]->id);
@@ -1543,7 +1565,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Entity")) {
 
-			editor->scene.newEntity(editor->scene.rootTransform->id, "Entity");
+			lastSelectedEntityID = editor->scene.newEntity(editor->scene.rootTransform->id, "Entity")->id;
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1556,7 +1578,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			editor->scene.newLight(editor->scene.rootTransform->id, "Sun", LightType::DirectionalLight);
+			lastSelectedEntityID = editor->scene.newLight(editor->scene.rootTransform->id, "Sun", LightType::DirectionalLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1565,7 +1587,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			editor->scene.newLight(editor->scene.rootTransform->id, "Point_Light", LightType::PointLight);
+			lastSelectedEntityID = editor->scene.newLight(editor->scene.rootTransform->id, "Point_Light", LightType::PointLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();

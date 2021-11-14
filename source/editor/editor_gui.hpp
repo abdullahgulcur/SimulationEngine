@@ -8,6 +8,7 @@
 #include <GLM/gtc/type_ptr.hpp>
 
 #include <math.hpp>
+#include <input.hpp>
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
@@ -59,7 +60,6 @@ private:
 	bool fileTreeClicked = false;
 
 	// Scene Graph
-	bool childrenCheckFlag = true;
 	bool entityClicked = false;
 
 	/*
@@ -124,7 +124,7 @@ public:
 
 	void loadTextures();
 
-	void updateStateMachine();
+	void handleInputs();
 
 	void mainMenuBar();
 

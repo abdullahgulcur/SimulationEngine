@@ -8,8 +8,6 @@ Camera::Camera()
 	horizontalTranslationSpeed *= generalSpeed;
 	verticalTranslationSpeed *= generalSpeed;
 	scrollSpeed *= generalSpeed;
-
-	Camera::setCameraAngles(0, 0, 1); // read from file
 }
 
 void Camera::computeMatricesFromInputs(Editor* editor) {
@@ -48,8 +46,11 @@ void Camera::computeMatricesFromInputs(Editor* editor) {
 
 	bool insideSceneView = mousePos.x > scenePosX && mousePos.x < scenePosX + sceneRegionX && mousePos.y > scenePosY && mousePos.y < scenePosY + sceneRegionY;
 
-	if(insideSceneView)
-		position += direction * Input::mouseScroolDelta() * scrollSpeed;
+	if (insideSceneView) {
+		
+		float delta = Input::mouseScroolDelta();
+		position += direction * delta * scrollSpeed;
+	}
 
 	if (firstCycle) {
 
@@ -77,23 +78,17 @@ void Camera::computeMatricesFromInputs(Editor* editor) {
 			position += up * deltaY * deltaTime * verticalTranslationSpeed;
 		}
 
-		ProjectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-		ViewMatrix = glm::lookAt(position, position + direction, up);
+		ImGuiMouseButton btn = ImGuiPopupFlags_MouseButtonLeft || ImGuiPopupFlags_MouseButtonRight || ImGuiPopupFlags_MouseButtonMiddle;
+		if (ImGui::IsMouseReleased(btn))
+			allow = false;
 	}
+
+	ProjectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	ViewMatrix = glm::lookAt(position, position + direction, up);
 
 	lastX = mousePos.x;
 	lastY = mousePos.y;
 	lastTime = currentTime;
-}
-
-void Camera::setCameraAngles(float horizontalAngle, float verticalAngle, float aspectRatio) {
-
-	glm::vec3 direction(cos(verticalAngle) * sin(horizontalAngle), sin(verticalAngle), cos(verticalAngle) * cos(horizontalAngle));
-	glm::vec3 right = glm::vec3(sin(horizontalAngle - 3.14f / 2.0f), 0, cos(horizontalAngle - 3.14f / 2.0f));
-	glm::vec3 up = glm::cross(right, direction);
-
-	ProjectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-	ViewMatrix = glm::lookAt(position, position + direction, up);
 }
 
 void Camera::teleportMouse(glm::vec2& mousePos, float& scenePosX, float& scenePosY, float& sceneRegionX,

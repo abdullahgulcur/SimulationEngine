@@ -361,7 +361,7 @@ void FileSystem::deleteFileFromTree(File* parent, int id) {
 	}
 }
 
-void FileSystem::newFolder(int currentDirID, const char* fileName) {
+int FileSystem::newFolder(int currentDirID, const char* fileName) {
 
 	File* subFile = new File;
 	subFile->id = files.size();
@@ -391,6 +391,8 @@ void FileSystem::newFolder(int currentDirID, const char* fileName) {
 	}
 
 	loadFileToEngine(files[subFile->id]);
+
+	return subFile->id;
 }
 
 void FileSystem::newMaterial(int currentDirID, const char* fileName) {
@@ -627,7 +629,7 @@ std::string FileSystem::getAvailableFileName(File* file, const char* name) {
 	return std::string(name);
 }
 
-void FileSystem::duplicateFile(int id) {
+int FileSystem::duplicateFile(int id) {
 
 	File* subFile = new File;
 	subFile->id = files.size();
@@ -650,6 +652,8 @@ void FileSystem::duplicateFile(int id) {
 
 	if (files[subFile->id].type == FileType::folder)
 		generateFileStructure(subFile);
+
+	return subFile->id;
 }
 
 FileType FileSystem::getFileType(std::string extension) {

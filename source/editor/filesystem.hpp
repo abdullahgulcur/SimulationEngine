@@ -114,11 +114,11 @@ public:
 
 	void deleteFileCompletely(int id);
 
-	void duplicateFile(int id);
+	int duplicateFile(int id);
 
 	FileType getFileType(std::string extension);
 
-	void newFolder(int currentDirID, const char* fileName);
+	int newFolder(int currentDirID, const char* fileName);
 
 	void newMaterial(int currentDirID, const char* fileName);
 

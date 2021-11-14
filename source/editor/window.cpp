@@ -8,6 +8,7 @@ std::vector<std::string> Window::dragAndDropFiles;
 
 Window::Window() {
 
+
 	std::cout << "Editor started..." << std::endl;
 }
 
@@ -92,7 +93,14 @@ void Window::handleCallBacks() {
 
 bool Window::getOpen() {
 
-	return glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
+	bool open = glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
+
+	if (!open) {
+
+		SaveLoadSystem::saveSceneCamera(editor);
+	}
+
+	return open;
 }
 
 void Window::terminateGLFW() {

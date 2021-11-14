@@ -175,11 +175,10 @@
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
     <ClCompile Include="source\editor\input.cpp" />
-    <ClCompile Include="source\editor\loadsystem.cpp" />
     <ClCompile Include="source\editor\log.cpp" />
     <ClCompile Include="source\editor\mousepick.cpp" />
     <ClCompile Include="source\editor\render.cpp" />
-    <ClCompile Include="source\editor\savingsystem.cpp" />
+    <ClCompile Include="source\editor\saveloadsystem.cpp" />
     <ClCompile Include="source\editor\window.cpp" />
     <ClCompile Include="source\include\GLM\detail\glm.cpp" />
     <ClCompile Include="source\include\imguizmo\GraphEditor.cpp" />
@@ -220,11 +219,10 @@
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />
     <ClInclude Include="source\editor\input.hpp" />
-    <ClInclude Include="source\editor\loadsystem.hpp" />
     <ClInclude Include="source\editor\log.hpp" />
     <ClInclude Include="source\editor\mousepick.hpp" />
     <ClInclude Include="source\editor\render.hpp" />
-    <ClInclude Include="source\editor\savingsystem.hpp" />
+    <ClInclude Include="source\editor\saveloadsystem.hpp" />
     <ClInclude Include="source\editor\window.hpp" />
     <ClInclude Include="source\include\GLM\common.hpp" />
     <ClInclude Include="source\include\GLM\detail\compute_common.hpp" />

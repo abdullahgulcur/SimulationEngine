@@ -61,16 +61,6 @@ public:
 
 	void setTransformsOfComponents();
 
-	bool readSceneGraph();
-
-	void loadEntities();
-
-	void loadTransformAttributes();
-
-	void loadMeshRenderers();
-
-	void loadLights();
-
 	bool subEntityCheck(Transform* child, Transform* parent);
 
 	void recompileAllMaterials();
@@ -87,7 +77,7 @@ public:
 
 	void deleteEntityCompletelyRecursively(Transform* transform);
 
-	void duplicateEntity(int id);
+	int duplicateEntity(int id);
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
 
@@ -95,23 +85,13 @@ public:
 
 	Transform* newEntity(int parentID, const char* name);
 
-	void newLight(int parentID, const char* name, LightType type);
+	int newLight(int parentID, const char* name, LightType type);
 
 	void renameEntity(int id, char* newName);
 
 	void saveEditorProperties();
 
-	void saveEntities();
-
-	void saveMeshRenderers();
-
-	void saveLights();
-
 	std::string getLightType(LightType type);
-
-	void saveTransformAttributes();
-
-	void saveSceneGraph();
 
 	void writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream);
 
