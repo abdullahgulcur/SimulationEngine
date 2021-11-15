@@ -44,31 +44,11 @@ public:
 
 	unsigned int programID;
 
-	unsigned int mID;
-	unsigned int vID;
-	unsigned int pID;
-
-	unsigned int albedoColorID;
-	unsigned int albedoTextureID;
-	unsigned int normalTextureID;
-	unsigned int metallicTextureID;
-	unsigned int roughnessTextureID;
-	unsigned int aoTextureID;
-
-	unsigned int normalAmountID;
-	unsigned int metallicAmountID;
-	unsigned int roughnessAmountID;
-	unsigned int aoAmountID;
-
-	unsigned int camPosID;
-
 	Material();
 
 	GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
 
 	void compileShaders();
-
-	void loadUniforms();
 
 	void deleteProgram();
 };

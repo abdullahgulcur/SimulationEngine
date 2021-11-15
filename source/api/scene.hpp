@@ -13,7 +13,6 @@
 
 #include "transform.hpp"
 #include "entity.hpp"
-#include "component.hpp"
 #include "material.hpp"
 #include "mousepick.hpp"
 

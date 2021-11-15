@@ -4,37 +4,11 @@ Material::Material() {
 
 	type = MaterialType::pbr;
 	albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
-
-	//programID = LoadShaders("source/shader/PBR.vertex", "source/shader/PBR.frag");
-
-	//Material::loadUniforms();
 }
 
 void Material::compileShaders() {
 
 	programID = LoadShaders("source/shader/PBR.vertex", "source/shader/PBR.frag");
-	Material::loadUniforms();
-}
-
-void Material::loadUniforms() {
-
-	mID = glGetUniformLocation(programID, "M");
-	vID = glGetUniformLocation(programID, "V");
-	pID = glGetUniformLocation(programID, "P");
-
-	albedoColorID = glGetUniformLocation(programID, "albedoColor");
-	albedoTextureID = glGetUniformLocation(programID, "albedoMap");
-	normalTextureID = glGetUniformLocation(programID, "normalMap");
-	metallicTextureID = glGetUniformLocation(programID, "metallicMap");
-	roughnessTextureID = glGetUniformLocation(programID, "roughnessMap");
-	aoTextureID = glGetUniformLocation(programID, "aoMap");
-
-	normalAmountID = glGetUniformLocation(programID, "normal_amount");
-	metallicAmountID = glGetUniformLocation(programID, "metallic_amount");
-	roughnessAmountID = glGetUniformLocation(programID, "roughness_amount");
-	aoAmountID = glGetUniformLocation(programID, "ao_amount");
-
-	camPosID = glGetUniformLocation(programID, "camPos");
 }
 
 GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {

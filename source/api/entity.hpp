@@ -4,9 +4,10 @@
 #include <unordered_map>
 
 #include "transform.hpp"
-#include "component.hpp"
 #include "meshrenderer.hpp"
 #include "light.hpp"
+
+enum class ComponentType{Light, MeshRenderer, RigidBody, Collider, Transform, Script, Animation, Animator};
 
 class Scene;
 

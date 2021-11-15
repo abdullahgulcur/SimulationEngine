@@ -81,9 +81,6 @@
     <ClCompile Include="source\editor\saveloadsystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\api\component.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\api\material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -216,9 +213,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\editor\saveloadsystem.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\api\component.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\scene.hpp">

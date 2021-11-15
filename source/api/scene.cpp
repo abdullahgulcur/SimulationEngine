@@ -51,10 +51,10 @@ void Scene::update() {
 	for (auto const& val : meshRendererComponents)
 	{
 		glUseProgram(val.mat->programID);
-		glUniformMatrix4fv(val.mat->mID, 1, GL_FALSE, &entities[val.entID].transform->model[0][0]);
-		glUniformMatrix4fv(val.mat->vID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-		glUniformMatrix4fv(val.mat->pID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
-		glUniform3fv(val.mat->camPosID, 1, &editor->editorCamera.position[0]);
+		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "M"), 1, GL_FALSE, &entities[val.entID].transform->model[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+		glUniform3fv(glGetUniformLocation(val.mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
 
 		int dlightCounter = 0;
 		int plightCounter = 0;
@@ -122,48 +122,48 @@ void Scene::update() {
 			}
 		}
 
-		glUniform1f(val.mat->metallicAmountID, val.mat->metallicAmount);
-		glUniform1f(val.mat->roughnessAmountID, val.mat->roughnessAmount);
-		glUniform1f(val.mat->aoAmountID, val.mat->aoAmount);
+		glUniform1f(glGetUniformLocation(val.mat->programID, "metallic_amount"), val.mat->metallicAmount);
+		glUniform1f(glGetUniformLocation(val.mat->programID, "roughness_amount"), val.mat->roughnessAmount);
+		glUniform1f(glGetUniformLocation(val.mat->programID, "ao_amount"), val.mat->aoAmount);
 
 		if (val.mat->useAlbedo) {
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, val.mat->albedoTexture);
-			glUniform1i(val.mat->albedoTextureID, 0);
+			glUniform1i(glGetUniformLocation(val.mat->programID, "albedoColor"), 0);
 		}
 		else {
 
-			glUniform3fv(val.mat->albedoColorID, 1, &val.mat->albedoColor[0]);
+			glUniform3fv(glGetUniformLocation(val.mat->programID, "albedoColor"), 1, &val.mat->albedoColor[0]);
 		}
 
 		if (val.mat->useNormal) {
 
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, val.mat->normalTexture);
-			glUniform1i(val.mat->normalTextureID, 1);
-			glUniform1f(val.mat->normalAmountID, val.mat->normalAmount);
+			glUniform1i(glGetUniformLocation(val.mat->programID, "normalMap"), 1);
+			glUniform1f(glGetUniformLocation(val.mat->programID, "normal_amount"), val.mat->normalAmount);
 		}
 
 		if (val.mat->useMetallic) {
 
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, val.mat->metallicTexture);
-			glUniform1i(val.mat->metallicTextureID, 2);
+			glUniform1i(glGetUniformLocation(val.mat->programID, "metallicMap"), 2);
 		}
 
 		if (val.mat->useRoughness) {
 
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, val.mat->roughnessTexture);
-			glUniform1i(val.mat->roughnessTextureID, 3);
+			glUniform1i(glGetUniformLocation(val.mat->programID, "roughnessMap"), 3);
 		}
 
 		if (val.mat->useAO) {
 
 			glActiveTexture(GL_TEXTURE4);
 			glBindTexture(GL_TEXTURE_2D, val.mat->aoTexture);
-			glUniform1i(val.mat->aoTextureID, 4);
+			glUniform1i(glGetUniformLocation(val.mat->programID, "aoMap"), 4);
 		}
 
 		glBindVertexArray(val.VAO);

@@ -155,7 +155,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source\api\component.cpp" />
     <ClCompile Include="source\api\material.cpp" />
     <ClCompile Include="source\api\math.cpp" />
     <ClCompile Include="source\api\mesh.cpp" />
@@ -196,7 +195,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\material.hpp" />
     <ClInclude Include="source\api\math.hpp" />
     <ClInclude Include="source\api\mesh.hpp" />
