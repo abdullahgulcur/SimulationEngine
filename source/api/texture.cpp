@@ -17,6 +17,11 @@ namespace TextureNS {
 		textureID = TextureNS::loadDDS(imagepath);
 	}
 
+	void TextureFile::deleteTexture() {
+
+		glDeleteTextures(1, &textureID);
+	}
+
 	unsigned int TextureNS::getEmptyTexture() {
 
 		unsigned int textureID;
@@ -182,5 +187,10 @@ namespace TextureNS {
 			data[i] = image[i];
 
 		return data;
+	}
+
+	void TextureNS::deleteTexture(unsigned int textureID) {
+
+		glDeleteTextures(1, &textureID);
 	}
 }

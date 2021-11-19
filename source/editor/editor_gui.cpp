@@ -1,7 +1,13 @@
 #include "editor.hpp"
 #include "editor_gui.hpp"
 
-EditorGUI::EditorGUI() {
+EditorGUI::EditorGUI() {}
+
+void EditorGUI::init(Editor* editor) {
+
+	this->editor = editor;
+	EditorGUI::setFiles(&editor->fileSystem.files);
+	EditorGUI::initImGui();
 }
 
 void EditorGUI::initImGui() {
@@ -1154,13 +1160,13 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 
 				if (matShaderSourceChange) {
 
-					material.textureUnitPaths.clear();
+					material.textureUnitFileAddrs.clear();
 					material.textureUnits.clear();
 					material.floatUnits.clear();
 
 					for (int i = 0; i < sampler2DCount; i++) {
 						material.textureUnits.push_back(editor->fileSystem.textures["whitetexture"].textureID);
-						material.textureUnitPaths.push_back("whitetexture");
+						material.textureUnitFileAddrs.push_back(NULL);
 					}
 
 					for (int i = 0; i < floatCount; i++)
@@ -1203,7 +1209,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 				if (matShaderSourceChange) {
 
 					material.textureUnits.clear();
-					material.textureUnitPaths.clear();
+					material.textureUnitFileAddrs.clear();
 					material.floatUnits.clear();
 				}
 			}
@@ -1355,7 +1361,7 @@ void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) 
 				if (ImGui::ImageButton((ImTextureID)it.second.textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 
 					material.textureUnits[index] = it.second.textureID;
-					material.textureUnitPaths[index] = it.first;
+					material.textureUnitFileAddrs[index] = it.second.fileAddr;
 					
 
 					materialChanged = true;

@@ -18,8 +18,8 @@ private:
 
 public:
 
-	Render render;
 	Window window;
+	Render render;
 	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
@@ -29,13 +29,6 @@ public:
 
 	void startEditorScreen();
 
-	void stayOpen();
+	void run();
 
-	void drawAllAxis();
-
-	void setRender(Render render);
-
-	void setWindow(Window window);
-
-	void setEditorCamera(Camera editorCamera);
 };

@@ -6,6 +6,12 @@ Scene::Scene() {
 	name = "MyScene";	
 }
 
+void Scene::init(Editor* editor) {
+
+	this->editor = editor;
+	Scene::initSceneGraph();
+}
+
 void Scene::initSceneGraph() {
 
 	mousepick.init();

@@ -112,6 +112,8 @@ public:
 
 	EditorGUI();
 
+	void init(Editor* editor);
+
 	void initImGui();
 
 	void newFrameImGui();

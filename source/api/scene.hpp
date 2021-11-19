@@ -48,6 +48,8 @@ public:
 
 	Scene();
 
+	void init(Editor* editor);
+
 	void initSceneGraph();
 
 	void generateSceneGraph();

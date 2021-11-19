@@ -77,7 +77,7 @@ private:
 
 	std::string getAvailableFileName(File* file, const char* name);
 
-	void loadTextureIDsOfMaterials();
+	//void loadTextureIDsOfMaterials();
 
 public:
 
@@ -105,7 +105,7 @@ public:
 
 	void checkProjectFolder();
 
-	void initFileSystem();
+	void init(Editor* editor);
 
 	void updateChildrenPathRecursively(File* file);
 
@@ -119,7 +119,7 @@ public:
 
 	void moveFile(int toBeMoved, int moveTo);
 
-	void changeAssetsKeyManually(int toBeMoved, std::string previousName, std::string newName);
+	void changeAssetsKeyManually(int filID, std::string previousName, std::string newName);
 
 	void deleteFileFromTree(File* parent, int id);
 
@@ -136,6 +136,10 @@ public:
 	void readMaterialFile(File* filePtr, std::string path);
 
 	void writeMaterialFile(std::string path, MaterialFile& mat);
+
+	File* getTextureFileAddr(const char* path);
+
+	const char* getTextureFilePath(File* addr);
 
 	int getFragShaderID(const char* path);
 

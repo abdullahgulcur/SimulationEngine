@@ -8,14 +8,9 @@ class Editor;
 
 class Window {
 
-private:
-
-	Editor* editor;
-
 public:
 
 	GLFWwindow* GLFW_window;
-	const char* title;
 	const GLFWvidmode* mode;
 	GLFWmonitor* monitor;
 
@@ -25,6 +20,8 @@ public:
 	static std::vector<std::string> dragAndDropFiles;
 
 	Window();
+
+	void init();
 
 	int startGLFW();
 
@@ -36,23 +33,15 @@ public:
 
 	void end();
 
-	void handleCallBacks();
+	void handleCallBacks(Editor* editor);
 
-	bool getOpen();
+	bool getOpen(Editor* editor);
 
 	void terminateGLFW();
 
 	void frameBufferForSceneViewport();
 
-	void setWindow(GLFWwindow* window);
-
 	void setTitle(const char* title);
-
-	void setGLFWvidmode(GLFWvidmode* mode);
-
-	void setGLFWmonitor(GLFWmonitor* monitor);
-
-	void setEditor(Editor* editor);
 
 	static void drop_callback(GLFWwindow* window, int count, const char** paths);
 

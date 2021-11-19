@@ -5,31 +5,20 @@ Editor::Editor() {
 
 void Editor::startEditorScreen() {
 
-	window.setTitle("Fury");
-	window.startGLFW();
-	render.startGLEW();
-	window.startGLOptions();
-	
-	fileSystem.initFileSystem();
-	fileSystem.setEditor(this);
+	window.init();
+	render.init();
+	fileSystem.init(this);
 	SaveLoadSystem::loadSceneCamera(this);
-	scene.setEditor(this);
-	scene.initSceneGraph();
-
-	window.setEditor(this);
-	render.setEditor(this);
-	editorGUI.setEditor(this);
-	editorGUI.setFiles(&fileSystem.files);
-
-	editorGUI.initImGui();
+	scene.init(this);
+	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
 
 	scene.start();
 }
 
-void Editor::stayOpen() {
+void Editor::run() {
 
-	window.handleCallBacks();
+	window.handleCallBacks(this);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
 
@@ -48,9 +37,3 @@ void Editor::stayOpen() {
 
 	editorCamera.computeMatricesFromInputs(this);
 }
-
-void Editor::setRender(Render render) { this->render = render; }
-
-void Editor::setWindow(Window window) { this->window = window; }
-
-void Editor::setEditorCamera(Camera editorCamera) { this->editorCamera = editorCamera; }

@@ -27,6 +27,8 @@ namespace TextureNS {
 
 	unsigned char* loadPNG(const char* imagepath, unsigned& width, unsigned& height);
 
+	void deleteTexture(unsigned int textureID);
+
 	class TextureFile {
 
 	private:
@@ -41,6 +43,8 @@ namespace TextureNS {
 		TextureFile(const char* imagepath);
 
 		TextureFile(File* file, const char* imagepath);
+
+		void deleteTexture();
 
 	};
 }

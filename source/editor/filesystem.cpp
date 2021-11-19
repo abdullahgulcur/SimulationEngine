@@ -9,7 +9,9 @@ FileSystem::~FileSystem() {
 
 }
 
-void FileSystem::initFileSystem() {
+void FileSystem::init(Editor* editor) {
+
+	FileSystem::setEditor(editor);
 
 	FileSystem::checkProjectFolder();
 	FileSystem::loadDefaultAssets();
@@ -31,37 +33,6 @@ void FileSystem::initFileSystem() {
 
 	FileSystem::generateFileStructure(rootFile);
 	FileSystem::loadAllFilesToEngine();
-
-	FileSystem::loadTextureIDsOfMaterials();
-}
-
-void FileSystem::loadTextureIDsOfMaterials() {
-
-	for (auto& mat : materials) {
-
-		int count = 0;
-
-		for (auto& texPath : mat.second.textureUnitPaths) {
-
-			auto found = textures.find(texPath);
-
-			if (found != textures.end())
-				mat.second.textureUnits.push_back(found->second.textureID);
-			else {
-				mat.second.textureUnits.push_back(textures["whitetexture"].textureID);
-				mat.second.textureUnitPaths[count] = "whitetexture";
-				FileSystem::writeMaterialFile(files[mat.second.fileAddr->id].path, mat.second);
-
-				// ASSERT
-				char logMsg[256];
-				sprintf(logMsg, "File %s is not found. Blank texture is set as default.", texPath.c_str());
-				printf("%s", logMsg);
-				//Log::assertMessage(logMsg, &editor->editorGUI);
-			}
-
-			count++;
-		}
-	}
 }
 
 void FileSystem::checkProjectFolder() {
@@ -174,8 +145,31 @@ void FileSystem::loadAllFilesToEngine() {
 	for (int& i : texturefileIDs)
 		loadFileToEngine(files[i]);
 
-	for (int& i : matfileIDs)
+	for (int& i : matfileIDs) {
 		loadFileToEngine(files[i]);
+
+		int count = 0;
+		MaterialFile& mat = materials[files[i].path];
+		for (auto& texFileAddr : mat.textureUnitFileAddrs) {
+
+			auto found = textures.find(FileSystem::getTextureFilePath(texFileAddr));
+
+			if (found != textures.end())
+				mat.textureUnits.push_back(found->second.textureID);
+			else {
+				mat.textureUnits.push_back(textures["whitetexture"].textureID);
+				mat.textureUnitFileAddrs[count] = NULL;
+				FileSystem::writeMaterialFile(files[mat.fileAddr->id].path, mat);
+
+				// ASSERT
+				char logMsg[256];
+				sprintf(logMsg, "File %s is not found. Blank texture is set as default.", files[texFileAddr->id].path.c_str());
+				printf("%s", logMsg);
+				//Log::assertMessage(logMsg, &editor->editorGUI);
+			}
+			count++;
+		}
+	}
 
 	for (int& i : objfileIDs)
 		loadFileToEngine(files[i]);
@@ -292,9 +286,9 @@ void FileSystem::moveFile(int toBeMoved, int moveTo) {
 	FileSystem::deleteFileFromTree(oldParent, toBeMoved);
 }
 
-void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath, std::string newPath) {
+void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, std::string newPath) {
 
-	switch (files[toBeMoved].type) {
+	switch (files[fileID].type) {
 
 	case FileType::object: {
 
@@ -348,7 +342,7 @@ void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath
 
 		for (auto& mat_iter : materials) {
 
-			if (mat_iter.second.vertShaderFileID == files[toBeMoved].addr->id)
+			if (mat_iter.second.vertShaderFileID == files[fileID].addr->id)
 				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 		}
 
@@ -358,7 +352,7 @@ void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath
 
 		for (auto& mat_iter : materials) {
 
-			if (mat_iter.second.fragShaderFileID == files[toBeMoved].addr->id)
+			if (mat_iter.second.fragShaderFileID == files[fileID].addr->id)
 				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 		}
 
@@ -366,16 +360,12 @@ void FileSystem::changeAssetsKeyManually(int toBeMoved, std::string previousPath
 	}
 	case FileType::texture: {
 
-		//measure time spent...
-
 		for (auto& mat_iter : materials) {
 
-			for (auto& tex_iter : mat_iter.second.textureUnitPaths) {
+			for (auto& texFileAddr : mat_iter.second.textureUnitFileAddrs) {
 
-				if (strcmp(tex_iter.c_str(), previousPath.c_str()) == 0) {
-					tex_iter = newPath;
+				if (texFileAddr == files[fileID].addr)
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
-				}
 			}
 		}
 
@@ -441,15 +431,16 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			// gl delete textures
 
+			textures[files[indices[i]].path].deleteTexture();
 			textures.erase(files[indices[i]].path);
 
 			for (auto& mat_iter : materials) {
 
 				int count = 0;
-				for (auto& tex_iter : mat_iter.second.textureUnitPaths) {
+				for (auto& texFileAddr : mat_iter.second.textureUnitFileAddrs) {
 
-					if (strcmp(tex_iter.c_str(), files[indices[i]].path.c_str()) == 0) {
-						tex_iter = "whitetexture";
+					if (texFileAddr == files[indices[i]].addr) {
+						texFileAddr = NULL;
 						mat_iter.second.textureUnits[count] = textures["whitetexture"].textureID;
 						FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 					}
@@ -492,7 +483,7 @@ void FileSystem::deleteFileCompletely(int id) {
 
 				if (strcmp(files[mat_iter.second.fragShaderFileID].path.c_str(), files[indices[i]].path.c_str()) == 0) {
 					mat_iter.second.fragShaderFileID = -1;
-					mat_iter.second.textureUnitPaths.clear();
+					mat_iter.second.textureUnitFileAddrs.clear();
 					mat_iter.second.textureUnits.clear();
 					mat_iter.second.floatUnits.clear();
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
@@ -630,7 +621,7 @@ void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 	MaterialFile mat(filePtr, vertFileID, fragFileID, vertFilePath, fragFilePath, 0, 0);
 
 	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling())
-		mat.textureUnitPaths.push_back(texpath_node->first_attribute("Path")->value());
+		mat.textureUnitFileAddrs.push_back(FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value()));
 
 	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
 		mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
@@ -654,10 +645,10 @@ void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
 	materialNode->append_node(shaderNode);
 
 	rapidxml::xml_node<>* sampler2DsNode = doc.allocate_node(rapidxml::node_element, "Sampler2Ds");
-	for (std::string texUnitPath : mat.textureUnitPaths) {
+	for (auto& texUnitFileAddr : mat.textureUnitFileAddrs) {
 
 		rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
-		texture->append_attribute(doc.allocate_attribute("Path", doc.allocate_string(texUnitPath.c_str())));
+		texture->append_attribute(doc.allocate_attribute("Path", doc.allocate_string(FileSystem::getTextureFilePath(texUnitFileAddr))));
 		sampler2DsNode->append_node(texture);
 	}
 	materialNode->append_node(sampler2DsNode);
@@ -680,6 +671,22 @@ void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
+}
+
+File* FileSystem::getTextureFileAddr(const char* path) {
+
+	if (strcmp(path, "whitetexture") == 0)
+		return NULL;
+	
+	return textures[path].fileAddr;
+}
+
+const char* FileSystem::getTextureFilePath(File* addr) {
+
+	if (addr == NULL)
+		return "whitetexture";
+
+	return files[addr->id].path.c_str();
 }
 
 int FileSystem::getFragShaderID(const char* path) {

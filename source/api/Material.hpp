@@ -16,11 +16,13 @@ namespace MaterialNS {
 
 	public:
 
+		// Real Material Address
+
 		File* fileAddr;
 		int vertShaderFileID;
 		int fragShaderFileID;
 
-		std::vector<std::string> textureUnitPaths; // file ids
+		std::vector<File*> textureUnitFileAddrs;
 		std::vector<unsigned int> textureUnits;
 
 		std::vector<float> floatUnits;

@@ -6,10 +6,12 @@
 bool Window::dragAndDropFromOutside;
 std::vector<std::string> Window::dragAndDropFiles;
 
-Window::Window() {
+Window::Window() {}
 
+void Window::init() {
 
-	std::cout << "Editor started..." << std::endl;
+	Window::startGLFW();
+	Window::startGLOptions();
 }
 
 int Window::startGLFW() {
@@ -25,11 +27,10 @@ int Window::startGLFW() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 	monitor = glfwGetPrimaryMonitor();
 	mode = glfwGetVideoMode(monitor);
-	GLFW_window = glfwCreateWindow(mode->width, mode->height, title, NULL, NULL);
+	GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL);
 
 	glfwMaximizeWindow(GLFW_window);
 	glfwMakeContextCurrent(GLFW_window);
@@ -40,9 +41,6 @@ void Window::startGLOptions() {
 	glfwSetInputMode(GLFW_window, GLFW_STICKY_KEYS, GL_TRUE);
 	glfwSetInputMode(GLFW_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	//glfwSetMouseButtonCallback(GLFW_window, editor->editorCamera.mouse_button_callback);
-	//glfwSetKeyCallback(GLFW_window, editor->editorCamera.key_callback);
-	//glfwSetScrollCallback(GLFW_window, editor->editorCamera.scrollCallback);
 	glfwSetDropCallback(GLFW_window, drop_callback);
 
 	Window::loadTitleBarIcon();
@@ -80,7 +78,7 @@ void Window::end() {
 	glfwPollEvents();
 }
 
-void Window::handleCallBacks() {
+void Window::handleCallBacks(Editor* editor) {
 
 	if (dragAndDropFromOutside) {
 
@@ -90,7 +88,7 @@ void Window::handleCallBacks() {
 	}
 }
 
-bool Window::getOpen() {
+bool Window::getOpen(Editor* editor) {
 
 	bool open = glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
 
@@ -141,12 +139,7 @@ void Window::drop_callback(GLFWwindow* window, int count, const char** paths)
 	dragAndDropFromOutside = true;
 }
 
-void Window::setWindow(GLFWwindow* window) { this->GLFW_window = window; }
-
-void Window::setTitle(const char* title) { this->title = title; }
-
-void Window::setGLFWvidmode(GLFWvidmode* mode) { this->mode = mode; }
-
-void Window::setGLFWmonitor(GLFWmonitor* monitor) { this->monitor = monitor; }
-
-void Window::setEditor(Editor* editor) { this->editor = editor; }
+void Window::setTitle(const char* title) { 
+	
+	glfwSetWindowTitle(GLFW_window, title);
+}

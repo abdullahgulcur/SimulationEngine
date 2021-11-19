@@ -12,10 +12,5 @@ public:
 
 	Application();
 
-	void run();
-
-	Editor getEditor();
-
-	void setEditor(Editor editor);
-
+	void start();
 };
