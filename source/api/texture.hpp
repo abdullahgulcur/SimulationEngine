@@ -9,22 +9,17 @@
 
 #include <lodepng/lodepng.h>
 
+struct File;
 
-#define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
-#define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
-#define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
+namespace TextureNS {
 
-enum class TextureType{ albedo, normal, metallic, roughness, ao};
+#define FOURCC_DXT1 0x31545844
+#define FOURCC_DXT3 0x33545844
+#define FOURCC_DXT5 0x35545844
 
-class Texture {
+	enum class TextureType { albedo, normal, metallic, roughness, ao };
 
-private:
-
-public:
-
-	unsigned int textureID;
-
-	Texture();
+	unsigned int getEmptyTexture();
 
 	unsigned int loadDDS(const char* imagepath);
 
@@ -32,10 +27,20 @@ public:
 
 	unsigned char* loadPNG(const char* imagepath, unsigned& width, unsigned& height);
 
-	void setTextureID(const char* imagepath);
+	class TextureFile {
 
-	void setEmptyTextureID();
+	private:
 
-	GLuint getEmptyTexture(); // make it static
+	public:
 
-};
+		unsigned int textureID;
+		File* fileAddr;
+
+		TextureFile();
+
+		TextureFile(const char* imagepath);
+
+		TextureFile(File* file, const char* imagepath);
+
+	};
+}

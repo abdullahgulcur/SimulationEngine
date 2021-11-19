@@ -6,29 +6,34 @@
 #include <stddef.h>
 #include <string>
 
-struct Vertex {
+class File;
 
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 texCoord;
-};
+namespace Mesh {
 
-class FileSystem;
+    struct Vertex {
 
-class Mesh {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
+    };
 
-private:
 
-public:
+    class MeshFile {
 
-    unsigned int VAO;
-    unsigned int indiceSize;
+    private:
 
-    Mesh();
+    public:
 
-    Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem);
+        File* fileAddr;
+        unsigned int VAO;
+        unsigned int indiceSize;
 
-    void initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem);
+        MeshFile();
 
-    void initEmtyBuffers();
-};
+        MeshFile(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, File* file);
+
+        void initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
+
+        void initEmtyBuffers();
+    };
+}

@@ -44,10 +44,6 @@ void Editor::stayOpen() {
 	editorGUI.createPanels();
 	editorGUI.renderImGui();
 
-	double x = 0;
-	double y = 0;
-	glfwGetCursorPos(window.GLFW_window, &x, &y);
-
 	window.end();
 
 	editorCamera.computeMatricesFromInputs(this);

@@ -16,10 +16,17 @@
 #include "texture.hpp"
 #include "utility.hpp"
 #include "material.hpp"
+#include "shader.hpp"
+//#include "log.hpp"
+
+using namespace MaterialNS;
+using namespace TextureNS;
+using namespace ShaderNS;
+using namespace Mesh;
 
 class Editor;
 
-enum class FileType {folder, object, material, texture, audio, script, undefined};
+enum class FileType {folder, object, material, texture, fragshader, vertshader, audio, script, undefined};
 
 struct EditorTextures {
 
@@ -62,6 +69,8 @@ private:
 
 	void generateFileStructure(File* file);
 
+	void loadAllFilesToEngine();
+
 	unsigned int getSubFileIndex(File* file);
 
 	void insertFileToParentsSubfolders(File* file);
@@ -79,12 +88,14 @@ public:
 	File* rootFile;
 	std::vector<FileNode> files;
 
-	std::unordered_map<unsigned int, std::string> meshNames;
-	std::unordered_map<std::string, unsigned int> meshVAOs;
+	std::unordered_map<unsigned int, std::string> meshPaths;
+	//std::unordered_map<std::string, unsigned int> meshVAOs;
 
-	std::unordered_map<unsigned int, Mesh> meshes;
-	std::unordered_map<std::string, Material> materials;
-	std::unordered_map<std::string, Texture> textures;
+	std::unordered_map<std::string, MeshFile> meshes;
+	std::unordered_map<std::string, MaterialFile> materials;
+	std::unordered_map<std::string, TextureFile> textures;
+	std::vector<ShaderFile> vertShaderFiles;
+	std::vector<ShaderFile> fragShaderFiles;
 
 	EditorTextures editorTextures;
 
@@ -122,9 +133,17 @@ public:
 
 	void newMaterial(int currentDirID, const char* fileName);
 
-	void readMaterialFile(std::string path, Material& mat);
+	void readMaterialFile(File* filePtr, std::string path);
 
-	void writeMaterialFile(std::string path, Material& mat);
+	void writeMaterialFile(std::string path, MaterialFile& mat);
+
+	int getFragShaderID(const char* path);
+
+	int getVertShaderID(const char* path);
+
+	const char* getFragShaderPath(int fileID);
+
+	const char* getVertShaderPath(int fileID);
 
 	void rename(int id, const char* newName);
 
@@ -136,18 +155,9 @@ public:
 
 	void loadDefaultAssets();
 
-	Material& getMaterial(int id);
+	MaterialFile& getMaterial(int id);
 
-	Texture& getTexture(int id);
+	TextureFile& getTexture(int id);
 
 	void setEditor(Editor* editor);
-
-
-
-	//node* newNode(int data);
-
-	//void identicalTrees(node* a, node* b, bool& identical);
-
-	//void detectFilesChangedOutside(File* file, std::string fileToCompare);
-
 };

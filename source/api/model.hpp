@@ -17,14 +17,12 @@ private:
 
 public:
 
-	std::vector<Mesh> meshes;
+	Model(std::string const& path, File* file, FileSystem* fileSystem);
 
-	Model(std::string const& path, FileSystem* fileSystem);
+	void loadModel(std::string const& path, File* file, FileSystem* fileSystem);
 
-	void loadModel(std::string const& path, FileSystem* fileSystem);
+	void processNode(std::string const& path, aiNode* node, const aiScene* scene, File* file, FileSystem* fileSystem);
 
-	void processNode(aiNode* node, const aiScene* scene, FileSystem* fileSystem);
-
-	Mesh processMesh(aiMesh* mesh, const aiScene* scene, FileSystem* fileSystem);
+	void processMesh(std::string const& path, aiMesh* mesh, const aiScene* scene, File* file, FileSystem* fileSystem);
 
 };

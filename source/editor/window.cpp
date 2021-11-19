@@ -58,11 +58,10 @@ void Window::startGLOptions() {
 
 void Window::loadTitleBarIcon() {
 
-	Texture texture;
 	GLFWimage image;
 	unsigned width;
 	unsigned height;
-	image.pixels = texture.loadPNG("resource/icons/material.png", width, height);
+	image.pixels = TextureNS::loadPNG("resource/icons/material.png", width, height);
 	image.width = width;
 	image.height = height;
 	glfwSetWindowIcon(GLFW_window, 1, &image);

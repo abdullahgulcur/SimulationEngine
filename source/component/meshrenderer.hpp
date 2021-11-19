@@ -3,6 +3,8 @@
 #include "mesh.hpp"
 #include "material.hpp"
 
+using namespace MaterialNS;
+
 class MeshRenderer {
 
 public:
@@ -11,7 +13,7 @@ public:
 
 	unsigned int VAO;
 	int indiceSize;
-	Material* mat;
+	MaterialFile* mat;
 
 	MeshRenderer();
 };

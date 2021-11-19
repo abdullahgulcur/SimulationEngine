@@ -16,6 +16,7 @@
 
 #include <imguizmo/imguizmo.h>
 
+using namespace MaterialNS;
 
 class Editor;
 
@@ -25,7 +26,6 @@ private:
 
 	Editor* editor;
 	std::vector<FileNode>* files;
-	//std::vector<Scene>* sceneList;
 
 	/*
 	* INDEX VARIABLES
@@ -73,7 +73,7 @@ private:
 	*/
 
 	bool inspectorHovered = false;
-	bool fileChangedInInspector = false;
+	bool materialChanged = false;
 
 	
 	bool gizmoClicked = false;
@@ -148,9 +148,9 @@ public:
 
 	void showLightComponent();
 
-	void showMaterialProperties(Material& material);
+	void showMaterialProperties(MaterialFile& material);
 
-	void textureMenuPopup(Material& material, TextureType type, bool& flag);
+	void textureMenuPopup(MaterialFile& material, int index, bool& flag);
 
 	bool contextMenuPopup(ComponentType type);
 
@@ -177,11 +177,5 @@ public:
 	Editor* getEditor();
 
 	void setFiles(std::vector<FileNode>* files);
-
-	//std::map<int, FileNode>* getFiles();
-
-	//void setSceneList(std::vector<Scene>* sceneList);
-
-	//std::vector<Scene>* getSceneList();
 
 };

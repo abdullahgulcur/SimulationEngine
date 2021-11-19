@@ -69,9 +69,6 @@
     <ClCompile Include="source\editor\filesystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\editor\log.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\api\utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -124,6 +121,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\editor\mousepick.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\editor\log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -192,9 +192,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\editor\filesystem.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\editor\log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\utility.hpp">
@@ -1130,10 +1127,11 @@
     <ClInclude Include="source\include\rapidXML\rapidxml_utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\editor\log.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="source\shader\PBR.frag" />
-    <None Include="source\shader\PBR.vertex" />
     <None Include="source\include\GLM\detail\func_common.inl">
       <Filter>Header Files</Filter>
     </None>
@@ -1553,7 +1551,9 @@
     </None>
     <None Include="readme.MD" />
     <None Include="source\shader\ObjectPick.frag" />
-    <None Include="source\shader\ObjectPick.vertex" />
+    <None Include="source\shader\ObjectPick.vert" />
+    <None Include="source\shader\Default.frag" />
+    <None Include="source\shader\Default.vert" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

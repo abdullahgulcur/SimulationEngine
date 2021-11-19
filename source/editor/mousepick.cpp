@@ -3,7 +3,7 @@
 
 void MousePick::init() {
 
-	pickingProgramID = Shader::loadShaders("source/shader/ObjectPick.vertex", "source/shader/ObjectPick.frag");
+	pickingProgramID = ShaderNS::loadShaders("source/shader/ObjectPick.vert", "source/shader/ObjectPick.frag");
 	pickingColorID = glGetUniformLocation(pickingProgramID, "PickingColor");
 	modelMatrixID = glGetUniformLocation(pickingProgramID, "M");
 	viewMatrixID = glGetUniformLocation(pickingProgramID, "V");

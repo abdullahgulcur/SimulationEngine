@@ -8,47 +8,34 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
-enum class MaterialType { pbr, phong };
+struct File;
 
-class Material {
+namespace MaterialNS {
 
-public:
+	class MaterialFile {
 
-	int fileID;
-	std::string name;
-	MaterialType type;
-	bool useAlbedo = false;
-	bool useNormal = false;
-	bool useMetallic = false;
-	bool useRoughness = false;
-	bool useAO = false;
-	std::string albedoTexturePath;
-	std::string normalTexturePath;
-	std::string metallicTexturePath;
-	std::string roughnessTexturePath;
-	std::string aoTexturePath;
-	unsigned int dirLightCount = 0;
-	unsigned int pointLightCount = 0;
+	public:
 
-	glm::vec3 albedoColor;
-	unsigned int albedoTexture;
-	unsigned int normalTexture;
-	unsigned int metallicTexture;
-	unsigned int roughnessTexture;
-	unsigned int aoTexture;
+		File* fileAddr;
+		int vertShaderFileID;
+		int fragShaderFileID;
 
-	float normalAmount = 0.0f;
-	float metallicAmount = 0.0f;
-	float roughnessAmount = 0.5f;
-	float aoAmount = 0.0f;
+		std::vector<std::string> textureUnitPaths; // file ids
+		std::vector<unsigned int> textureUnits;
 
-	unsigned int programID;
+		std::vector<float> floatUnits;
 
-	Material();
+		unsigned int programID;
 
-	GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
+		MaterialFile();
 
-	void compileShaders();
+		MaterialFile(const char* vertex_file_path, const char* fragment_file_path);
 
-	void deleteProgram();
-};
+		MaterialFile(File* file, int vertShaderFileID, int fragShaderFileID, const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
+
+		void compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
+
+		void deleteProgram();
+	};
+}
+

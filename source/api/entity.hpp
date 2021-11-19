@@ -5,7 +5,11 @@
 
 #include "transform.hpp"
 #include "meshrenderer.hpp"
+#include "mesh.hpp"
 #include "light.hpp"
+
+using namespace MaterialNS;
+using namespace Mesh;
 
 enum class ComponentType{Light, MeshRenderer, RigidBody, Collider, Transform, Script, Animation, Animator};
 
@@ -31,7 +35,7 @@ public:
 
 	void addTransformComponent(Transform* transform);
 
-	void addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents);
+	void addMeshRendererComponent(MeshFile* mesh, MaterialFile* mat, std::vector<MeshRenderer>& m_rendererComponents);
 
 	void addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type = LightType::DirectionalLight);
 

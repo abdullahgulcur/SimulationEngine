@@ -1,19 +1,21 @@
 #include "mesh.hpp"
 #include "filesystem.hpp"
 
-Mesh::Mesh() {
+Mesh::MeshFile::MeshFile() {
 
+    fileAddr = NULL;
     this->indiceSize = 0;
-    Mesh::initEmtyBuffers();
+    Mesh::MeshFile::initEmtyBuffers();
 }
 
-Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem) {
+Mesh::MeshFile::MeshFile(std::vector<Mesh::Vertex>& vertices, std::vector<unsigned int>& indices, File* file) {
 
-    this->indiceSize = indices.size();
-    Mesh::initBuffers(vertices, indices, name, fileSystem);
+    fileAddr = file;
+    indiceSize = indices.size();
+    Mesh::MeshFile::initBuffers(vertices, indices);
 }
 
-void Mesh::initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices, char* name, FileSystem* fileSystem) {
+void Mesh::MeshFile::initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices) {
 
     glGenVertexArrays(1, &VAO);
 
@@ -40,12 +42,9 @@ void Mesh::initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>&
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
 
     glBindVertexArray(0);
-
-    fileSystem->meshNames.insert({ VAO, name });
-    fileSystem->meshVAOs.insert({ name, VAO });
 }
 
-void Mesh::initEmtyBuffers() {
+void Mesh::MeshFile::initEmtyBuffers() {
 
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);

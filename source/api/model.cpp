@@ -1,12 +1,12 @@
-#include "api/model.hpp"
+#include "model.hpp"
 #include "filesystem.hpp"
 
-Model::Model(std::string const& path, FileSystem* fileSystem) {
+Model::Model(std::string const& path, File* file, FileSystem* fileSystem) {
 
-    Model::loadModel(path, fileSystem);
+    Model::loadModel(path, file, fileSystem);
 }
 
-void Model::loadModel(std::string const& path, FileSystem* fileSystem)
+void Model::loadModel(std::string const& path, File* file, FileSystem* fileSystem)
 {
     // read file via ASSIMP
     Assimp::Importer importer;
@@ -21,39 +21,38 @@ void Model::loadModel(std::string const& path, FileSystem* fileSystem)
     //directory = path.substr(0, path.find_last_of('/'));
 
     // process ASSIMP's root node recursively
-    processNode(scene->mRootNode, scene, fileSystem);
+    processNode(path, scene->mRootNode, scene, file, fileSystem);
 }
 
 // processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
-void Model::processNode(aiNode* node, const aiScene* scene, FileSystem* fileSystem)
+void Model::processNode(std::string const& path, aiNode* node, const aiScene* scene, File* file, FileSystem* fileSystem)
 {
     // process each mesh located at the current node
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         // the node object only contains indices to index the actual objects in the scene. 
         // the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes.push_back(processMesh(mesh, scene, fileSystem));
+        aiMesh* aimesh = scene->mMeshes[node->mMeshes[i]];
+        Model::processMesh(path, aimesh, scene, file, fileSystem);
     }
     // after we've processed all of the meshes (if any) we then recursively process each of the children nodes
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        processNode(node->mChildren[i], scene, fileSystem);
+        processNode(path, node->mChildren[i], scene, file, fileSystem);
     }
-
 }
 
-Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene, FileSystem* fileSystem)
+void Model::processMesh(std::string const& path, aiMesh* mesh, const aiScene* scene, File* file, FileSystem* fileSystem)
 {
     // data to fill
-    std::vector<Vertex> vertices;
+    std::vector<Mesh::Vertex> vertices;
     std::vector<unsigned int> indices;
     //std::vector<Texture> textures;
 
     // walk through each of the mesh's vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++)
     {
-        Vertex vertex;
+        Mesh::Vertex vertex;
         glm::vec3 vector; // we declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
         // positions
         vector.x = mesh->mVertices[i].x;
@@ -92,5 +91,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene, FileSystem* fileSyst
             indices.push_back(face.mIndices[j]);
     }
     
-    return Mesh(vertices, indices, (char*)mesh->mName.C_Str(), fileSystem);
+    Mesh::MeshFile meshFile(vertices, indices, file);
+    fileSystem->meshes.insert({ path, meshFile });
+    fileSystem->meshPaths.insert({ meshFile.VAO, path });
 }

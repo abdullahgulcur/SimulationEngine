@@ -670,10 +670,10 @@
     <None Include="source\include\GLM\gtx\vector_angle.inl" />
     <None Include="source\include\GLM\gtx\vector_query.inl" />
     <None Include="source\include\GLM\gtx\wrap.inl" />
+    <None Include="source\shader\Default.frag" />
+    <None Include="source\shader\Default.vert" />
     <None Include="source\shader\ObjectPick.frag" />
-    <None Include="source\shader\ObjectPick.vertex" />
-    <None Include="source\shader\PBR.frag" />
-    <None Include="source\shader\PBR.vertex" />
+    <None Include="source\shader\ObjectPick.vert" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

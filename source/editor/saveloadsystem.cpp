@@ -361,8 +361,13 @@ bool SaveLoadSystem::saveMeshRenderers(Editor* editor) {
 
 		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "MeshRendererComponent");
 		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("MeshName", doc.allocate_string(editor->fileSystem.meshNames[it.VAO].c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("MatName", doc.allocate_string(it.mat->name.c_str())));
+		componentNode->append_attribute(doc.allocate_attribute("MeshPath", doc.allocate_string(editor->fileSystem.meshPaths[it.VAO].c_str())));
+
+		if(it.mat->fileAddr == NULL)
+			componentNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string("Default")));
+		else
+			componentNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[it.mat->fileAddr->id].path.c_str())));
+		
 		meshRenderersNode->append_node(componentNode);
 	}
 
@@ -398,17 +403,17 @@ bool SaveLoadSystem::loadMeshRenderers(Editor* editor) {
 		MeshRenderer m_rendererComp;
 		m_rendererComp.entID = atoi(mesh_node->first_attribute("EntID")->value());
 
-		auto meshFound = editor->fileSystem.meshVAOs.find(mesh_node->first_attribute("MeshName")->value());
-		if (meshFound != editor->fileSystem.meshVAOs.end()) {
-			m_rendererComp.VAO = meshFound->second;
-			m_rendererComp.indiceSize = editor->fileSystem.meshes[m_rendererComp.VAO].indiceSize;
+		auto meshFound = editor->fileSystem.meshes.find(mesh_node->first_attribute("MeshPath")->value());
+		if (meshFound != editor->fileSystem.meshes.end()) {
+			m_rendererComp.VAO = meshFound->second.VAO;
+			m_rendererComp.indiceSize = meshFound->second.indiceSize;
 		}
 		else {
-			m_rendererComp.VAO = editor->fileSystem.meshVAOs["Null"];
+			m_rendererComp.VAO = editor->fileSystem.meshes["Null"].VAO;
 			m_rendererComp.indiceSize = 0;
 		}
 
-		auto matFound = editor->fileSystem.materials.find(mesh_node->first_attribute("MatName")->value());
+		auto matFound = editor->fileSystem.materials.find(mesh_node->first_attribute("MaterialPath")->value());
 		if (matFound != editor->fileSystem.materials.end())
 			m_rendererComp.mat = &matFound->second;
 		else

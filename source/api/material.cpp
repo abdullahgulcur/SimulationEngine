@@ -1,17 +1,26 @@
 #include "material.hpp"
+#include "filesystem.hpp"
 
-Material::Material() {
+MaterialNS::MaterialFile::MaterialFile() {}
 
-	type = MaterialType::pbr;
-	albedoColor = glm::vec3(1.0f, 1.0f, 1.0f);
+MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
+
+	fileAddr = NULL;
+	this->vertShaderFileID = -1;
+	this->fragShaderFileID = -1;
+	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, 0, 0);
 }
 
-void Material::compileShaders() {
+MaterialNS::MaterialFile::MaterialFile(File* file, int vertShaderFileID, int fragShaderFileID, const char* vertex_file_path, const char* fragment_file_path,
+	int dirLightCount, int pointLightCount) {
 
-	programID = LoadShaders("source/shader/PBR.vertex", "source/shader/PBR.frag");
+	fileAddr = file;
+	this->vertShaderFileID = vertShaderFileID;
+	this->fragShaderFileID = fragShaderFileID;
+	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, dirLightCount, pointLightCount);
 }
 
-GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
+void MaterialNS::MaterialFile::compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount) {
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -29,7 +38,7 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 	else {
 		printf("Could not open %s.\n", vertex_file_path);
 		getchar();
-		return 0;
+		return;
 	}
 
 	// Read the Fragment Shader code from the file
@@ -61,12 +70,7 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 	}
 
 	char const* fragmentShaderArr[2];
-	std::string macro = "#version 330 core\n#define USE_ALBEDO " + std::to_string(useAlbedo) + "\n"; //1\n";
-	macro += "#define USE_NORMAL " + std::to_string(useNormal) + "\n";
-	macro += "#define USE_METALLIC " + std::to_string(useMetallic) + "\n";
-	macro += "#define USE_ROUGHNESS " + std::to_string(useRoughness) + "\n";
-	macro += "#define USE_AO " + std::to_string(useAO) + "\n";
-
+	std::string macro = "#version 330 core\n";
 	macro += "#define DIR_LIGHT_COUNT " + std::to_string(dirLightCount) + "\n";
 	macro += "#define POINT_LIGHT_COUNT " + std::to_string(pointLightCount) + "\n";
 
@@ -110,10 +114,10 @@ GLuint Material::LoadShaders(const char* vertex_file_path, const char* fragment_
 	glDeleteShader(VertexShaderID);
 	glDeleteShader(FragmentShaderID);
 
-	return ProgramID;
+	programID = ProgramID;
 }
 
-void Material::deleteProgram() {
+void MaterialNS::MaterialFile::deleteProgram() {
 
 	glDeleteProgram(programID);
 }

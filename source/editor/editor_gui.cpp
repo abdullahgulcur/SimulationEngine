@@ -147,19 +147,18 @@ void EditorGUI::setTheme()
 
 void EditorGUI::loadTextures() {
 
-	Texture texture;
-	openFolderTextureID = texture.loadDDS("resource/icons/folder_open.DDS");
-	closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
-	plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
-	greaterTextureID = texture.loadDDS("resource/icons/greater.DDS");
-	gameObjectTextureID = texture.loadDDS("resource/icons/gameobject.DDS");
-	transformTextureID = texture.loadDDS("resource/icons/transform.DDS");
-	meshrendererTextureID = texture.loadDDS("resource/icons/meshrenderer.DDS");
-	lightTextureID = texture.loadDDS("resource/icons/light.DDS");
-	contextMenuTextureID = texture.loadDDS("resource/icons/contextMenu.DDS");
-	eyeTextureID = texture.loadDDS("resource/icons/eye.DDS");
-	materialTextureID = texture.loadDDS("resource/icons/material.DDS");
-	materialSmallTextureID = texture.loadDDS("resource/icons/materialSmall.DDS");
+	openFolderTextureID = TextureNS::loadDDS("resource/icons/folder_open.DDS");
+	closedFolderTextureID = TextureNS::loadDDS("resource/icons/folder_closed.DDS");
+	plusTextureID = TextureNS::loadDDS("resource/icons/plus.DDS");
+	greaterTextureID = TextureNS::loadDDS("resource/icons/greater.DDS");
+	gameObjectTextureID = TextureNS::loadDDS("resource/icons/gameobject.DDS");
+	transformTextureID = TextureNS::loadDDS("resource/icons/transform.DDS");
+	meshrendererTextureID = TextureNS::loadDDS("resource/icons/meshrenderer.DDS");
+	lightTextureID = TextureNS::loadDDS("resource/icons/light.DDS");
+	contextMenuTextureID = TextureNS::loadDDS("resource/icons/contextMenu.DDS");
+	eyeTextureID = TextureNS::loadDDS("resource/icons/eye.DDS");
+	materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
+	materialSmallTextureID = TextureNS::loadDDS("resource/icons/materialSmall.DDS");
 }
 
 void EditorGUI::handleInputs() {
@@ -182,19 +181,28 @@ void EditorGUI::handleInputs() {
 
 	if (Input::mouseReleased(0)) {
 
-		if (fileChangedInInspector) {
+		if (materialChanged) {
 
-			Material mat;
 			if (lastSelectedEntityID != -1) {
 				
-				MeshRenderer & m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
-				mat = *m_renderer.mat;
-			}
-			else
-				mat = editor->fileSystem.getMaterial(lastSelectedItemID);
+				MeshRenderer& m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
+				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[m_renderer.mat->fileAddr->id].path, *m_renderer.mat);
 
-			editor->fileSystem.writeMaterialFile(editor->fileSystem.files[mat.fileID].path, mat);
-			fileChangedInInspector = false;
+				m_renderer.mat->deleteProgram();
+				m_renderer.mat->compileShaders((*files)[m_renderer.mat->vertShaderFileID].path.c_str(), (*files)[m_renderer.mat->fragShaderFileID].path.c_str(),
+					editor->scene.dirLightCount, editor->scene.pointLightCount);
+			}
+			else {
+				
+				MaterialNS::MaterialFile& mat = editor->fileSystem.getMaterial(lastSelectedItemID);
+				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[mat.fileAddr->id].path, mat);
+
+				mat.deleteProgram();
+				mat.compileShaders((*files)[mat.vertShaderFileID].path.c_str(), (*files)[mat.fragShaderFileID].path.c_str(),
+					editor->scene.dirLightCount, editor->scene.pointLightCount);
+			}
+
+			materialChanged = false;
 		}
 
 		if (entered) {
@@ -282,6 +290,20 @@ void EditorGUI::handleInputs() {
 			lastSelectedItemID = -1;
 		}
 	}
+
+	if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter))) {
+
+		if (lastSelectedItemID != -1 && renameItemID == -1) {
+
+			if ((*files)[lastSelectedItemID].type == FileType::folder)
+				lastClickedItemID = lastSelectedItemID;
+			else
+				ShellExecute(NULL, L"open", std::filesystem::absolute((*files)[lastSelectedItemID].path).c_str(), NULL, NULL, SW_RESTORE);
+		}
+
+		if (renameItemID != -1)
+			renameItemID = -1;
+	}
 }
 
 void EditorGUI::mainMenuBar()
@@ -352,8 +374,6 @@ void EditorGUI::createPanels() {
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 	}
 
-	//io.mouse
-
 	EditorGUI::mainMenuBar();
 	EditorGUI::createInspectorPanel();
 	EditorGUI::createAppPanel();
@@ -378,12 +398,8 @@ void EditorGUI::createScenePanel() {
 	sceneRegion = ImGui::GetContentRegionAvail();
 	ImVec2 windowSize(sceneRegion.x, sceneRegion.y);
 
-	//editor->editorCamera.setAspectRatio(sceneRegion.x, sceneRegion.y);
-
 	ImTextureID textureId = (ImTextureID)(editor->window.textureColorbuffer);
 	ImGui::Image(textureId, windowSize, ImVec2(0, 1), ImVec2(1, 0));
-
-	//gizmo
 
 	if (lastSelectedEntityID != -1) {
 
@@ -472,7 +488,7 @@ void EditorGUI::createInspectorPanel() {
 		if (editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex != -1) {
 
 			MeshRenderer& m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
-			Material& material = *m_renderer.mat;
+			MaterialFile& material = *m_renderer.mat;
 			EditorGUI::showMeshRendererComponent(m_renderer);
 			EditorGUI::showMaterialProperties(material);
 		}
@@ -487,7 +503,7 @@ void EditorGUI::createInspectorPanel() {
 
 	if (lastSelectedItemID != -1 && editor->fileSystem.files[lastSelectedItemID].type == FileType::material) {
 
-		Material& material = editor->fileSystem.getMaterial(lastSelectedItemID);
+		MaterialFile& material = editor->fileSystem.getMaterial(lastSelectedItemID);
 		EditorGUI::showMaterialProperties(material);
 	}
 
@@ -545,8 +561,8 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			Mesh* mesh = &editor->fileSystem.meshes[editor->fileSystem.nullMeshVAO];
-			Material* mat = &editor->fileSystem.materials["Default"];
+			MeshFile* mesh = &editor->fileSystem.meshes["Null"];
+			MaterialFile* mat = &editor->fileSystem.materials["Default"];
 			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, mat, editor->scene.meshRendererComponents);
 		}
 		ImGui::Separator();
@@ -798,23 +814,36 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 
 		//const char* meshName = editor->fileSystem.meshNames[m_renderer.VAO].c_str();
 		unsigned int vao = m_renderer.VAO;
-		const char* matName = m_renderer.mat->name.c_str();
+
+		const char* matPath;
+		if (m_renderer.mat->fileAddr == NULL)
+			matPath = "Default";
+		else
+			matPath = editor->fileSystem.files[m_renderer.mat->fileAddr->id].path.c_str();
 
 		int size_meshes = editor->fileSystem.meshes.size();
 		int size_mats = editor->fileSystem.materials.size();
 		const char** meshNames = new const char* [size_meshes];
-		unsigned int* meshVAOs = new unsigned int [size_meshes];
-		const char** matItems = new const char* [size_mats];
+		unsigned int* meshVAOs = new unsigned int[size_meshes];
+		unsigned int* meshIndiceSizes = new unsigned int [size_meshes];
+		const char** matPaths = new const char* [size_mats];
+		const char** matNames = new const char* [size_mats];
 
 		int meshIndex = -1;
 		int matIndex = -1;
 
 		int i = 0;
-		for (auto& it : editor->fileSystem.meshNames) {
+		for (auto& it : editor->fileSystem.meshes) {
 
-			meshNames[i] = it.second.c_str();
-			meshVAOs[i] = it.first;
-			if (it.first == vao)
+			if (it.second.fileAddr == NULL)
+				meshNames[i] = "Null";
+			else
+				meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+
+			//meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			meshVAOs[i] = it.second.VAO;
+			meshIndiceSizes[i] = it.second.indiceSize;
+			if (it.second.VAO == vao)
 				meshIndex = i;
 			i++;
 		}
@@ -827,14 +856,22 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 
 		if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
 			m_renderer.VAO = meshVAOs[meshIndex];
-			m_renderer.indiceSize = editor->fileSystem.meshes[m_renderer.VAO].indiceSize;
+			m_renderer.indiceSize = meshIndiceSizes[meshIndex];
 		}
 
 		i = 0;
 		for (auto& it : editor->fileSystem.materials) {
 
-			matItems[i] = it.second.name.c_str();
-			if (strcmp(matName, matItems[i]) == 0)
+			if (it.second.fileAddr == NULL) {
+				matPaths[i] = "Default";
+				matNames[i] = "Default";
+			}
+			else {
+				matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+				matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			}
+
+			if (strcmp(matPath, matPaths[i]) == 0)
 				matIndex = i;
 			i++;
 		}
@@ -844,13 +881,15 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImGui::PushItemWidth(80);
 		ImGui::SetNextItemWidth(width - 130);
 
-		if (ImGui::Combo("##1", &matIndex, matItems, size_mats)) {
+		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
 
-			m_renderer.mat = &editor->fileSystem.materials[matItems[matIndex]];
+			m_renderer.mat = &editor->fileSystem.materials[matPaths[matIndex]];
 		}
 		delete meshNames;
 		delete meshVAOs;
-		delete matItems;
+		delete meshIndiceSizes;
+		delete matPaths;
+		delete matNames;
 
 		ImGui::PopStyleColor();
 		ImGui::TreePop();
@@ -978,13 +1017,15 @@ void EditorGUI::showLightComponent() {
 	ImGui::Separator();
 }
 
-void EditorGUI::showMaterialProperties(Material& material) {
+
+
+void EditorGUI::showMaterialProperties(MaterialFile& material) {
 
 	float width = ImGui::GetContentRegionAvail().x;
 
 	ImGui::SetNextItemOpen(true);
 
-	if(strcmp(material.name.c_str(), "Default") == 0)
+	if(material.fileAddr == NULL)
 		ImGui::SetNextItemOpen(false);
 
 	bool treeNodeOpen = ImGui::TreeNode("##3");
@@ -1006,125 +1047,279 @@ void EditorGUI::showMaterialProperties(Material& material) {
 
 	if (treeNodeOpen) {
 
+		std::vector<FileNode>& files = editor->fileSystem.files;
+
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		int item = material.type == MaterialType::pbr ? 0 : 1;
-		const char* items[] = { "PBR", "Phong"};
-		ImGui::SetNextItemWidth(width - 45);
-		if (ImGui::Combo("##0", &item, items, 2)) {
-
-			material.type = item == 0 ? MaterialType::pbr : MaterialType::phong;
-			fileChangedInInspector = true;
-		}
-
-		static bool popupFlag = true;
-
-		ImGui::PushID(1);
-
-		ImTextureID textId = !material.useAlbedo ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.albedoTexture;
-		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-			ImGui::OpenPopup("texture_menu_popup");
-			popupFlag = true;
-		}
-
-		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Albedo Map"); ImGui::SameLine(160);
-
-		ImVec4 color = ImVec4(material.albedoColor.x, material.albedoColor.y, material.albedoColor.z, 1.0f);
-		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
-		static ImVec4 backup_color;
-		bool open_popup = ImGui::ColorButton("##0", color);
-		if (open_popup)
 		{
-			ImGui::OpenPopup("mypicker");
-			backup_color = color;
+			std::vector<ShaderFile>& vertShaderFiles = editor->fileSystem.vertShaderFiles;
+			ImGui::Text("Vert Shader");
+
+			int indiceSize = vertShaderFiles.size() + 1;
+			const char** shaderNames = new const char* [indiceSize];
+			shaderNames[0] = "Default\0";
+
+			const char* vertShaderPath = editor->fileSystem.getVertShaderPath(material.vertShaderFileID);
+
+			int index = 0;
+			int i = 1;
+
+			for (auto& shaderFile : vertShaderFiles) {
+
+				shaderNames[i] = files[shaderFile.fileAddr->id].name.c_str();
+				i++;
+			}
+
+			if (indiceSize == 1 || strcmp(vertShaderPath, "source/shader/Default.vert") == 0)
+				index = 0;
+			else {
+
+				i = 1;
+				for (auto& shaderFile :vertShaderFiles) {
+
+					if (strcmp(vertShaderPath, files[shaderFile.fileAddr->id].path.c_str()) == 0) {
+						index = i;
+						break;
+					}
+					i++;
+				}
+			}
+
+			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
+
+			if (ImGui::Combo("##0", &index, shaderNames, indiceSize)) {
+				if (index == 0)
+					material.vertShaderFileID = -1;
+				else
+					material.vertShaderFileID = vertShaderFiles[index - 1].fileAddr->id;
+				materialChanged = true;
+			}
+
+			delete shaderNames;
 		}
-		if (ImGui::BeginPopup("mypicker"))
+
 		{
-			ImGui::ColorPicker4("##1", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-			material.albedoColor = glm::vec3(color.x, color.y, color.z);
-			fileChangedInInspector = true;
-			ImGui::EndPopup();
+			std::vector<ShaderFile>& fragShaderFiles = editor->fileSystem.fragShaderFiles;
+			ImGui::Text("Frag Shader");
+
+			int indiceSize = fragShaderFiles.size() + 1;
+			const char** shaderNames = new const char* [indiceSize];
+			shaderNames[0] = "Default";
+
+			const char* fragShaderPath = editor->fileSystem.getFragShaderPath(material.fragShaderFileID);;
+
+			int index = 0;
+			int i = 1;
+
+			for (auto& shaderFile : fragShaderFiles) {
+
+				shaderNames[i] = files[shaderFile.fileAddr->id].name.c_str();
+				i++;
+			}
+
+			if (indiceSize == 1 || strcmp(fragShaderPath, "source/shader/Default.frag") == 0)
+				index = 0;
+			else {
+
+				i = 1;
+				for (auto& shaderFile : fragShaderFiles) {
+
+					if (strcmp(fragShaderPath, files[shaderFile.fileAddr->id].path.c_str()) == 0) {
+						index = i;
+						break;
+					}
+					i++;
+				}
+			}
+
+			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
+
+			bool matShaderSourceChange = false;
+			if (ImGui::Combo("##1", &index, shaderNames, indiceSize)) {
+				if (index == 0)
+					material.fragShaderFileID = -1;
+				else
+					material.fragShaderFileID = fragShaderFiles[index - 1].fileAddr->id;
+				materialChanged = true;
+				matShaderSourceChange = true;
+			}
+
+			delete shaderNames;
+
+			if (index != 0) {
+
+				int sampler2DCount = fragShaderFiles[index - 1].sampler2DNames.size();
+				int floatCount = fragShaderFiles[index - 1].floatNames.size();
+
+				if (matShaderSourceChange) {
+
+					material.textureUnitPaths.clear();
+					material.textureUnits.clear();
+					material.floatUnits.clear();
+
+					for (int i = 0; i < sampler2DCount; i++) {
+						material.textureUnits.push_back(editor->fileSystem.textures["whitetexture"].textureID);
+						material.textureUnitPaths.push_back("whitetexture");
+					}
+
+					for (int i = 0; i < floatCount; i++)
+						material.floatUnits.push_back(0);
+				}
+
+				static bool popupFlag = true;
+
+				for (int i = 0; i < sampler2DCount; i++) {
+
+					ImGui::PushID(i);
+
+					if (ImGui::ImageButton((ImTextureID)material.textureUnits[i], size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+						ImGui::OpenPopup("texture_menu_popup");
+						popupFlag = true;
+					}
+
+					EditorGUI::textureMenuPopup(material, i, popupFlag);
+
+					ImGui::PopID();
+					ImGui::SameLine();
+					pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+					ImGui::Text(fragShaderFiles[index - 1].sampler2DNames[i].c_str());
+				}
+
+				for (int i = 0; i < floatCount; i++) {
+
+					ImGui::Text(fragShaderFiles[index - 1].floatNames[i].c_str());
+
+					char temp[8];
+					sprintf(temp, "##%d\0", i + 10);
+
+					float val = material.floatUnits[i];
+					if (ImGui::DragFloat(temp, &val, 0.1f, 0.0f, 0.0f, "%.2f"))
+						materialChanged = true;
+				}
+			}
+			else {
+
+				if (matShaderSourceChange) {
+
+					material.textureUnits.clear();
+					material.textureUnitPaths.clear();
+					material.floatUnits.clear();
+				}
+			}
 		}
 
-		EditorGUI::textureMenuPopup(material, TextureType::albedo, popupFlag);
+		
 
-		ImGui::PopID();
-		ImGui::PushID(2);
+		
 
-		textId = !material.useNormal ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.normalTexture;
-		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-			ImGui::OpenPopup("texture_menu_popup");
-			popupFlag = true;
-		}
+		//static bool popupFlag = true;
 
-		float& slider_n = material.normalAmount;
-		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Normal Map"); ImGui::SameLine(160);
-		ImGui::SetNextItemWidth(width - 180);
-		if (ImGui::SliderFloat("##2", &slider_n, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-			fileChangedInInspector = true;
+		//ImGui::PushID(1);
 
-		EditorGUI::textureMenuPopup(material, TextureType::normal, popupFlag);
+		//ImTextureID textId = !material.useAlbedo ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.albedoTexture;
+		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
 
-		ImGui::PopID();
-		ImGui::PushID(3);
+		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//ImGui::Text("Albedo Map"); ImGui::SameLine(160);
+
+		//ImVec4 color = ImVec4(material.albedoColor.x, material.albedoColor.y, material.albedoColor.z, 1.0f);
+		//ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
+		//static ImVec4 backup_color;
+		//bool open_popup = ImGui::ColorButton("##0", color);
+		//if (open_popup)
+		//{
+		//	ImGui::OpenPopup("mypicker");
+		//	backup_color = color;
+		//}
+		//if (ImGui::BeginPopup("mypicker"))
+		//{
+		//	ImGui::ColorPicker4("##1", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
+		//	material.albedoColor = glm::vec3(color.x, color.y, color.z);
+		//	materialChanged = true;
+		//	ImGui::EndPopup();
+		//}
+
+		//EditorGUI::textureMenuPopup(material, TextureType::albedo, popupFlag);
+
+		//ImGui::PopID();
+		//ImGui::PushID(2);
+
+		//textId = !material.useNormal ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.normalTexture;
+		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
+
+		//float& slider_n = material.normalAmount;
+		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//ImGui::Text("Normal Map"); ImGui::SameLine(160);
+		//ImGui::SetNextItemWidth(width - 180);
+		//if (ImGui::SliderFloat("##2", &slider_n, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		//	materialChanged = true;
+
+		//EditorGUI::textureMenuPopup(material, TextureType::normal, popupFlag);
+
+		//ImGui::PopID();
+		//ImGui::PushID(3);
 
 
-		textId = !material.useMetallic ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.metallicTexture;
-		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-			ImGui::OpenPopup("texture_menu_popup");
-			popupFlag = true;
-		}
+		//textId = !material.useMetallic ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.metallicTexture;
+		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
 
-		float& slider_m = material.metallicAmount;
-		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Metallic Map"); ImGui::SameLine(160);
-		ImGui::SetNextItemWidth(width - 180);
-		if(ImGui::SliderFloat("##3", &slider_m, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-			fileChangedInInspector = true;
+		//float& slider_m = material.metallicAmount;
+		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//ImGui::Text("Metallic Map"); ImGui::SameLine(160);
+		//ImGui::SetNextItemWidth(width - 180);
+		//if(ImGui::SliderFloat("##3", &slider_m, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		//	materialChanged = true;
 
 
-		EditorGUI::textureMenuPopup(material, TextureType::metallic, popupFlag);
+		//EditorGUI::textureMenuPopup(material, TextureType::metallic, popupFlag);
 
-		ImGui::PopID();
-		ImGui::PushID(4);
+		//ImGui::PopID();
+		//ImGui::PushID(4);
 
-		textId = !material.useRoughness ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.roughnessTexture;
-		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-			ImGui::OpenPopup("texture_menu_popup");
-			popupFlag = true;
-		}
+		//textId = !material.useRoughness ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.roughnessTexture;
+		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
 
-		float& slider_r = material.roughnessAmount;
-		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("Roughness Map"); ImGui::SameLine(160);
-		ImGui::SetNextItemWidth(width - 180);
-		if(ImGui::SliderFloat("##4", &slider_r, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-			fileChangedInInspector = true;
+		//float& slider_r = material.roughnessAmount;
+		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//ImGui::Text("Roughness Map"); ImGui::SameLine(160);
+		//ImGui::SetNextItemWidth(width - 180);
+		//if(ImGui::SliderFloat("##4", &slider_r, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		//	materialChanged = true;
 
-		EditorGUI::textureMenuPopup(material, TextureType::roughness, popupFlag);
+		//EditorGUI::textureMenuPopup(material, TextureType::roughness, popupFlag);
 
-		ImGui::PopID();
-		ImGui::PushID(5);
+		//ImGui::PopID();
+		//ImGui::PushID(5);
 
-		textId = !material.useAO ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.aoTexture;
-		if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-			ImGui::OpenPopup("texture_menu_popup");
-			popupFlag = true;
-		}
+		//textId = !material.useAO ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.aoTexture;
+		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
 
-		float& slider_ao = material.aoAmount;
-		ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text("AO Map"); ImGui::SameLine(160);
-		ImGui::SetNextItemWidth(width - 180);
-		if (ImGui::SliderFloat("##5", &slider_ao, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-			fileChangedInInspector = true;
+		//float& slider_ao = material.aoAmount;
+		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//ImGui::Text("AO Map"); ImGui::SameLine(160);
+		//ImGui::SetNextItemWidth(width - 180);
+		//if (ImGui::SliderFloat("##5", &slider_ao, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
+		//	materialChanged = true;
 
-		EditorGUI::textureMenuPopup(material, TextureType::ao, popupFlag);
+		//EditorGUI::textureMenuPopup(material, TextureType::ao, popupFlag);
 
-		ImGui::PopID();
+		//ImGui::PopID();
 
 		ImGui::TreePop();
 	}
@@ -1133,20 +1328,20 @@ void EditorGUI::showMaterialProperties(Material& material) {
 	ImGui::Separator();
 }
 
-void EditorGUI::textureMenuPopup(Material& material, TextureType type, bool& flag) {
+void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) {
 
 	if (!flag)
 		return;
 
 	int frame_padding = 2;
-	ImVec2 size = ImVec2(64.0f, 64.0f);
+	ImVec2 size = ImVec2(128.0f, 128.0f);
 	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
 	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
 	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
 	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
 
-	ImGui::SetNextWindowSize(ImVec2(235, 350));
+	ImGui::SetNextWindowSize(ImVec2(300, 635));
 
 	if (ImGui::BeginPopup("texture_menu_popup"))
 	{
@@ -1159,103 +1354,35 @@ void EditorGUI::textureMenuPopup(Material& material, TextureType type, bool& fla
 
 				if (ImGui::ImageButton((ImTextureID)it.second.textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 
-					switch (type) {
-					case TextureType::albedo: {
+					material.textureUnits[index] = it.second.textureID;
+					material.textureUnitPaths[index] = it.first;
+					
 
-						material.albedoTexture = it.second.textureID;
-						material.albedoTexturePath = it.first;
-
-						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
-
-						if (material.useAlbedo && nullSelected || !material.useAlbedo && !nullSelected) {
-
-							material.useAlbedo = !nullSelected;
-							material.deleteProgram();
-							material.compileShaders();
-						}
-
-						break;
-					}
-					case TextureType::normal: {
-
-						material.normalTexture = it.second.textureID;
-						material.normalTexturePath = it.first;
-
-						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
-
-						if (material.useNormal && nullSelected || !material.useNormal && !nullSelected) {
-
-							material.useNormal = !nullSelected;
-							material.deleteProgram();
-							material.compileShaders();
-						}
-
-						break;
-					}
-					case TextureType::metallic: {
-
-						material.metallicTexture = it.second.textureID;
-						material.metallicTexturePath = it.first;
-						
-						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
-
-						if (material.useMetallic && nullSelected || !material.useMetallic && !nullSelected) {
-
-							material.useMetallic = !nullSelected;
-							material.deleteProgram();
-							material.compileShaders();
-						}
-
-						break;
-					}
-					case TextureType::roughness: {
-
-						material.roughnessTexture = it.second.textureID;
-						material.roughnessTexturePath = it.first;
-						
-						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
-
-						if (material.useRoughness && nullSelected || !material.useRoughness && !nullSelected) {
-
-							material.useRoughness = !nullSelected;
-							material.deleteProgram();
-							material.compileShaders();
-						}
-
-						break;
-					}
-					case TextureType::ao: {
-
-						material.aoTexture = it.second.textureID;
-						material.aoTexturePath = it.first;
-						
-						bool nullSelected = std::strcmp(it.first.c_str(), "Null") == 0;
-
-						if (material.useAO && nullSelected || !material.useAO && !nullSelected) {
-
-							material.useAO = !nullSelected;
-							material.deleteProgram();
-							material.compileShaders();
-						}
-
-						break;
-					}
-					}
-
-					fileChangedInInspector = true;
+					materialChanged = true;
 					flag = false;
 					ImGui::PopID();
 					ImGui::EndGroup();
 					ImGui::EndPopup();
 					return;
 				}
-				ImGui::Text(it.first.c_str());
+
+				char name[32];
+				if (it.second.fileAddr != NULL)
+					strcpy(name, (*files)[it.second.fileAddr->id].name.c_str());
+				else
+					strcpy(name, "White\0");
+
+				ImVec2 pos = ImGui::GetCursorPos();
+				ImVec2 textSize = ImGui::CalcTextSize(name);
+				ImGui::SetCursorPos(ImVec2(pos.x + (128.f - textSize.x) / 2, pos.y));
+
+				ImGui::Text(name);
 
 				ImGui::PopID();
 			}
 			ImGui::EndGroup();
 
-			if ((iterateIndex + 1) % 3 != 0)
+			if ((iterateIndex + 1) % 2 != 0)
 				ImGui::SameLine();
 
 			iterateIndex++;
@@ -2035,7 +2162,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 
 					if (strlen(str0) != 0)
 						editor->fileSystem.rename(file->subfiles[i]->id, str0);
-					renameItemID = -1;
+					//renameItemID = -1;
 				}
 			}
 			else {
@@ -2130,11 +2257,3 @@ void EditorGUI::setEditor(Editor* editor) { this->editor = editor; }
 Editor* EditorGUI::getEditor() { return editor; }
 
 void EditorGUI::setFiles(std::vector<FileNode>* files) { this->files = files; }
-
-//std::map<int, FileNode>* EditorGUI::getFiles() { return files; }
-
-//void EditorGUI::setSceneList(std::vector<Scene>* sceneList) { this->sceneList = sceneList; }
-//
-//std::vector<Scene>* EditorGUI::getSceneList() { return sceneList; }
-
-

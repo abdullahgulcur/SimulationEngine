@@ -122,48 +122,21 @@ void Scene::update() {
 			}
 		}
 
-		glUniform1f(glGetUniformLocation(val.mat->programID, "metallic_amount"), val.mat->metallicAmount);
-		glUniform1f(glGetUniformLocation(val.mat->programID, "roughness_amount"), val.mat->roughnessAmount);
-		glUniform1f(glGetUniformLocation(val.mat->programID, "ao_amount"), val.mat->aoAmount);
+		for (int i = 0; i < val.mat->textureUnits.size(); i++) {
 
-		if (val.mat->useAlbedo) {
+			char str[16];
+			sprintf(str, "texture%d\0", i);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, val.mat->albedoTexture);
-			glUniform1i(glGetUniformLocation(val.mat->programID, "albedoColor"), 0);
-		}
-		else {
-
-			glUniform3fv(glGetUniformLocation(val.mat->programID, "albedoColor"), 1, &val.mat->albedoColor[0]);
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, val.mat->textureUnits[i]);
+			glUniform1i(glGetUniformLocation(val.mat->programID, str), i);
 		}
 
-		if (val.mat->useNormal) {
+		for (int i = 0; i < val.mat->floatUnits.size(); i++) {
 
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, val.mat->normalTexture);
-			glUniform1i(glGetUniformLocation(val.mat->programID, "normalMap"), 1);
-			glUniform1f(glGetUniformLocation(val.mat->programID, "normal_amount"), val.mat->normalAmount);
-		}
-
-		if (val.mat->useMetallic) {
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, val.mat->metallicTexture);
-			glUniform1i(glGetUniformLocation(val.mat->programID, "metallicMap"), 2);
-		}
-
-		if (val.mat->useRoughness) {
-
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, val.mat->roughnessTexture);
-			glUniform1i(glGetUniformLocation(val.mat->programID, "roughnessMap"), 3);
-		}
-
-		if (val.mat->useAO) {
-
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, val.mat->aoTexture);
-			glUniform1i(glGetUniformLocation(val.mat->programID, "aoMap"), 4);
+			char str[16];
+			sprintf(str, "float%d\0", i);
+			glUniform1f(glGetUniformLocation(val.mat->programID, str), val.mat->floatUnits[i]);
 		}
 
 		glBindVertexArray(val.VAO);
@@ -174,12 +147,9 @@ void Scene::update() {
 
 void Scene::recompileAllMaterials() {
 
-	for (auto& val : editor->fileSystem.materials) {
-
-		val.second.pointLightCount = pointLightCount;
-		val.second.dirLightCount = dirLightCount;
-		val.second.compileShaders();
-	}
+	for (auto& val : editor->fileSystem.materials)
+		val.second.compileShaders(editor->fileSystem.getVertShaderPath(val.second.vertShaderFileID),
+			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileID), dirLightCount, pointLightCount);
 }
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {

@@ -27,7 +27,7 @@ void Entity::addTransformComponent(Transform* transform) {
 	this->transform = transform;
 }
 
-void Entity::addMeshRendererComponent(Mesh* mesh, Material* mat, std::vector<MeshRenderer>& m_rendererComponents) {
+void Entity::addMeshRendererComponent(MeshFile* mesh, MaterialFile* mat, std::vector<MeshRenderer>& m_rendererComponents) {
 
 	if (m_rendererComponentIndex != -1)
 		return;
