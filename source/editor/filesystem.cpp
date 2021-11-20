@@ -418,7 +418,7 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& it : editor->scene.meshRendererComponents) {
 
-				if (strcmp(files[it.mat->fileAddr->id].path.c_str(), files[indices[i]].path.c_str()) == 0)
+				if (it.mat->fileAddr == files[indices[i]].addr)
 					it.mat = &materials["Default"];
 			}
 
@@ -573,7 +573,6 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	subFile->id = files.size();
 	subFile->parent = files[currentDirID].addr;
 
-	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode;
 	std::string temp = fileName;
 	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".mat";
@@ -626,8 +625,10 @@ void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 
 	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, 0, 0);
 
-	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling())
+	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling()) {
 		mat.textureUnitFileAddrs.push_back(FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value()));
+		mat.textureUnits.push_back(textures[texpath_node->first_attribute("Path")->value()].textureID);
+	}
 
 	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
 		mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
@@ -841,7 +842,6 @@ int FileSystem::duplicateFile(int id) {
 	subFile->id = files.size();
 	subFile->parent = files[id].addr->parent;
 
-	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode = files[id];
 	tempFileNode.addr = subFile;
 	files.push_back(tempFileNode);

@@ -77,19 +77,14 @@ private:
 
 	std::string getAvailableFileName(File* file, const char* name);
 
-	//void loadTextureIDsOfMaterials();
-
 public:
 
 	std::string assetsPathExternal;
-
-	unsigned int nullMeshVAO;
 
 	File* rootFile;
 	std::vector<FileNode> files;
 
 	std::unordered_map<unsigned int, std::string> meshPaths;
-	//std::unordered_map<std::string, unsigned int> meshVAOs;
 
 	std::unordered_map<std::string, MeshFile> meshes;
 	std::unordered_map<std::string, MaterialFile> materials;

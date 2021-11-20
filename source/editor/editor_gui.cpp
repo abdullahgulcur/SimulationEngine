@@ -892,11 +892,11 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 
 			m_renderer.mat = &editor->fileSystem.materials[matPaths[matIndex]];
 		}
-		delete meshNames;
-		delete meshVAOs;
-		delete meshIndiceSizes;
-		delete matPaths;
-		delete matNames;
+		delete[] meshNames;
+		delete[] meshVAOs;
+		delete[] meshIndiceSizes;
+		delete[] matPaths;
+		delete[] matNames;
 
 		ImGui::PopStyleColor();
 		ImGui::TreePop();
@@ -1103,7 +1103,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 				materialChanged = true;
 			}
 
-			delete shaderNames;
+			delete[] shaderNames;
 		}
 
 		{
@@ -1152,7 +1152,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 				matShaderSourceChange = true;
 			}
 
-			delete shaderNames;
+			delete[] shaderNames;
 
 			if (index != 0) {
 
@@ -1216,23 +1216,6 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 			}
 		}
 
-		
-
-		
-
-		//static bool popupFlag = true;
-
-		//ImGui::PushID(1);
-
-		//ImTextureID textId = !material.useAlbedo ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.albedoTexture;
-		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text("Albedo Map"); ImGui::SameLine(160);
-
 		//ImVec4 color = ImVec4(material.albedoColor.x, material.albedoColor.y, material.albedoColor.z, 1.0f);
 		//ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
 		//static ImVec4 backup_color;
@@ -1249,84 +1232,6 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 		//	materialChanged = true;
 		//	ImGui::EndPopup();
 		//}
-
-		//EditorGUI::textureMenuPopup(material, TextureType::albedo, popupFlag);
-
-		//ImGui::PopID();
-		//ImGui::PushID(2);
-
-		//textId = !material.useNormal ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.normalTexture;
-		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//float& slider_n = material.normalAmount;
-		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text("Normal Map"); ImGui::SameLine(160);
-		//ImGui::SetNextItemWidth(width - 180);
-		//if (ImGui::SliderFloat("##2", &slider_n, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-		//	materialChanged = true;
-
-		//EditorGUI::textureMenuPopup(material, TextureType::normal, popupFlag);
-
-		//ImGui::PopID();
-		//ImGui::PushID(3);
-
-
-		//textId = !material.useMetallic ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.metallicTexture;
-		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//float& slider_m = material.metallicAmount;
-		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text("Metallic Map"); ImGui::SameLine(160);
-		//ImGui::SetNextItemWidth(width - 180);
-		//if(ImGui::SliderFloat("##3", &slider_m, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-		//	materialChanged = true;
-
-
-		//EditorGUI::textureMenuPopup(material, TextureType::metallic, popupFlag);
-
-		//ImGui::PopID();
-		//ImGui::PushID(4);
-
-		//textId = !material.useRoughness ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.roughnessTexture;
-		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//float& slider_r = material.roughnessAmount;
-		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text("Roughness Map"); ImGui::SameLine(160);
-		//ImGui::SetNextItemWidth(width - 180);
-		//if(ImGui::SliderFloat("##4", &slider_r, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-		//	materialChanged = true;
-
-		//EditorGUI::textureMenuPopup(material, TextureType::roughness, popupFlag);
-
-		//ImGui::PopID();
-		//ImGui::PushID(5);
-
-		//textId = !material.useAO ? (ImTextureID)editor->fileSystem.textures["Null"].textureID : (ImTextureID)material.aoTexture;
-		//if (ImGui::ImageButton(textId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//float& slider_ao = material.aoAmount;
-		//ImGui::SameLine(); pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text("AO Map"); ImGui::SameLine(160);
-		//ImGui::SetNextItemWidth(width - 180);
-		//if (ImGui::SliderFloat("##5", &slider_ao, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None))
-		//	materialChanged = true;
-
-		//EditorGUI::textureMenuPopup(material, TextureType::ao, popupFlag);
-
-		//ImGui::PopID();
 
 		ImGui::TreePop();
 	}

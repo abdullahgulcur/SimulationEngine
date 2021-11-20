@@ -225,8 +225,8 @@ void Scene::deleteEntityCompletely(int id) {
 
 	for (auto& iter : indices) {
 
-		//delete entities[iter].name;
-		//delete entities[iter].transform;
+		delete[] entities[iter].name;
+		delete entities[iter].transform;
 	}
 
 	std::vector<Entity> newEntList;
