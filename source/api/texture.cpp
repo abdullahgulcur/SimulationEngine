@@ -1,96 +1,196 @@
 #include "texture.hpp"
+#include "filesystem.hpp"
 
-Texture::Texture() {
+namespace TextureNS {
 
-}
+	TextureNS::TextureFile::TextureFile() {}
 
-unsigned int Texture::loadDDS(const char* imagepath) {
+	TextureNS::TextureFile::TextureFile(const char* imagepath) {
 
-	unsigned char header[124];
-
-	FILE* fp;
-
-	/* try to open the file */
-	fp = fopen(imagepath, "rb");
-	if (fp == NULL) {
-		printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath); getchar();
-		return 0;
+		fileAddr = NULL;
+		textureID = TextureNS::loadDDS(imagepath);
 	}
 
-	/* verify the type of file */
-	char filecode[4];
-	fread(filecode, 1, 4, fp);
-	if (strncmp(filecode, "DDS ", 4) != 0) {
+	TextureNS::TextureFile::TextureFile(File* file, const char* imagepath) {
+
+		fileAddr = file;
+		textureID = TextureNS::loadDDS(imagepath);
+	}
+
+	void TextureFile::deleteTexture() {
+
+		glDeleteTextures(1, &textureID);
+	}
+
+	unsigned int TextureNS::getEmptyTexture() {
+
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+		return textureID;
+	}
+
+	unsigned int TextureNS::loadDDS(const char* imagepath) {
+
+		unsigned char header[124];
+
+		FILE* fp;
+
+		/* try to open the file */
+		fp = fopen(imagepath, "rb");
+		if (fp == NULL) {
+			printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath); getchar();
+			return 0;
+		}
+
+		/* verify the type of file */
+		char filecode[4];
+		fread(filecode, 1, 4, fp);
+		if (strncmp(filecode, "DDS ", 4) != 0) {
+			fclose(fp);
+			return 0;
+		}
+
+		/* get the surface desc */
+		fread(&header, 124, 1, fp);
+
+		unsigned int height = *(unsigned int*)&(header[8]);
+		unsigned int width = *(unsigned int*)&(header[12]);
+		unsigned int linearSize = *(unsigned int*)&(header[16]);
+		unsigned int mipMapCount = *(unsigned int*)&(header[24]);
+		unsigned int fourCC = *(unsigned int*)&(header[80]);
+
+
+		unsigned char* buffer;
+		unsigned int bufsize;
+		/* how big is it going to be including all mipmaps? */
+		bufsize = mipMapCount > 1 ? linearSize * 2 : linearSize;
+		buffer = (unsigned char*)malloc(bufsize * sizeof(unsigned char));
+		fread(buffer, 1, bufsize, fp);
+		/* close the file pointer */
 		fclose(fp);
-		return 0;
-	}
 
-	/* get the surface desc */
-	fread(&header, 124, 1, fp);
+		unsigned int components = (fourCC == FOURCC_DXT1) ? 3 : 4;
+		unsigned int format;
+		switch (fourCC)
+		{
+		case FOURCC_DXT1:
+			format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+			break;
+		case FOURCC_DXT3:
+			format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+			break;
+		case FOURCC_DXT5:
+			format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			break;
+		default:
+			free(buffer);
+			return 0;
+		}
 
-	unsigned int height = *(unsigned int*)&(header[8]);
-	unsigned int width = *(unsigned int*)&(header[12]);
-	unsigned int linearSize = *(unsigned int*)&(header[16]);
-	unsigned int mipMapCount = *(unsigned int*)&(header[24]);
-	unsigned int fourCC = *(unsigned int*)&(header[80]);
+		// Create one OpenGL texture
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
 
+		// "Bind" the newly created texture : all future texture functions will modify this texture
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	unsigned char* buffer;
-	unsigned int bufsize;
-	/* how big is it going to be including all mipmaps? */
-	bufsize = mipMapCount > 1 ? linearSize * 2 : linearSize;
-	buffer = (unsigned char*)malloc(bufsize * sizeof(unsigned char));
-	fread(buffer, 1, bufsize, fp);
-	/* close the file pointer */
-	fclose(fp);
+		unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
+		unsigned int offset = 0;
 
-	unsigned int components = (fourCC == FOURCC_DXT1) ? 3 : 4;
-	unsigned int format;
-	switch (fourCC)
-	{
-	case FOURCC_DXT1:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		break;
-	case FOURCC_DXT3:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		break;
-	case FOURCC_DXT5:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		break;
-	default:
+		/* load the mipmaps */
+		for (unsigned int level = 0; level < mipMapCount && (width || height); ++level)
+		{
+			unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
+			glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height,
+				0, size, buffer + offset);
+
+			offset += size;
+			width /= 2;
+			height /= 2;
+
+			// Deal with Non-Power-Of-Two textures. This code is not included in the webpage to reduce clutter.
+			if (width < 1) width = 1;
+			if (height < 1) height = 1;
+
+		}
+
 		free(buffer);
-		return 0;
+
+		return textureID;
 	}
 
-	// Create one OpenGL texture
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
+	unsigned char* TextureNS::loadBMP(const char* imagepath) {
 
-	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		printf("Reading image %s\n", imagepath);
 
-	unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
-	unsigned int offset = 0;
+		// Data read from the header of the BMP file
+		unsigned char header[54];
+		unsigned int dataPos;
+		unsigned int imageSize;
+		unsigned int width, height;
+		// Actual RGB data
+		unsigned char* data;
 
-	/* load the mipmaps */
-	for (unsigned int level = 0; level < mipMapCount && (width || height); ++level)
-	{
-		unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
-		glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height,
-			0, size, buffer + offset);
+		// Open the file
+		FILE* file = fopen(imagepath, "rb");
+		if (!file) {
+			printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath);
+			getchar();
+		}
 
-		offset += size;
-		width /= 2;
-		height /= 2;
+		// Read the header, i.e. the 54 first bytes
 
-		// Deal with Non-Power-Of-Two textures. This code is not included in the webpage to reduce clutter.
-		if (width < 1) width = 1;
-		if (height < 1) height = 1;
+		// If less than 54 bytes are read, problem
+		if (fread(header, 1, 54, file) != 54) {
+			printf("Not a correct BMP file\n");
+			fclose(file);
+		}
+		// A BMP files always begins with "BM"
+		if (header[0] != 'B' || header[1] != 'M') {
+			printf("Not a correct BMP file\n");
+			fclose(file);
+		}
+		// Make sure this is a 24bpp file
+		if (*(int*)&(header[0x1E]) != 0) { printf("Not a correct BMP file\n");    fclose(file); return 0; }
+		if (*(int*)&(header[0x1C]) != 24) { printf("Not a correct BMP file\n");    fclose(file); return 0; }
 
+		// Read the information about the image
+		dataPos = *(int*)&(header[0x0A]);
+		imageSize = *(int*)&(header[0x22]);
+		width = *(int*)&(header[0x12]);
+		height = *(int*)&(header[0x16]);
+
+		// Some BMP files are misformatted, guess missing information
+		if (imageSize == 0)    imageSize = width * height * 3; // 3 : one byte for each Red, Green and Blue component
+		if (dataPos == 0)      dataPos = 54; // The BMP header is done that way
+
+		// Create a buffer
+		data = new unsigned char[imageSize];
+
+		// Read the actual data from the file into the buffer
+		fread(data, 1, imageSize, file);
+
+		// Everything is in memory now, the file can be closed.
+		fclose(file);
+
+		return data;
 	}
 
-	free(buffer);
+	unsigned char* TextureNS::loadPNG(const char* imagepath, unsigned& width, unsigned& height) {
 
-	return textureID;
+		std::vector<unsigned char> image;
+		unsigned error = lodepng::decode(image, width, height, imagepath);
+
+		unsigned char* data = new unsigned char[width * height * 4];
+		for (int i = 0; i < image.size(); i++)
+			data[i] = image[i];
+
+		return data;
+	}
+
+	void TextureNS::deleteTexture(unsigned int textureID) {
+
+		glDeleteTextures(1, &textureID);
+	}
 }

@@ -4,10 +4,12 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "mesh_renderer.hpp"
+#include "mesh.hpp"
 
 #include <string>
 #include <iostream>
+
+class FileSystem;
 
 class Model {
 
@@ -15,14 +17,12 @@ private:
 
 public:
 
-	std::vector<MeshRenderer> meshes;
+	Model(std::string const& path, File* file, FileSystem* fileSystem);
 
-	Model();
+	void loadModel(std::string const& path, File* file, FileSystem* fileSystem);
 
-	void loadModel(std::string const& path);
+	void processNode(std::string const& path, aiNode* node, const aiScene* scene, File* file, FileSystem* fileSystem);
 
-	void processNode(aiNode* node, const aiScene* scene);
-
-	MeshRenderer processMesh(aiMesh* mesh, const aiScene* scene);
+	void processMesh(std::string const& path, aiMesh* mesh, const aiScene* scene, File* file, FileSystem* fileSystem);
 
 };

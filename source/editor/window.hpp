@@ -1,19 +1,18 @@
 #pragma once
 #include "GLfW/glfw3.h"
 
+#include "saveloadsystem.hpp"
+#include "input.hpp"
+
 class Editor;
 
 class Window {
 
-private:
+public:
 
-	GLFWwindow* window;
-	const char* title;
+	GLFWwindow* GLFW_window;
 	const GLFWvidmode* mode;
 	GLFWmonitor* monitor;
-	Editor* editor;
-
-public:
 
 	unsigned int framebuffer;
 	unsigned int textureColorbuffer;
@@ -22,43 +21,27 @@ public:
 
 	Window();
 
+	void init();
+
 	int startGLFW();
 
 	void startGLOptions();
+
+	void loadTitleBarIcon();
 
 	void clear();
 
 	void end();
 
-	void renderScreen();
+	void handleCallBacks(Editor* editor);
 
-	void handleCallBacks();
-
-	bool getOpen();
+	bool getOpen(Editor* editor);
 
 	void terminateGLFW();
 
-	void renderToTexture();
-
-	void setWindow(GLFWwindow* window);
-
-	GLFWwindow* getGLFWwindow();
+	void frameBufferForSceneViewport();
 
 	void setTitle(const char* title);
-
-	const char* getTitle();
-
-	void setGLFWvidmode(GLFWvidmode* mode);
-
-	const GLFWvidmode* getGLFWvidmode();
-
-	void setGLFWmonitor(GLFWmonitor* monitor);
-
-	GLFWmonitor* getGLFWmonitor();
-
-	void setEditor(Editor* editor);
-
-	Editor* getEditor();
 
 	static void drop_callback(GLFWwindow* window, int count, const char** paths);
 

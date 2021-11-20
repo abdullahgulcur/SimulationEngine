@@ -3,6 +3,6 @@
 int main() {
 
 	Application app;
-	app.run();
+	app.start();
 	return 0;
 }

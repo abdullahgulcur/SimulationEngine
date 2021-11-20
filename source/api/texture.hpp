@@ -1,23 +1,50 @@
 #pragma once
 
-#include <GL/glew.h>
-
 #include <stdio.h>
-#include <string.h>
+#include <vector>
+#include <string>
 #include <stdlib.h>
 
-#define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
-#define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
-#define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
+#include <GL/glew.h>
 
-class Texture {
+#include <lodepng/lodepng.h>
 
-private:
+struct File;
 
-public:
+namespace TextureNS {
 
-	Texture();
+#define FOURCC_DXT1 0x31545844
+#define FOURCC_DXT3 0x33545844
+#define FOURCC_DXT5 0x35545844
+
+	enum class TextureType { albedo, normal, metallic, roughness, ao };
+
+	unsigned int getEmptyTexture();
 
 	unsigned int loadDDS(const char* imagepath);
 
-};
+	unsigned char* loadBMP(const char* imagepath);
+
+	unsigned char* loadPNG(const char* imagepath, unsigned& width, unsigned& height);
+
+	void deleteTexture(unsigned int textureID);
+
+	class TextureFile {
+
+	private:
+
+	public:
+
+		unsigned int textureID;
+		File* fileAddr;
+
+		TextureFile();
+
+		TextureFile(const char* imagepath);
+
+		TextureFile(File* file, const char* imagepath);
+
+		void deleteTexture();
+
+	};
+}

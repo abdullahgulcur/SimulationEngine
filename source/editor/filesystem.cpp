@@ -1,33 +1,41 @@
+#include "editor.hpp"
 #include "filesystem.hpp"
 
 FileSystem::FileSystem() {
 
 }
 
-void FileSystem::initFileSystem() {
+FileSystem::~FileSystem() {
 
+}
+
+void FileSystem::init(Editor* editor) {
+
+	FileSystem::setEditor(editor);
+
+	FileSystem::checkProjectFolder();
+	FileSystem::loadDefaultAssets();
 	FileSystem::initEditorTextures();
-	FileSystem::checkAssetsFolder();
 
-	file = new File;
-	file->id = index;
-	file->parent = NULL;
+	rootFile = new File;
+	rootFile->id = files.size();
+	rootFile->parent = NULL;
 
 	FileNode fileNode;
 
+	fileNode.addr = rootFile;
 	fileNode.path = assetsPathExternal + "\\MyProject";
 	fileNode.name = "MyProject";
 	fileNode.extension = "";
 	fileNode.type = FileType::folder;
 	fileNode.textureID = editorTextures.folderBigTextureID;
-	files[index] = fileNode;
+	files.push_back(fileNode);
 
-	index++;
-
-	FileSystem::generateFileStructure(file);
+	FileSystem::generateFileStructure(rootFile);
+	FileSystem::loadAllFilesToEngine();
 }
 
-void FileSystem::checkAssetsFolder() {
+void FileSystem::checkProjectFolder() {
 
 	PWSTR ppszPath; // variable to receive the path memory block pointer.
 
@@ -42,58 +50,129 @@ void FileSystem::checkAssetsFolder() {
 	const std::string temp(documentsPath.begin(), documentsPath.end());
 	assetsPathExternal = temp + "\\Fury";
 
-	if (!std::filesystem::exists(assetsPathExternal)) {
-
+	if (!std::filesystem::exists(assetsPathExternal))
 		std::filesystem::create_directory(assetsPathExternal);
-	}
 
-	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject")) {
-
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject"))
 		std::filesystem::create_directory(assetsPathExternal + "\\MyProject");
-	}
 
-	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Folders")) {
-
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Folders"))
 		std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Folders");
-	}
+
+	if (!std::filesystem::exists(assetsPathExternal + "\\MyProject\\Database"))
+		std::filesystem::create_directory(assetsPathExternal + "\\MyProject\\Database");
 }
 
 void FileSystem::initEditorTextures() {
 
-	editorTextures.openFolderTextureID = texture.loadDDS("resource/icons/folder_open.DDS");
-	editorTextures.closedFolderTextureID = texture.loadDDS("resource/icons/folder_closed.DDS");
-	editorTextures.objectTextureID = texture.loadDDS("resource/icons/icon_object.DDS");
-	editorTextures.objectBigTextureID = texture.loadDDS("resource/icons/object_big.DDS");
-	editorTextures.textureTextureID = texture.loadDDS("resource/icons/icon_texture.DDS");
-	editorTextures.undefinedTextureID = texture.loadDDS("resource/icons/undefined.DDS");
-	editorTextures.documentTextureID = texture.loadDDS("resource/icons/icon_document.DDS");
-	editorTextures.folderBigTextureID = texture.loadDDS("resource/icons/folder_closed_big.DDS");
-	editorTextures.plusTextureID = texture.loadDDS("resource/icons/plus.DDS");
+	editorTextures.openFolderTextureID = TextureNS::loadDDS("resource/icons/folder_open.DDS");
+	editorTextures.closedFolderTextureID = TextureNS::loadDDS("resource/icons/folder_closed.DDS");
+	editorTextures.objectTextureID = TextureNS::loadDDS("resource/icons/icon_object.DDS");
+	editorTextures.objectBigTextureID = TextureNS::loadDDS("resource/icons/object_big.DDS");
+	editorTextures.textureTextureID = TextureNS::loadDDS("resource/icons/icon_texture.DDS");
+	editorTextures.undefinedTextureID = TextureNS::loadDDS("resource/icons/undefined.DDS");
+	editorTextures.documentTextureID = TextureNS::loadDDS("resource/icons/icon_document.DDS");
+	editorTextures.folderBigTextureID = TextureNS::loadDDS("resource/icons/folder_closed_big.DDS");
+	editorTextures.plusTextureID = TextureNS::loadDDS("resource/icons/plus.DDS");
+	editorTextures.materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
 }
 
 void FileSystem::generateFileStructure(File* file) {
 
 	for (std::filesystem::path entry : std::filesystem::directory_iterator(files[file->id].path)) {
 
-		File* subfile = new File;
-		subfile->id = index;
-		subfile->parent = file;
-
 		FileNode fileNode;
 		fileNode.path = entry.string();
-		fileNode.name = entry.stem().string();//entry.string().substr(files[file->id].path.length() + 1, entry.string().length() - files[file->id].path.length() - 1);
+		fileNode.name = entry.stem().string();
+
+		if (std::strcmp(fileNode.name.c_str(), "Database") == 0)
+			continue;
+
+		File* subfile = new File;
+		subfile->id = files.size();
+		subfile->parent = file;
+
 		fileNode.extension = entry.extension().string();
 		fileNode.type = FileSystem::getFileType(entry.extension().string());
 		fileNode.addr = subfile;
-		loadFileToEngine(fileNode);
-		files[index] = fileNode;
+		//loadFileToEngine(fileNode);
+		files.push_back(fileNode);
 
 		(file->subfiles).push_back(subfile);
-		index++;
 
 		if(fileNode.type == FileType::folder)
 			FileSystem::generateFileStructure(subfile);
 	}
+}
+
+void FileSystem::loadAllFilesToEngine() {
+
+	std::vector<int> vertfileIDs;
+	std::vector<int> fragfileIDs;
+	std::vector<int> texturefileIDs;
+	std::vector<int> matfileIDs;
+	std::vector<int> objfileIDs;
+
+	for (int i = 1; i < files.size(); i++) {
+
+		switch (files[i].type) {
+		case FileType::fragshader:
+			fragfileIDs.push_back(i);
+			break;
+		case FileType::material:
+			matfileIDs.push_back(i);
+			break;
+		case FileType::object:
+			objfileIDs.push_back(i);
+			break;
+		case FileType::texture:
+			texturefileIDs.push_back(i);
+			break;
+		case FileType::vertshader:
+			vertfileIDs.push_back(i);
+			break;
+		default:
+			loadFileToEngine(files[i]);
+		}
+	}
+
+	for(int& i: vertfileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : fragfileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : texturefileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : matfileIDs) {
+		loadFileToEngine(files[i]);
+
+		int count = 0;
+		MaterialFile& mat = materials[files[i].path];
+		for (auto& texFileAddr : mat.textureUnitFileAddrs) {
+
+			auto found = textures.find(FileSystem::getTextureFilePath(texFileAddr));
+
+			if (found != textures.end())
+				mat.textureUnits.push_back(found->second.textureID);
+			else {
+				mat.textureUnits.push_back(textures["whitetexture"].textureID);
+				mat.textureUnitFileAddrs[count] = NULL;
+				FileSystem::writeMaterialFile(files[mat.fileAddr->id].path, mat);
+
+				// ASSERT
+				char logMsg[256];
+				sprintf(logMsg, "File %s is not found. Blank texture is set as default.", files[texFileAddr->id].path.c_str());
+				printf("%s", logMsg);
+				//Log::assertMessage(logMsg, &editor->editorGUI);
+			}
+			count++;
+		}
+	}
+
+	for (int& i : objfileIDs)
+		loadFileToEngine(files[i]);
 }
 
 void FileSystem::updateChildrenPathRecursively(File* file) {
@@ -109,7 +188,7 @@ void FileSystem::updateChildrenPathRecursively(File* file) {
 			iter = iter->parent;
 		}
 
-		std::string updatedPath = "MyProject\\";
+		std::string updatedPath = assetsPathExternal + "\\MyProject\\";
 
 		while (fileStack.size() > 1) {
 
@@ -118,15 +197,16 @@ void FileSystem::updateChildrenPathRecursively(File* file) {
 			updatedPath = updatedPath + files[popped->id].name + "\\";
 		}
 
+		std::string oldPath = files[file->subfiles[i]->id].path;
 		File* popped = fileStack.top();
 		fileStack.pop();
 		updatedPath = updatedPath + files[popped->id].name + files[popped->id].extension;
-
 		files[file->subfiles[i]->id].path = updatedPath;
+
+		FileSystem::changeAssetsKeyManually(file->subfiles[i]->id, oldPath, files[file->subfiles[i]->id].path);
 
 		FileSystem::updateChildrenPathRecursively(file->subfiles[i]);
 	}
-
 }
 
 void FileSystem::traverseAllFiles(File* file) {
@@ -137,10 +217,14 @@ void FileSystem::traverseAllFiles(File* file) {
 	std::cout << files[file->id].path << std::endl;
 }
 
- /*
- * It checks if we try to move file to subfolders or file itself.
- * In this case function returns true.
- */
+void FileSystem::getTreeIndices(File* file, std::vector<int>& indices) {
+
+	for (int i = 0; i < file->subfiles.size(); i++)
+		getTreeIndices(file->subfiles[i], indices);
+
+	indices.push_back(file->id);
+}
+
 bool FileSystem::subfolderAndItselfCheck(File* fileToMove, File* fileToBeMoved) {
 
 	while (fileToMove->parent != NULL) {
@@ -167,7 +251,7 @@ bool FileSystem::subfolderCheck(File* fileToMove, File* fileToBeMoved) {
 
 void FileSystem::moveFile(int toBeMoved, int moveTo) {
 
-	if (files[moveTo].type != FileType::folder || FileSystem::subfolderAndItselfCheck(files[moveTo].addr, files[toBeMoved].addr))
+	if (files[moveTo].type != FileType::folder || FileSystem::subfolderAndItselfCheck(files[moveTo].addr, files[toBeMoved].addr) || files[toBeMoved].addr->parent == files[moveTo].addr)
 		return;
 
 	std::string previousPath = files[toBeMoved].path;
@@ -179,25 +263,262 @@ void FileSystem::moveFile(int toBeMoved, int moveTo) {
 	if (files[moveTo].addr->subfiles.size() == 0) {
 		(files[moveTo].addr->subfiles).push_back(files[toBeMoved].addr);
 		std::string destination = files[moveTo].path + "\\" + files[toBeMoved].name + files[toBeMoved].extension;
+		files[toBeMoved].path = destination;
+		FileSystem::updateChildrenPathRecursively(files[toBeMoved].addr);
 		std::filesystem::copy(previousPath, destination, copyOptions);
 		std::filesystem::remove_all(previousPath);
+
+		FileSystem::changeAssetsKeyManually(toBeMoved, previousPath, destination);
 	}
 	else {
-		FileSystem::addFile(files[toBeMoved].addr, files[toBeMoved].name.c_str(), AddType::fromMove);
+
+		files[toBeMoved].name = FileSystem::getAvailableFileName(files[toBeMoved].addr, files[toBeMoved].name.c_str());
+		files[toBeMoved].path = files[files[toBeMoved].addr->parent->id].path +"\\" + files[toBeMoved].name + files[toBeMoved].extension;
+		FileSystem::insertFileToParentsSubfolders(files[toBeMoved].addr);
+		FileSystem::updateChildrenPathRecursively(files[toBeMoved].addr);
+
 		std::filesystem::copy(previousPath, files[toBeMoved].path, copyOptions);
 		std::filesystem::remove_all(previousPath);
+
+		FileSystem::changeAssetsKeyManually(toBeMoved, previousPath, files[toBeMoved].path);
 	}
 
 	FileSystem::deleteFileFromTree(oldParent, toBeMoved);
 }
 
+void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, std::string newPath) {
+
+	switch (files[fileID].type) {
+
+	case FileType::object: {
+
+		//measure time spent...
+		for (auto& iter : editor->scene.meshRendererComponents) {
+
+			if (meshes[meshPaths[iter.VAO]].fileAddr == NULL)
+				continue;
+
+			if (strcmp(files[meshes[meshPaths[iter.VAO]].fileAddr->id].path.c_str(), newPath.c_str()) == 0)
+				meshPaths[iter.VAO] = newPath;
+		}
+
+		MeshFile mesh = meshes[previousPath];
+		auto it = meshes.extract(previousPath);
+		it.key() = newPath;
+		meshes[it.key()] = mesh;
+		meshes.insert(std::move(it));
+
+		SaveLoadSystem::saveMeshRenderers(editor);
+
+		break;
+	}
+	case FileType::material: {
+
+		//measure time spent...
+		std::vector<int> indices;
+		int count = 0;
+		for (auto& iter : editor->scene.meshRendererComponents) {
+
+			if (iter.mat->fileAddr == files[fileID].addr)
+				indices.push_back(count);
+			
+			count++;
+		}
+
+		MaterialFile mat = materials[previousPath];
+		auto it = materials.extract(previousPath);
+		it.key() = newPath;
+		materials[it.key()] = mat;
+		materials.insert(std::move(it));
+
+		for (int& i : indices)
+			editor->scene.meshRendererComponents[i].mat = &materials[newPath];
+
+		SaveLoadSystem::saveMeshRenderers(editor);
+
+		break;
+	}
+	case FileType::vertshader: {
+
+		for (auto& mat_iter : materials) {
+
+			if (mat_iter.second.vertShaderFileAddr == files[fileID].addr)
+				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+		}
+
+		break;
+	}
+	case FileType::fragshader: {
+
+		for (auto& mat_iter : materials) {
+
+			if (mat_iter.second.fragShaderFileAddr == files[fileID].addr)
+				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+		}
+
+		break;
+	}
+	case FileType::texture: {
+
+		for (auto& mat_iter : materials) {
+
+			for (auto& texFileAddr : mat_iter.second.textureUnitFileAddrs) {
+
+				if (texFileAddr == files[fileID].addr)
+					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+			}
+		}
+
+		auto it = textures.extract(previousPath);
+		it.key() = newPath;
+		textures.insert(std::move(it));
+		break;
+	}
+	}
+}
+
 void FileSystem::deleteFileCompletely(int id) {
 
-	std::filesystem::remove_all(files[id].path);
+	std::vector<int> indices;
+	FileSystem::getTreeIndices(files[id].addr, indices);
+	std::sort(indices.begin(), indices.end(), std::greater<int>());
 
 	File* parent = files[id].addr->parent;
 	FileSystem::deleteFileFromTree(parent, id);
-	files.erase(id);
+
+	for (int i = 0; i < indices.size(); i++) {
+
+		switch (files[indices[i]].type) {
+
+		case FileType::object: {
+
+			std::vector<int> ids;
+			for (auto& comp_it : editor->scene.meshRendererComponents) {
+
+				int count = 0;
+				for (auto& it : meshes) {
+
+					if (it.second.VAO == comp_it.VAO) {
+
+						comp_it.indiceSize = meshes["Null"].indiceSize;
+						comp_it.VAO = meshes["Null"].VAO;
+						ids.push_back(indices[i]);
+						SaveLoadSystem::saveMeshRenderers(editor);
+						break;
+					}
+					count++;
+				}
+			}
+			for(int& i: ids)
+				meshes.erase(files[i].path);
+
+			break;
+		}
+		case FileType::material: {
+
+			for (auto& it : editor->scene.meshRendererComponents) {
+
+				if (strcmp(files[it.mat->fileAddr->id].path.c_str(), files[indices[i]].path.c_str()) == 0)
+					it.mat = &materials["Default"];
+			}
+
+			materials.erase(files[indices[i]].path);
+			SaveLoadSystem::saveMeshRenderers(editor);
+
+			break;
+		}
+		case FileType::texture: {
+
+			textures[files[indices[i]].path].deleteTexture();
+			textures.erase(files[indices[i]].path);
+
+			for (auto& mat_iter : materials) {
+
+				int count = 0;
+				for (auto& texFileAddr : mat_iter.second.textureUnitFileAddrs) {
+
+					if (texFileAddr == files[indices[i]].addr) {
+						texFileAddr = NULL;
+						mat_iter.second.textureUnits[count] = textures["whitetexture"].textureID;
+						FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+					}
+					count++;
+				}
+			}
+
+			break;
+		}
+		case FileType::vertshader: {
+
+			for (auto& mat_iter : materials) {
+
+				if (mat_iter.second.fileAddr == files[indices[i]].addr){
+					mat_iter.second.vertShaderFileAddr = NULL;
+					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+					
+					mat_iter.second.deleteProgram();
+					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
+						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
+						editor->scene.dirLightCount, editor->scene.pointLightCount);
+				}
+			}
+
+			int count = 0;
+			for (auto& it : vertShaderFiles) {
+
+				if (files[indices[i]].addr == it.fileAddr) {
+
+					vertShaderFiles.erase(vertShaderFiles.begin() + count);
+					break;
+				}
+				count++;
+			}
+
+			break;
+		}
+		case FileType::fragshader: {
+
+			for (auto& mat_iter : materials) {
+
+				if (mat_iter.second.fileAddr == files[indices[i]].addr) {
+					mat_iter.second.fragShaderFileAddr = NULL;
+					mat_iter.second.textureUnitFileAddrs.clear();
+					mat_iter.second.textureUnits.clear();
+					mat_iter.second.floatUnits.clear();
+					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+					
+					mat_iter.second.deleteProgram();
+					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
+						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
+						editor->scene.dirLightCount, editor->scene.pointLightCount);
+				}
+			}
+
+			int count = 0;
+			for (auto& it : fragShaderFiles) {
+
+				if (files[indices[i]].addr == it.fileAddr) {
+
+					fragShaderFiles.erase(fragShaderFiles.begin() + count);
+					break;
+				}
+				count++;
+			}
+
+			break;
+		}
+		}
+	}
+
+	for (int i = 0; i < indices.size(); i++) {
+
+		std::filesystem::remove(files[indices[i]].path);
+		delete files[indices[i]].addr;
+		files.erase(files.begin() + indices[i]);
+	}
+
+	for (int i = indices[indices.size() - 1]; i < files.size(); i++)
+		files[i].addr->id = i;
 }
 
 void FileSystem::deleteFileFromTree(File* parent, int id) {
@@ -212,10 +533,10 @@ void FileSystem::deleteFileFromTree(File* parent, int id) {
 	}
 }
 
-void FileSystem::newFolder(int currentDirID, const char* fileName) {
+int FileSystem::newFolder(int currentDirID, const char* fileName) {
 
 	File* subFile = new File;
-	subFile->id = index;
+	subFile->id = files.size();
 	subFile->parent = files[currentDirID].addr;
 
 	// called this temp becasuse its properties can be changed afterwards 
@@ -226,17 +547,204 @@ void FileSystem::newFolder(int currentDirID, const char* fileName) {
 	tempFileNode.extension = "";
 	tempFileNode.type = FileType::folder;
 	tempFileNode.addr = subFile;
-	files[index] = tempFileNode;
-	index++;
+	files.push_back(tempFileNode);
 
 	if (files[currentDirID].addr->subfiles.size() == 0) {
 		(files[currentDirID].addr->subfiles).push_back(subFile);
 		std::filesystem::create_directory(files[subFile->id].path);
 	}
-	else
-		FileSystem::addFile(subFile, fileName, AddType::fromNewFolder);
+	else {
+
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path +"\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+
+		std::filesystem::create_directory(files[subFile->id].path);
+	}
 
 	loadFileToEngine(files[subFile->id]);
+
+	return subFile->id;
+}
+
+void FileSystem::newMaterial(int currentDirID, const char* fileName) {
+
+	File* subFile = new File;
+	subFile->id = files.size();
+	subFile->parent = files[currentDirID].addr;
+
+	// called this temp becasuse its properties can be changed afterwards 
+	FileNode tempFileNode;
+	std::string temp = fileName;
+	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".mat";
+	tempFileNode.name = temp;
+	tempFileNode.extension = ".mat";
+	tempFileNode.type = FileType::material;
+	tempFileNode.addr = subFile;
+	files.push_back(tempFileNode);
+
+	if (files[currentDirID].addr->subfiles.size() == 0)
+		(files[currentDirID].addr->subfiles).push_back(subFile);
+	else {
+
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+	}
+
+	MaterialFile mat(subFile, NULL, NULL, "source/shader/Default.vert", "source/shader/Default.frag",
+		editor->scene.dirLightCount, editor->scene.pointLightCount);
+	materials.insert({ files[subFile->id].path, mat });
+	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
+	files[subFile->id].textureID = editorTextures.materialTextureID;
+}
+
+void FileSystem::readMaterialFile(File* filePtr, std::string path) {
+
+	std::ifstream file(path);
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("Material");
+
+	const char* vertFilePath = root_node->first_node("Shader")->first_attribute("Vert")->value();
+	const char* fragFilePath = root_node->first_node("Shader")->first_attribute("Frag")->value();
+	File* vertFileAddr = FileSystem::getVertShaderAddr(vertFilePath);
+	File* fragFileAddr = FileSystem::getFragShaderAddr(fragFilePath);
+
+	if (vertFileAddr == NULL)
+		vertFilePath = "source/shader/Default.vert";
+
+	if (fragFileAddr == NULL)
+		fragFilePath = "source/shader/Default.frag";
+
+	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, 0, 0);
+
+	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling())
+		mat.textureUnitFileAddrs.push_back(FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value()));
+
+	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
+		mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
+
+	materials.insert({ path, mat });
+}
+
+void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
+
+	rapidxml::xml_node<>* shaderNode = doc.allocate_node(rapidxml::node_element, "Shader");
+	shaderNode->append_attribute(doc.allocate_attribute("Vert", doc.allocate_string(FileSystem::getVertShaderPath(mat.vertShaderFileAddr))));
+	shaderNode->append_attribute(doc.allocate_attribute("Frag", doc.allocate_string(FileSystem::getFragShaderPath(mat.fragShaderFileAddr))));
+	materialNode->append_node(shaderNode);
+
+	rapidxml::xml_node<>* sampler2DsNode = doc.allocate_node(rapidxml::node_element, "Sampler2Ds");
+	for (auto& texUnitFileAddr : mat.textureUnitFileAddrs) {
+
+		rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
+		texture->append_attribute(doc.allocate_attribute("Path", doc.allocate_string(FileSystem::getTextureFilePath(texUnitFileAddr))));
+		sampler2DsNode->append_node(texture);
+	}
+	materialNode->append_node(sampler2DsNode);
+
+	rapidxml::xml_node<>* floatsNode = doc.allocate_node(rapidxml::node_element, "Floats");
+	for (float val : mat.floatUnits) {
+
+		rapidxml::xml_node<>* floatNode = doc.allocate_node(rapidxml::node_element, "Float");
+		floatNode->append_attribute(doc.allocate_attribute("Value", doc.allocate_string(std::to_string(val).c_str())));
+		floatsNode->append_node(floatNode);
+	}
+	materialNode->append_node(floatsNode);
+
+	doc.append_node(materialNode);
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored(path);
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+}
+
+File* FileSystem::getTextureFileAddr(const char* path) {
+
+	if (strcmp(path, "whitetexture") == 0)
+		return NULL;
+	
+	return textures[path].fileAddr;
+}
+
+const char* FileSystem::getTextureFilePath(File* addr) {
+
+	if (addr == NULL)
+		return "whitetexture";
+
+	return files[addr->id].path.c_str();
+}
+
+File* FileSystem::getFragShaderAddr(const char* path) {
+
+	if (strcmp(path, "source/shader/Default.frag") == 0)
+		return NULL;
+
+	for (auto& fs : fragShaderFiles) {
+
+		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
+			return fs.fileAddr;
+	}
+
+	return NULL;
+}
+
+File* FileSystem::getVertShaderAddr(const char* path) {
+
+	if (strcmp(path, "source/shader/Default.vert") == 0)
+		return NULL;
+
+	for (auto& fs : vertShaderFiles) {
+
+		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
+			return fs.fileAddr;
+	}
+
+	return NULL;
+}
+
+const char* FileSystem::getFragShaderPath(File* fileAddr) {
+
+	if (fileAddr == NULL)
+		return "source/shader/Default.frag";
+
+	for (auto& fs : fragShaderFiles) {
+
+		if (fs.fileAddr == fileAddr)
+			return files[fs.fileAddr->id].path.c_str();
+	}
+}
+
+const char* FileSystem::getVertShaderPath(File* fileAddr) {
+
+	if (fileAddr == NULL)
+		return "source/shader/Default.vert";
+
+	for (auto& vs : vertShaderFiles) {
+
+		if (vs.fileAddr == fileAddr)
+			return files[vs.fileAddr->id].path.c_str();
+	}
 }
 
 void FileSystem::rename(int id, const char* newName) {
@@ -244,16 +752,47 @@ void FileSystem::rename(int id, const char* newName) {
 	if (Utility::iequals(newName, files[id].name) == 0)
 		return;
 
-	FileSystem::addFile(files[id].addr, newName, AddType::fromRename);
+	std::string oldPath = files[id].path;
+	files[id].name = FileSystem::getAvailableFileName(files[id].addr, newName);
+	files[id].path = files[files[id].addr->parent->id].path +"\\" + files[id].name + files[id].extension;
+	files[id].addr->parent->subfiles.erase(files[id].addr->parent->subfiles.begin() + FileSystem::getSubFileIndex(files[id].addr));
+	FileSystem::insertFileToParentsSubfolders(files[id].addr);
+	std::filesystem::rename(oldPath, files[id].path);
+	FileSystem::updateChildrenPathRecursively(files[id].addr);
+	FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
+
+	if (files[id].type == FileType::material) {
+		writeMaterialFile(files[id].path, materials[files[id].path]);
+	}
 }
 
-/*
-* Returns 1 if there is a file with the same name
-* Returns 2 if there is not a file with the same name
-*/
-void FileSystem::addFile(File* file, const char* name, AddType type) {
+unsigned int FileSystem::getSubFileIndex(File* file) {
 
-	std::string oldPath = files[file->id].path;
+	for (int i = 0; i < file->parent->subfiles.size(); i++) {
+
+		if (file->id == file->parent->subfiles[i]->id)
+			return i;
+	}
+}
+
+void FileSystem::insertFileToParentsSubfolders(File* file) {
+
+	bool lastElementFlag = true;
+	for (int i = 0; i < file->parent->subfiles.size(); i++) {
+
+		if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
+
+			file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
+			lastElementFlag = false;
+			break;
+		}
+	}
+	if (lastElementFlag)
+		file->parent->subfiles.push_back(file);
+}
+
+std::string FileSystem::getAvailableFileName(File* file, const char* name) {
+
 	std::vector<int> indices;
 	bool flag = false;
 	int fileSubIndex = -1;
@@ -289,96 +828,38 @@ void FileSystem::addFile(File* file, const char* name, AddType type) {
 					max = stoi(rightPart);
 			}
 		}
-		files[file->id].name = std::string(name) + std::to_string(max + 1);
-		files[file->id].path = files[file->parent->id].path + "\\" + std::string(name) + std::to_string(max + 1) + files[file->id].extension;
 
-		if(type == AddType::fromRename)
-			file->parent->subfiles.erase(file->parent->subfiles.begin() + fileSubIndex);
-
-		bool lastElementFlag = true;
-		for (int i = 0; i < file->parent->subfiles.size(); i++) {
-
-			if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
-
-				file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
-				lastElementFlag = false;
-				break;
-			}
-		}
-		if (lastElementFlag)
-			file->parent->subfiles.push_back(file);
-
-		if (type == AddType::fromNewFolder)
-			std::filesystem::create_directory(files[file->id].path);
-		else if (type == AddType::fromRename) {
-
-			std::filesystem::rename(oldPath, files[file->id].path);
-			FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-		}
-		else if (type == AddType::fromMove || type == AddType::fromDuplicate) {
-
-			FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-		}
-
-		return;
+		return std::string(name) + std::to_string(max + 1);
 	}
 
-	/*
-	* if there are not files with the same name
-	*/
-	files[file->id].name = std::string(name);
-	files[file->id].path = files[file->parent->id].path + "\\" + std::string(name) + files[file->id].extension;
-
-	if (type == AddType::fromRename)
-		file->parent->subfiles.erase(file->parent->subfiles.begin() + fileSubIndex);
-
-	bool lastElementFlag = true;
-	for (int i = 0; i < file->parent->subfiles.size(); i++) {
-
-		if (Utility::iequals(files[file->id].name, files[file->parent->subfiles[i]->id].name) < 0) {
-
-			file->parent->subfiles.insert(file->parent->subfiles.begin() + i, file);
-			lastElementFlag = false;
-			break;
-		}
-	}
-	if (lastElementFlag)
-		file->parent->subfiles.push_back(file);
-
-	if (type == AddType::fromNewFolder)
-		std::filesystem::create_directory(files[file->id].path);
-	else if (type == AddType::fromRename) {
-
-		std::filesystem::rename(oldPath, files[file->id].path);
-		FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-	}
-	else if (type == AddType::fromMove || type == AddType::fromDuplicate) {
-
-		FileSystem::updateChildrenPathRecursively(files[file->id].addr);
-	}
+	return std::string(name);
 }
 
-void FileSystem::duplicateFile(int id) {
+int FileSystem::duplicateFile(int id) {
 
 	File* subFile = new File;
-	subFile->id = index;
+	subFile->id = files.size();
 	subFile->parent = files[id].addr->parent;
 
 	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode = files[id];
 	tempFileNode.addr = subFile;
-	files[index] = tempFileNode;
-	index++;
+	files.push_back(tempFileNode);
 
-	FileSystem::addFile(subFile, tempFileNode.name.c_str(), AddType::fromDuplicate);
+	files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+	files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+	FileSystem::insertFileToParentsSubfolders(subFile);
+	FileSystem::updateChildrenPathRecursively(subFile);
 
 	const auto copyOptions = std::filesystem::copy_options::recursive;
 	std::filesystem::copy(files[id].path, files[subFile->id].path, copyOptions);
 
-	loadFileToEngine(files[subFile->id]);
+	FileSystem::loadFileToEngine(files[subFile->id]);
 
 	if (files[subFile->id].type == FileType::folder)
 		generateFileStructure(subFile);
+
+	return subFile->id;
 }
 
 FileType FileSystem::getFileType(std::string extension) {
@@ -389,6 +870,12 @@ FileType FileSystem::getFileType(std::string extension) {
 		return FileType::object;
 	else if (extension == ".DDS")
 		return FileType::texture;
+	else if (extension == ".mat")
+		return FileType::material; 
+	else if (extension == ".frag")
+		return FileType::fragshader;
+	else if (extension == ".vert")
+		return FileType::vertshader;
 	else
 		return FileType::undefined;
 }
@@ -409,22 +896,40 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 	{
 	case FileType::texture: {
 
-		unsigned int textureID = texture.loadDDS(fileNode.path.c_str());
-		fileNode.textureID = textureID;
-		textures.push_back(textureID);
+		TextureFile texture(fileNode.addr, fileNode.path.c_str());
+		textures.insert({ fileNode.path, texture });
+		fileNode.textureID = texture.textureID;
 		break;
 	}
 	case FileType::object: {
 
-		Model model;
-		model.loadModel(fileNode.path.c_str());
-		models.push_back(model);
+		Model model(fileNode.path.c_str(), fileNode.addr, this);
 		fileNode.textureID = editorTextures.objectBigTextureID;
 		break;
 	}
 	case FileType::folder: {
 
 		fileNode.textureID = editorTextures.folderBigTextureID;
+		break;
+	}
+	case FileType::material: {
+
+		fileNode.textureID = editorTextures.materialTextureID;
+		readMaterialFile(fileNode.addr, fileNode.path);
+		break;
+	}
+	case FileType::fragshader: {
+
+		ShaderFile shaderFile(fileNode.addr, fileNode.path);
+		fragShaderFiles.push_back(shaderFile);
+		fileNode.textureID = editorTextures.undefinedTextureID;
+		break;
+	}
+	case FileType::vertshader: {
+
+		ShaderFile shaderFile(fileNode.addr, fileNode.path);
+		vertShaderFiles.push_back(shaderFile);
+		fileNode.textureID = editorTextures.undefinedTextureID;
 		break;
 	}
 	case FileType::undefined: {
@@ -441,7 +946,6 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 
 void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
-
 	for (int i = 0; i < filesToMove.size(); i++) {
 
 		File* file = NULL;
@@ -452,10 +956,9 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 			file = files[toDir].addr;
 
 		File* subFile = new File;
-		subFile->id = index;
+		subFile->id = files.size();
 		subFile->parent = file;
 
-		// called this temp becasuse its properties can be changed afterwards 
 		FileNode tempFileNode;
 		std::filesystem::path fullPath = filesToMove[i];
 		tempFileNode.name = fullPath.stem().string();
@@ -463,8 +966,7 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 		tempFileNode.path = files[toDir].path + "\\" + tempFileNode.name + tempFileNode.extension;
 		tempFileNode.type = FileSystem::getFileType(tempFileNode.extension);
 		tempFileNode.addr = subFile;
-		files[index] = tempFileNode;
-		index++;
+		files.push_back(tempFileNode);
 
 		const auto copyOptions = std::filesystem::copy_options::recursive;
 
@@ -475,69 +977,47 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 		}
 		else {
 
-			FileSystem::addFile(subFile, tempFileNode.name.c_str(), AddType::fromImport);
+			files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+			files[subFile->id].path = files[files[subFile->id].addr->parent->id].path + +"\\" + files[subFile->id].name + files[subFile->id].extension;
+			FileSystem::insertFileToParentsSubfolders(subFile);
+
 			std::filesystem::copy(fullPath, files[subFile->id].path, copyOptions);
 		}
-		loadFileToEngine(files[subFile->id]);
+		FileSystem::loadFileToEngine(files[subFile->id]);
 
 		if (files[subFile->id].type == FileType::folder)
 			generateFileStructure(subFile);
 	}	
 }
 
+void FileSystem::loadDefaultAssets() {
 
-node* FileSystem::newNode(int data)
-{
-	node* Node = new node();
-	Node->data = data;
-	Node->left = NULL;
-	Node->right = NULL;
+	MeshFile mesh;
+	meshes.insert({"Null", mesh });
+	meshPaths.insert({ mesh.VAO, "Null" });
 
-	return(Node);
+	MaterialFile mat("source/shader/Default.vert", "source/shader/Default.frag");
+	materials.insert({ "Default", mat });
+
+	TextureFile textureWhite("resource/textures/empty_texture_map.DDS");
+	textures.insert({ "whitetexture", textureWhite });
+
+	TextureFile textureNormal("resource/textures/empty_normal_map.DDS");
+	textures.insert({ "whitetexture", textureNormal });
 }
 
-void FileSystem::identicalTrees(node* a, node* b, bool& identical)
-{
-	if (a == NULL && b == NULL)
-		return;
-	else if (a != NULL && b != NULL)
-	{
-		if (a->data != b->data) {
+MaterialFile& FileSystem::getMaterial(int id) {
 
-			identical = false;
-			return;
-		}
-
-		identicalTrees(a->left, b->left, identical);
-		identicalTrees(a->right, b->right, identical);
-	}
-	else
-		identical = false;
+	auto it = materials.find(files[id].path);
+	return it->second;
 }
 
-// unfinished moterfuker
-void FileSystem::detectFilesChangedOutside(File* file, std::string fileToCompare)
-{
-	int count = 0;
-	for (std::filesystem::path entry : std::filesystem::directory_iterator(fileToCompare)) {
+TextureFile& FileSystem::getTexture(int id) {
 
-		if (file->subfiles.size() == count) {
-
-			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
-			std::cout << "\nSHIT0!!!" << std::endl;
-			return;
-		}
-
-		if (std::strcmp(entry.string().c_str(), files[file->subfiles[count]->id].path.c_str()) != 0) {
-
-			std::cout << "In folder: " << files[file->id].name << " and index: " << count << std::endl;
-			std::cout << "\nSHIT1!!!" << std::endl;
-			return;
-		}
-
-		if (files[file->subfiles[count]->id].type == FileType::folder)
-			FileSystem::detectFilesChangedOutside(files[file->subfiles[count]->id].addr, entry.string());
-
-		count++;
-	}
+	std::string relativePath = files[id].path;
+	relativePath.erase(0, assetsPathExternal.length());
+	auto it = textures.find(relativePath);
+	return it->second;
 }
+
+void FileSystem::setEditor(Editor* editor) { this->editor = editor; }

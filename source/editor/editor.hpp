@@ -1,60 +1,34 @@
 #pragma once
 
+#include <iostream>
+
+#include <scene.hpp>
 #include "filesystem.hpp"
 #include "render.hpp"
 #include "window.hpp"
-#include "editor_camera.hpp"
+#include "camera.hpp"
 #include "editor_gui.hpp"
-#include "api/model.hpp"
-#include <source/api/texture.hpp>
-
-#include <iostream>
-
+#include "model.hpp"
+#include "texture.hpp"
+#include "input.hpp"
 
 class Editor {
 
 private:
 
-	Render render;
-	Window window;
-	EditorCamera editorCamera;
-
-	GLuint programID;
-	GLuint viewMatrixID;
-	GLuint modelMatrixID;
-	GLuint mvpMatrixID;
-	GLuint projectionMatrixID;
-
-	//GLuint VertexArrayID;
-	//GLuint vertexbuffer;
-
-	Model model;
-
-	//Material mat;
-
 public:
 
+	Window window;
+	Render render;
+	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
-
+	Scene scene;
 
 	Editor();
 
 	void startEditorScreen();
 
-	void stayOpen();
+	void run();
 
-	void drawAllAxis();
-
-	void setRender(Render render);
-
-	Render getRender();
-
-	void setWindow(Window window);
-
-	Window getWindow();
-
-	void setEditorCamera(EditorCamera editorCamera);
-
-	EditorCamera& getEditorCamera();
 };

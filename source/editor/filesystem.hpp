@@ -1,20 +1,32 @@
 #pragma once
 
-#include <api/model.hpp>
-#include <api/texture.hpp>
-#include <api/utility.hpp>
-
 #include <string>
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <unordered_map>
 #include <stack>
 #include <shlobj.h>
+#include <fstream>
 
-enum class FileType {folder, object, texture, audio, script, undefined};
+#include "rapidxml_print.hpp"
+#include "rapidxml.hpp"
 
-enum class AddType { fromMove, fromRename, fromNewFolder, fromImport, fromDuplicate };
+#include "model.hpp"
+#include "texture.hpp"
+#include "utility.hpp"
+#include "material.hpp"
+#include "shader.hpp"
+//#include "log.hpp"
 
+using namespace MaterialNS;
+using namespace TextureNS;
+using namespace ShaderNS;
+using namespace Mesh;
+
+class Editor;
+
+enum class FileType {folder, object, material, texture, fragshader, vertshader, audio, script, undefined};
 
 struct EditorTextures {
 
@@ -27,6 +39,7 @@ struct EditorTextures {
 	unsigned int documentTextureID;
 	unsigned int folderBigTextureID;
 	unsigned int plusTextureID;
+	unsigned int materialTextureID;
 };
 
 struct File {
@@ -46,45 +59,59 @@ struct FileNode {
 	unsigned int textureID;
 };
 
-class node
-{
-public:
-	int data;
-	node* left;
-	node* right;
-};
-
 class FileSystem {
 
 private:
 
-	int index = 0;
-	Texture texture;
-	std::string assetsPathExternal;
-
-	void addFile(File* file, const char* name, AddType type);
-
-public:
-
-	File* file;
-	std::map<int, FileNode> files;
-	std::vector<Model> models;
-	std::vector<unsigned int> textures;
-	EditorTextures editorTextures;
-
-	FileSystem();
-
-	void checkAssetsFolder();
-
-	void initFileSystem();
+	Editor* editor;
 
 	void initEditorTextures();
 
 	void generateFileStructure(File* file);
 
+	void loadAllFilesToEngine();
+
+	unsigned int getSubFileIndex(File* file);
+
+	void insertFileToParentsSubfolders(File* file);
+
+	std::string getAvailableFileName(File* file, const char* name);
+
+	//void loadTextureIDsOfMaterials();
+
+public:
+
+	std::string assetsPathExternal;
+
+	unsigned int nullMeshVAO;
+
+	File* rootFile;
+	std::vector<FileNode> files;
+
+	std::unordered_map<unsigned int, std::string> meshPaths;
+	//std::unordered_map<std::string, unsigned int> meshVAOs;
+
+	std::unordered_map<std::string, MeshFile> meshes;
+	std::unordered_map<std::string, MaterialFile> materials;
+	std::unordered_map<std::string, TextureFile> textures;
+	std::vector<ShaderFile> vertShaderFiles;
+	std::vector<ShaderFile> fragShaderFiles;
+
+	EditorTextures editorTextures;
+
+	FileSystem();
+
+	~FileSystem();
+
+	void checkProjectFolder();
+
+	void init(Editor* editor);
+
 	void updateChildrenPathRecursively(File* file);
 
 	void traverseAllFiles(File* file);
+
+	void getTreeIndices(File* file, std::vector<int>& indices);
 
 	bool subfolderAndItselfCheck(File* fileToMove, File* fileToBeMoved);
 
@@ -92,15 +119,35 @@ public:
 
 	void moveFile(int toBeMoved, int moveTo);
 
+	void changeAssetsKeyManually(int filID, std::string previousName, std::string newName);
+
 	void deleteFileFromTree(File* parent, int id);
 
 	void deleteFileCompletely(int id);
 
-	void duplicateFile(int id);
+	int duplicateFile(int id);
 
 	FileType getFileType(std::string extension);
 
-	void newFolder(int currentDirID, const char* fileName);
+	int newFolder(int currentDirID, const char* fileName);
+
+	void newMaterial(int currentDirID, const char* fileName);
+
+	void readMaterialFile(File* filePtr, std::string path);
+
+	void writeMaterialFile(std::string path, MaterialFile& mat);
+
+	File* getTextureFileAddr(const char* path);
+
+	const char* getTextureFilePath(File* addr);
+
+	File* getFragShaderAddr(const char* path);
+
+	File* getVertShaderAddr(const char* path);
+
+	const char* getFragShaderPath(File* fileAddr);
+
+	const char* getVertShaderPath(File* fileAddr);
 
 	void rename(int id, const char* newName);
 
@@ -110,10 +157,11 @@ public:
 
 	void importFiles(std::vector<std::string> filesToMove, int toDir);
 
-	node* newNode(int data);
+	void loadDefaultAssets();
 
-	void identicalTrees(node* a, node* b, bool& identical);
+	MaterialFile& getMaterial(int id);
 
-	void detectFilesChangedOutside(File* file, std::string fileToCompare);
+	TextureFile& getTexture(int id);
 
+	void setEditor(Editor* editor);
 };

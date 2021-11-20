@@ -1,27 +1,14 @@
 #include "application.hpp"
 #include <iostream>
 
-Application::Application() {
+Application::Application() {}
 
-	std::cout << "Engine started..." << std::endl;
-}
-
-
-void Application::run() {
+void Application::start() {
 
 	editor.startEditorScreen();
 
 	do {
-
-		editor.stayOpen();
-	} while (editor.getWindow().getOpen());
-
-	//editor.editorGUI
-	//glfw 
-	// IMPORTANT ----------- DESTROY ALL THE THINGS !!!!!!
+		editor.run();
+	} while (editor.window.getOpen(&editor));
 }
-
-Editor Application::getEditor() { return editor; }
-
-void Application::setEditor(Editor editor) { this->editor = editor; }
 

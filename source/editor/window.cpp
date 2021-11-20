@@ -6,10 +6,12 @@
 bool Window::dragAndDropFromOutside;
 std::vector<std::string> Window::dragAndDropFiles;
 
-Window::Window() {
+Window::Window() {}
 
-	std::cout << "Editor started..." << std::endl;
+void Window::init() {
 
+	Window::startGLFW();
+	Window::startGLOptions();
 }
 
 int Window::startGLFW() {
@@ -25,51 +27,58 @@ int Window::startGLFW() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 	monitor = glfwGetPrimaryMonitor();
 	mode = glfwGetVideoMode(monitor);
-	window = glfwCreateWindow(mode->width, mode->height, title, NULL, NULL);
+	GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL);
 
-	glfwMaximizeWindow(window);
-	glfwMakeContextCurrent(window);
+	glfwMaximizeWindow(GLFW_window);
+	glfwMakeContextCurrent(GLFW_window);
 }
 
 void Window::startGLOptions() {
 
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetInputMode(GLFW_window, GLFW_STICKY_KEYS, GL_TRUE);
+	glfwSetInputMode(GLFW_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-	glfwSetMouseButtonCallback(window, editor->getEditorCamera().mouse_button_callback);
-	glfwSetKeyCallback(window, editor->getEditorCamera().key_callback);
-	glfwSetScrollCallback(window, editor->getEditorCamera().scrollCallback);
-	glfwSetDropCallback(window, drop_callback);
+	glfwSetDropCallback(GLFW_window, drop_callback);
+
+	Window::loadTitleBarIcon();
 
 	glfwPollEvents();
-	glfwSetCursorPos(window, mode->width / 2, mode->height / 2);
+	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
+	glViewport(0, 0, mode->width, mode->height);
+}
+
+void Window::loadTitleBarIcon() {
+
+	GLFWimage image;
+	unsigned width;
+	unsigned height;
+	image.pixels = TextureNS::loadPNG("resource/icons/material.png", width, height);
+	image.width = width;
+	image.height = height;
+	glfwSetWindowIcon(GLFW_window, 1, &image);
+	delete image.pixels;
 }
 
 void Window::clear() {
 
+	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void Window::end() {
 
-	glfwSwapBuffers(window);
+	glfwSwapBuffers(GLFW_window);
 	glfwPollEvents();
 }
 
-void Window::renderScreen() {
-
-
-}
-
-void Window::handleCallBacks() {
+void Window::handleCallBacks(Editor* editor) {
 
 	if (dragAndDropFromOutside) {
 
@@ -79,9 +88,16 @@ void Window::handleCallBacks() {
 	}
 }
 
-bool Window::getOpen() {
+bool Window::getOpen(Editor* editor) {
 
-	return glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0;
+	bool open = glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
+
+	if (!open) {
+
+		SaveLoadSystem::saveSceneCamera(editor);
+	}
+
+	return open;
 }
 
 void Window::terminateGLFW() {
@@ -89,20 +105,17 @@ void Window::terminateGLFW() {
 	glfwTerminate();
 }
 
-void Window::renderToTexture() {
+void Window::frameBufferForSceneViewport() {
 
 	glGenFramebuffers(1, &framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-	//unsigned int textureColorbuffer;
 	glGenTextures(1, &textureColorbuffer);
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, mode->width, mode->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
 
-	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
 
 	unsigned int rbo;
@@ -120,31 +133,13 @@ void Window::renderToTexture() {
 
 void Window::drop_callback(GLFWwindow* window, int count, const char** paths)
 {
-	std::cout << "Drag and Drop count - " << count << std::endl;
 	for (unsigned int i = 0; i < count; ++i)
-	{
 		dragAndDropFiles.push_back(std::string(paths[i]));
-	}
 
 	dragAndDropFromOutside = true;
 }
 
-void Window::setWindow(GLFWwindow* window) { this->window = window; }
-
-GLFWwindow* Window::getGLFWwindow() { return window; }
-
-void Window::setTitle(const char* title) { this->title = title; }
-
-const char* Window::getTitle() { return title; }
-
-void Window::setGLFWvidmode(GLFWvidmode* mode) { this->mode = mode; }
-
-const GLFWvidmode* Window::getGLFWvidmode() { return mode; }
-
-void Window::setGLFWmonitor(GLFWmonitor* monitor) { this->monitor = monitor; }
-
-GLFWmonitor* Window::getGLFWmonitor() { return monitor; }
-
-void Window::setEditor(Editor* editor) { this->editor = editor; }
-
-Editor* Window::getEditor() { return editor; }
+void Window::setTitle(const char* title) { 
+	
+	glfwSetWindowTitle(GLFW_window, title);
+}
