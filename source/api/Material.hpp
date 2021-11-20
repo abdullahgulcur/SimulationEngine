@@ -19,8 +19,8 @@ namespace MaterialNS {
 		// Real Material Address
 
 		File* fileAddr;
-		int vertShaderFileID;
-		int fragShaderFileID;
+		File* vertShaderFileAddr;
+		File* fragShaderFileAddr;
 
 		std::vector<File*> textureUnitFileAddrs;
 		std::vector<unsigned int> textureUnits;
@@ -33,7 +33,7 @@ namespace MaterialNS {
 
 		MaterialFile(const char* vertex_file_path, const char* fragment_file_path);
 
-		MaterialFile(File* file, int vertShaderFileID, int fragShaderFileID, const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
+		MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
 
 		void compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
 

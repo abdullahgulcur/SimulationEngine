@@ -195,7 +195,8 @@ void EditorGUI::handleInputs() {
 				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[m_renderer.mat->fileAddr->id].path, *m_renderer.mat);
 
 				m_renderer.mat->deleteProgram();
-				m_renderer.mat->compileShaders((*files)[m_renderer.mat->vertShaderFileID].path.c_str(), (*files)[m_renderer.mat->fragShaderFileID].path.c_str(),
+				m_renderer.mat->compileShaders(editor->fileSystem.getVertShaderPath(m_renderer.mat->vertShaderFileAddr),
+					editor->fileSystem.getFragShaderPath(m_renderer.mat->fragShaderFileAddr),
 					editor->scene.dirLightCount, editor->scene.pointLightCount);
 			}
 			else {
@@ -204,7 +205,7 @@ void EditorGUI::handleInputs() {
 				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[mat.fileAddr->id].path, mat);
 
 				mat.deleteProgram();
-				mat.compileShaders((*files)[mat.vertShaderFileID].path.c_str(), (*files)[mat.fragShaderFileID].path.c_str(),
+				mat.compileShaders(editor->fileSystem.getVertShaderPath(mat.vertShaderFileAddr), editor->fileSystem.getFragShaderPath(mat.fragShaderFileAddr),
 					editor->scene.dirLightCount, editor->scene.pointLightCount);
 			}
 
@@ -1066,7 +1067,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 			const char** shaderNames = new const char* [indiceSize];
 			shaderNames[0] = "Default\0";
 
-			const char* vertShaderPath = editor->fileSystem.getVertShaderPath(material.vertShaderFileID);
+			const char* vertShaderPath = editor->fileSystem.getVertShaderPath(material.vertShaderFileAddr);
 
 			int index = 0;
 			int i = 1;
@@ -1096,9 +1097,9 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 
 			if (ImGui::Combo("##0", &index, shaderNames, indiceSize)) {
 				if (index == 0)
-					material.vertShaderFileID = -1;
+					material.vertShaderFileAddr = NULL;
 				else
-					material.vertShaderFileID = vertShaderFiles[index - 1].fileAddr->id;
+					material.vertShaderFileAddr = vertShaderFiles[index - 1].fileAddr;
 				materialChanged = true;
 			}
 
@@ -1113,7 +1114,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 			const char** shaderNames = new const char* [indiceSize];
 			shaderNames[0] = "Default";
 
-			const char* fragShaderPath = editor->fileSystem.getFragShaderPath(material.fragShaderFileID);;
+			const char* fragShaderPath = editor->fileSystem.getFragShaderPath(material.fragShaderFileAddr);;
 
 			int index = 0;
 			int i = 1;
@@ -1144,9 +1145,9 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 			bool matShaderSourceChange = false;
 			if (ImGui::Combo("##1", &index, shaderNames, indiceSize)) {
 				if (index == 0)
-					material.fragShaderFileID = -1;
+					material.fragShaderFileAddr = NULL;
 				else
-					material.fragShaderFileID = fragShaderFiles[index - 1].fileAddr->id;
+					material.fragShaderFileAddr = fragShaderFiles[index - 1].fileAddr;
 				materialChanged = true;
 				matShaderSourceChange = true;
 			}

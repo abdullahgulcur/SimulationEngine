@@ -154,8 +154,8 @@ void Scene::update() {
 void Scene::recompileAllMaterials() {
 
 	for (auto& val : editor->fileSystem.materials)
-		val.second.compileShaders(editor->fileSystem.getVertShaderPath(val.second.vertShaderFileID),
-			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileID), dirLightCount, pointLightCount);
+		val.second.compileShaders(editor->fileSystem.getVertShaderPath(val.second.vertShaderFileAddr),
+			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileAddr), dirLightCount, pointLightCount);
 }
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {

@@ -319,7 +319,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 		int count = 0;
 		for (auto& iter : editor->scene.meshRendererComponents) {
 
-			if (strcmp(files[iter.mat->fileAddr->id].path.c_str(), newPath.c_str()) == 0)
+			if (iter.mat->fileAddr == files[fileID].addr)
 				indices.push_back(count);
 			
 			count++;
@@ -342,7 +342,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 
 		for (auto& mat_iter : materials) {
 
-			if (mat_iter.second.vertShaderFileID == files[fileID].addr->id)
+			if (mat_iter.second.vertShaderFileAddr == files[fileID].addr)
 				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 		}
 
@@ -352,7 +352,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 
 		for (auto& mat_iter : materials) {
 
-			if (mat_iter.second.fragShaderFileID == files[fileID].addr->id)
+			if (mat_iter.second.fragShaderFileAddr == files[fileID].addr)
 				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 		}
 
@@ -429,8 +429,6 @@ void FileSystem::deleteFileCompletely(int id) {
 		}
 		case FileType::texture: {
 
-			// gl delete textures
-
 			textures[files[indices[i]].path].deleteTexture();
 			textures.erase(files[indices[i]].path);
 
@@ -454,12 +452,13 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& mat_iter : materials) {
 
-				if (strcmp(files[mat_iter.second.vertShaderFileID].path.c_str(), files[indices[i]].path.c_str()) == 0){
-					mat_iter.second.vertShaderFileID = -1;
+				if (mat_iter.second.fileAddr == files[indices[i]].addr){
+					mat_iter.second.vertShaderFileAddr = NULL;
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 					
 					mat_iter.second.deleteProgram();
-					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileID].path.c_str(), files[mat_iter.second.fragShaderFileID].path.c_str(),
+					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
+						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
 						editor->scene.dirLightCount, editor->scene.pointLightCount);
 				}
 			}
@@ -467,7 +466,7 @@ void FileSystem::deleteFileCompletely(int id) {
 			int count = 0;
 			for (auto& it : vertShaderFiles) {
 
-				if (strcmp(files[indices[i]].path.c_str(), files[it.fileAddr->id].path.c_str()) == 0) {
+				if (files[indices[i]].addr == it.fileAddr) {
 
 					vertShaderFiles.erase(vertShaderFiles.begin() + count);
 					break;
@@ -481,15 +480,16 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& mat_iter : materials) {
 
-				if (strcmp(files[mat_iter.second.fragShaderFileID].path.c_str(), files[indices[i]].path.c_str()) == 0) {
-					mat_iter.second.fragShaderFileID = -1;
+				if (mat_iter.second.fileAddr == files[indices[i]].addr) {
+					mat_iter.second.fragShaderFileAddr = NULL;
 					mat_iter.second.textureUnitFileAddrs.clear();
 					mat_iter.second.textureUnits.clear();
 					mat_iter.second.floatUnits.clear();
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 					
 					mat_iter.second.deleteProgram();
-					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileID].path.c_str(), files[mat_iter.second.fragShaderFileID].path.c_str(),
+					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
+						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
 						editor->scene.dirLightCount, editor->scene.pointLightCount);
 				}
 			}
@@ -497,7 +497,7 @@ void FileSystem::deleteFileCompletely(int id) {
 			int count = 0;
 			for (auto& it : fragShaderFiles) {
 
-				if (strcmp(files[indices[i]].path.c_str(), files[it.fileAddr->id].path.c_str()) == 0) {
+				if (files[indices[i]].addr == it.fileAddr) {
 
 					fragShaderFiles.erase(fragShaderFiles.begin() + count);
 					break;
@@ -592,7 +592,7 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 		FileSystem::insertFileToParentsSubfolders(subFile);
 	}
 
-	MaterialFile mat(subFile, -1, -1, "source/shader/Default.vert", "source/shader/Default.frag",
+	MaterialFile mat(subFile, NULL, NULL, "source/shader/Default.vert", "source/shader/Default.frag",
 		editor->scene.dirLightCount, editor->scene.pointLightCount);
 	materials.insert({ files[subFile->id].path, mat });
 	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
@@ -615,10 +615,16 @@ void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 
 	const char* vertFilePath = root_node->first_node("Shader")->first_attribute("Vert")->value();
 	const char* fragFilePath = root_node->first_node("Shader")->first_attribute("Frag")->value();
-	int vertFileID = FileSystem::getVertShaderID(vertFilePath);
-	int fragFileID = FileSystem::getFragShaderID(fragFilePath);
+	File* vertFileAddr = FileSystem::getVertShaderAddr(vertFilePath);
+	File* fragFileAddr = FileSystem::getFragShaderAddr(fragFilePath);
 
-	MaterialFile mat(filePtr, vertFileID, fragFileID, vertFilePath, fragFilePath, 0, 0);
+	if (vertFileAddr == NULL)
+		vertFilePath = "source/shader/Default.vert";
+
+	if (fragFileAddr == NULL)
+		fragFilePath = "source/shader/Default.frag";
+
+	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, 0, 0);
 
 	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling())
 		mat.textureUnitFileAddrs.push_back(FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value()));
@@ -640,8 +646,8 @@ void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
 	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
 
 	rapidxml::xml_node<>* shaderNode = doc.allocate_node(rapidxml::node_element, "Shader");
-	shaderNode->append_attribute(doc.allocate_attribute("Vert", doc.allocate_string(FileSystem::getVertShaderPath(mat.vertShaderFileID))));
-	shaderNode->append_attribute(doc.allocate_attribute("Frag", doc.allocate_string(FileSystem::getFragShaderPath(mat.fragShaderFileID))));
+	shaderNode->append_attribute(doc.allocate_attribute("Vert", doc.allocate_string(FileSystem::getVertShaderPath(mat.vertShaderFileAddr))));
+	shaderNode->append_attribute(doc.allocate_attribute("Frag", doc.allocate_string(FileSystem::getFragShaderPath(mat.fragShaderFileAddr))));
 	materialNode->append_node(shaderNode);
 
 	rapidxml::xml_node<>* sampler2DsNode = doc.allocate_node(rapidxml::node_element, "Sampler2Ds");
@@ -689,50 +695,54 @@ const char* FileSystem::getTextureFilePath(File* addr) {
 	return files[addr->id].path.c_str();
 }
 
-int FileSystem::getFragShaderID(const char* path) {
+File* FileSystem::getFragShaderAddr(const char* path) {
 
 	if (strcmp(path, "source/shader/Default.frag") == 0)
-		return -1;
+		return NULL;
 
 	for (auto& fs : fragShaderFiles) {
 
 		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
-			return fs.fileAddr->id;
+			return fs.fileAddr;
 	}
+
+	return NULL;
 }
 
-int FileSystem::getVertShaderID(const char* path) {
+File* FileSystem::getVertShaderAddr(const char* path) {
 
 	if (strcmp(path, "source/shader/Default.vert") == 0)
-		return -1;
+		return NULL;
 
 	for (auto& fs : vertShaderFiles) {
 
 		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
-			return fs.fileAddr->id;
+			return fs.fileAddr;
 	}
+
+	return NULL;
 }
 
-const char* FileSystem::getFragShaderPath(int fileID) {
+const char* FileSystem::getFragShaderPath(File* fileAddr) {
 
-	if (fileID == -1)
+	if (fileAddr == NULL)
 		return "source/shader/Default.frag";
 
 	for (auto& fs : fragShaderFiles) {
 
-		if (fs.fileAddr->id == fileID)
+		if (fs.fileAddr == fileAddr)
 			return files[fs.fileAddr->id].path.c_str();
 	}
 }
 
-const char* FileSystem::getVertShaderPath(int fileID) {
+const char* FileSystem::getVertShaderPath(File* fileAddr) {
 
-	if (fileID == -1)
+	if (fileAddr == NULL)
 		return "source/shader/Default.vert";
 
 	for (auto& vs : vertShaderFiles) {
 
-		if (vs.fileAddr->id == fileID)
+		if (vs.fileAddr == fileAddr)
 			return files[vs.fileAddr->id].path.c_str();
 	}
 }

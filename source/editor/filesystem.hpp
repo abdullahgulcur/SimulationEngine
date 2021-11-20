@@ -141,13 +141,13 @@ public:
 
 	const char* getTextureFilePath(File* addr);
 
-	int getFragShaderID(const char* path);
+	File* getFragShaderAddr(const char* path);
 
-	int getVertShaderID(const char* path);
+	File* getVertShaderAddr(const char* path);
 
-	const char* getFragShaderPath(int fileID);
+	const char* getFragShaderPath(File* fileAddr);
 
-	const char* getVertShaderPath(int fileID);
+	const char* getVertShaderPath(File* fileAddr);
 
 	void rename(int id, const char* newName);
 

@@ -6,17 +6,17 @@ MaterialNS::MaterialFile::MaterialFile() {}
 MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
 
 	fileAddr = NULL;
-	this->vertShaderFileID = -1;
-	this->fragShaderFileID = -1;
+	this->vertShaderFileAddr = NULL;
+	this->fragShaderFileAddr = NULL;
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, 0, 0);
 }
 
-MaterialNS::MaterialFile::MaterialFile(File* file, int vertShaderFileID, int fragShaderFileID, const char* vertex_file_path, const char* fragment_file_path,
+MaterialNS::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path,
 	int dirLightCount, int pointLightCount) {
 
 	fileAddr = file;
-	this->vertShaderFileID = vertShaderFileID;
-	this->fragShaderFileID = fragShaderFileID;
+	this->vertShaderFileAddr = vertShaderFileAddr;
+	this->fragShaderFileAddr = fragShaderFileAddr;
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, dirLightCount, pointLightCount);
 }
 
