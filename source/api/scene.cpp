@@ -223,11 +223,11 @@ void Scene::deleteEntityCompletely(int id) {
 	Transform* parent = entities[id].transform->parent;
 	Scene::deleteEntityFromTree(parent, id);
 
-	for (auto& iter : indices) {
+	//for (auto& iter : indices) {
 
-		delete[] entities[iter].name;
-		delete entities[iter].transform;
-	}
+	//	delete[] entities[iter].name;
+	//	delete entities[iter].transform;
+	//}
 
 	std::vector<Entity> newEntList;
 

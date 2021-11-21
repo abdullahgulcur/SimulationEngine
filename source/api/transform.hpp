@@ -18,10 +18,6 @@ public:
 	Transform* parent;
 	std::vector<Transform*> children;
 
-	//glm::vec3 position;
-	//glm::vec3 rotation;
-	//glm::vec3 scale;
-
 	glm::vec3 localPosition;
 	glm::vec3 localRotation;
 	glm::vec3 localScale;
