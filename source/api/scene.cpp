@@ -29,7 +29,8 @@ void Scene::initSceneGraph() {
 		SaveLoadSystem::loadLights(editor);
 		Scene::generateSceneGraph();
 		SaveLoadSystem::loadTransforms(editor);
-		SaveLoadSystem::loadPhysicsComponents(editor);
+		SaveLoadSystem::loadRigidbodyComponents(editor);
+		SaveLoadSystem::loadMeshColliderComponents(editor);
 	}
 }
 
@@ -150,6 +151,14 @@ void Scene::update() {
 		glDrawElements(GL_TRIANGLES, val.indiceSize, GL_UNSIGNED_INT, (void*)0);
 		glBindVertexArray(0);
 	}
+
+	for (auto& it : rigidbodyComponents) {
+
+		if (it.useGravity) {
+			entities[it.entID].transform->localPosition.y -= 0.001f;
+			entities[it.entID].transform->updateSelfAndChild();
+		}
+	}
 }
 
 void Scene::recompileAllMaterials() {
@@ -229,6 +238,7 @@ void Scene::deleteEntityCompletely(int id) {
 	std::vector<std::pair<int, int>> m_renderer_transform_PairList;
 	std::vector<std::pair<int, int>> light_transform_PairList;
 	std::vector<std::pair<int, int>> physics_transform_PairList;
+	std::vector<std::pair<int, int>> meshcollider_transform_PairList;
 
 	int counter = 0;
 	for (Entity& ent : entities) {
@@ -254,12 +264,20 @@ void Scene::deleteEntityCompletely(int id) {
 				light_transform_PairList.push_back(pair);
 			}
 
-			if (ent.physicsComponentIndex != -1) {
+			if (ent.rigidbodyComponentIndex != -1) {
 
 				std::pair<int, int> pair;
-				pair.first = ent.physicsComponentIndex;
+				pair.first = ent.rigidbodyComponentIndex;
 				pair.second = ent.transform->id;
 				physics_transform_PairList.push_back(pair);
+			}
+
+			if (ent.meshColliderComponentIndex != -1) {
+
+				std::pair<int, int> pair;
+				pair.first = ent.meshColliderComponentIndex;
+				pair.second = ent.transform->id;
+				meshcollider_transform_PairList.push_back(pair);
 			}
 
 			counter++;
@@ -276,7 +294,8 @@ void Scene::deleteEntityCompletely(int id) {
 
 	std::vector<MeshRenderer> newMeshRendererComponentList;
 	std::vector<Light> newLightComponentList;
-	std::vector<PhysicsComponent> newPhysicsComponentList;
+	std::vector<Rigidbody> newPhysicsComponentList;
+	std::vector<MeshCollider> newMeshColliderComponentList;
 
 	counter = 0;
 	for (auto& pair : m_renderer_transform_PairList) {
@@ -302,12 +321,22 @@ void Scene::deleteEntityCompletely(int id) {
 	counter = 0;
 	for (auto& pair : physics_transform_PairList) {
 
-		newPhysicsComponentList.push_back(physicsComponents[pair.first]);
+		newPhysicsComponentList.push_back(rigidbodyComponents[pair.first]);
 		newPhysicsComponentList[counter].entID = pair.second;
-		entities[pair.second].physicsComponentIndex = counter;
+		entities[pair.second].rigidbodyComponentIndex = counter;
 		counter++;
 	}
-	physicsComponents = newPhysicsComponentList;
+	rigidbodyComponents = newPhysicsComponentList;
+
+	counter = 0;
+	for (auto& pair : meshcollider_transform_PairList) {
+
+		newMeshColliderComponentList.push_back(meshColliderComponents[pair.first]);
+		newMeshColliderComponentList[counter].entID = pair.second;
+		entities[pair.second].meshColliderComponentIndex = counter;
+		counter++;
+	}
+	meshColliderComponents = newMeshColliderComponentList;
 }
 
 int Scene::duplicateEntity(int id) {
@@ -368,12 +397,20 @@ void Scene::cloneComponents(int base, int entID) {
 		entities[entID].lightComponentIndex = lightComponents.size() - 1;
 	}
 
-	if (entities[base].physicsComponentIndex != -1) {
+	if (entities[base].rigidbodyComponentIndex != -1) {
 
-		PhysicsComponent comp = physicsComponents[entities[base].physicsComponentIndex];
+		Rigidbody comp = rigidbodyComponents[entities[base].rigidbodyComponentIndex];
 		comp.entID = entID;
-		physicsComponents.push_back(comp);
-		entities[entID].physicsComponentIndex = physicsComponents.size() - 1;
+		rigidbodyComponents.push_back(comp);
+		entities[entID].rigidbodyComponentIndex = rigidbodyComponents.size() - 1;
+	}
+
+	if (entities[base].meshColliderComponentIndex != -1) {
+
+		MeshCollider comp = meshColliderComponents[entities[base].meshColliderComponentIndex];
+		comp.entID = entID;
+		meshColliderComponents.push_back(comp);
+		entities[entID].meshColliderComponentIndex = meshColliderComponents.size() - 1;
 	}
 }
 
@@ -404,7 +441,8 @@ void Scene::saveEditorProperties() {
 	SaveLoadSystem::saveTransforms(editor);
 	SaveLoadSystem::saveMeshRenderers(editor);
 	SaveLoadSystem::saveLights(editor);
-	SaveLoadSystem::savePhysicsComponents(editor);
+	SaveLoadSystem::saveRigidbodyComponents(editor);
+	SaveLoadSystem::saveMeshColliderComponents(editor);
 } 
 
 std::string Scene::getLightType(LightType type) {

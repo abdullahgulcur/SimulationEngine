@@ -43,8 +43,12 @@ namespace SaveLoadSystem {
 
 	bool loadMeshRenderers(Editor* editor);
 
-	bool savePhysicsComponents(Editor* editor);
+	bool saveRigidbodyComponents(Editor* editor);
 
-	bool loadPhysicsComponents(Editor* editor);
+	bool loadRigidbodyComponents(Editor* editor);
+
+	bool saveMeshColliderComponents(Editor* editor);
+
+	bool loadMeshColliderComponents(Editor* editor);
 
 }

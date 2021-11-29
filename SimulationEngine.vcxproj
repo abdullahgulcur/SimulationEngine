@@ -169,8 +169,9 @@
     <ClCompile Include="source\app\application.cpp" />
     <ClCompile Include="Source\App\main.cpp" />
     <ClCompile Include="source\component\light.cpp" />
+    <ClCompile Include="source\component\collider.cpp" />
     <ClCompile Include="source\component\meshrenderer.cpp" />
-    <ClCompile Include="source\component\physics_comp.cpp" />
+    <ClCompile Include="source\component\rigidbody.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
     <ClCompile Include="source\editor\camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
@@ -214,8 +215,9 @@
     <ClInclude Include="source\common\rapidxml_print.hpp" />
     <ClInclude Include="source\common\rapidxml_utils.hpp" />
     <ClInclude Include="source\component\light.hpp" />
+    <ClInclude Include="source\component\collider.hpp" />
     <ClInclude Include="source\component\meshrenderer.hpp" />
-    <ClInclude Include="source\component\physics_comp.hpp" />
+    <ClInclude Include="source\component\rigidbody.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
     <ClInclude Include="source\editor\camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />

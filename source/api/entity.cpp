@@ -63,15 +63,26 @@ void Entity::addLightComponent(std::vector<Light>& lightComponents, Scene* scene
 	scene->recompileAllMaterials();
 }
 
-void Entity::addPhysicsComponent(std::vector<PhysicsComponent>& physicsComponents) {
+void Entity::addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents) {
 
-	if (physicsComponentIndex != -1)
+	if (rigidbodyComponentIndex != -1)
 		return;
 
-	PhysicsComponent comp;
+	Rigidbody comp;
 	comp.entID = transform->id;
 	physicsComponents.push_back(comp);
-	physicsComponentIndex = physicsComponents.size() - 1;
+	rigidbodyComponentIndex = physicsComponents.size() - 1;
+}
+
+void Entity::addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents) {
+
+	if (meshColliderComponentIndex != -1)
+		return;
+
+	MeshCollider comp;
+	comp.entID = transform->id;
+	meshColliderComponents.push_back(comp);
+	meshColliderComponentIndex = meshColliderComponents.size() - 1;
 }
 
 void Entity::removeComponent(ComponentType type, Scene* scene) {
@@ -103,13 +114,22 @@ void Entity::removeComponent(ComponentType type, Scene* scene) {
 		m_rendererComponentIndex = -1;
 		break;
 	}
-	case ComponentType::Physics: {
+	case ComponentType::Rigidbody: {
 
-		for (int i = physicsComponentIndex; i < scene->physicsComponents.size() - 1; i++)
-			scene->entities[scene->physicsComponents[i + 1].entID].physicsComponentIndex--;
+		for (int i = rigidbodyComponentIndex; i < scene->rigidbodyComponents.size() - 1; i++)
+			scene->entities[scene->rigidbodyComponents[i + 1].entID].rigidbodyComponentIndex--;
 
-		scene->physicsComponents.erase(scene->physicsComponents.begin() + physicsComponentIndex);
-		physicsComponentIndex = -1;
+		scene->rigidbodyComponents.erase(scene->rigidbodyComponents.begin() + rigidbodyComponentIndex);
+		rigidbodyComponentIndex = -1;
+		break;
+	}
+	case ComponentType::MeshCollider: {
+
+		for (int i = meshColliderComponentIndex; i < scene->meshColliderComponents.size() - 1; i++)
+			scene->entities[scene->meshColliderComponents[i + 1].entID].meshColliderComponentIndex--;
+
+		scene->meshColliderComponents.erase(scene->meshColliderComponents.begin() + meshColliderComponentIndex);
+		meshColliderComponentIndex = -1;
 		break;
 	}
 	}

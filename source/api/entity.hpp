@@ -7,12 +7,13 @@
 #include "meshrenderer.hpp"
 #include "mesh.hpp"
 #include "light.hpp"
-#include "physics_comp.hpp"
+#include "rigidbody.hpp"
+#include "collider.hpp"
 
 using namespace MaterialNS;
 using namespace Mesh;
 
-enum class ComponentType{Light, MeshRenderer, Physics, Collider, Transform, Script, Animation, Animator};
+enum class ComponentType{Light, MeshRenderer, Rigidbody, MeshCollider, Transform, Script, Animation, Animator};
 
 class Scene;
 
@@ -27,7 +28,8 @@ public:
 
 	unsigned int m_rendererComponentIndex = -1;
 	unsigned int lightComponentIndex = -1;
-	unsigned int physicsComponentIndex = -1;
+	unsigned int rigidbodyComponentIndex = -1;
+	unsigned int meshColliderComponentIndex = -1;
 
 	Entity(const char* name, std::vector<Entity>& entities);
 
@@ -41,7 +43,9 @@ public:
 
 	void addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type = LightType::DirectionalLight);
 
-	void addPhysicsComponent(std::vector<PhysicsComponent>& physicsComponents);
+	void addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents);
+
+	void addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents);
 
 	void removeComponent(ComponentType type, Scene* scene);
 };

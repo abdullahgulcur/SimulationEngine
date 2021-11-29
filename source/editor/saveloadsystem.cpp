@@ -427,7 +427,7 @@ bool SaveLoadSystem::loadMeshRenderers(Editor* editor) {
 	return true;
 }
 
-bool SaveLoadSystem::savePhysicsComponents(Editor* editor) {
+bool SaveLoadSystem::saveRigidbodyComponents(Editor* editor) {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -435,54 +435,116 @@ bool SaveLoadSystem::savePhysicsComponents(Editor* editor) {
 	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
 	doc.append_node(decl);
 
-	rapidxml::xml_node<>* physicsComponentsNode = doc.allocate_node(rapidxml::node_element, "PhysicsComponents");
-	doc.append_node(physicsComponentsNode);
+	rapidxml::xml_node<>* components = doc.allocate_node(rapidxml::node_element, "RigidbodyComponents");
+	doc.append_node(components);
 
-	for (auto& it : editor->scene.physicsComponents) {
+	for (auto& it : editor->scene.rigidbodyComponents) {
 
-		rapidxml::xml_node<>* componentNode = doc.allocate_node(rapidxml::node_element, "PhysicsComponent");
-		componentNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("Mass", doc.allocate_string(std::to_string(it.mass).c_str())));
-		componentNode->append_attribute(doc.allocate_attribute("UseGravity", doc.allocate_string(std::to_string(it.useGravity ? 1 : 0).c_str())));
-		physicsComponentsNode->append_node(componentNode);
+		rapidxml::xml_node<>* rigidbodyNode = doc.allocate_node(rapidxml::node_element, "RigidbodyComponent");
+		rigidbodyNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
+		rigidbodyNode->append_attribute(doc.allocate_attribute("Mass", doc.allocate_string(std::to_string(it.mass).c_str())));
+		rigidbodyNode->append_attribute(doc.allocate_attribute("UseGravity", doc.allocate_string(std::to_string(it.useGravity ? 1 : 0).c_str())));
+		components->append_node(rigidbodyNode);
 	}
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\physics_component_db.xml");
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\rigidbody_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
 	return true;
 }
 
-bool SaveLoadSystem::loadPhysicsComponents(Editor* editor) {
+bool SaveLoadSystem::loadRigidbodyComponents(Editor* editor) {
 
-	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\physics_component_db.xml");
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\rigidbody_db.xml");
 
 	if (file.fail())
 		return false;
 
 	rapidxml::xml_document<> doc;
-	rapidxml::xml_node<>* root_node = NULL;
+	rapidxml::xml_node<>* components = NULL;
 
 	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
 	doc.parse<0>(&buffer[0]);
 
-	root_node = doc.first_node("PhysicsComponents");
+	components = doc.first_node("RigidbodyComponents");
 
-	for (rapidxml::xml_node<>* physics_node = root_node->first_node("PhysicsComponent"); physics_node; physics_node = physics_node->next_sibling()) {
+	for (rapidxml::xml_node<>* rigidbodyNode = components->first_node("RigidbodyComponent"); rigidbodyNode; rigidbodyNode = rigidbodyNode->next_sibling()) {
 
-		PhysicsComponent physicsComp;
-		physicsComp.entID = atoi(physics_node->first_attribute("EntID")->value());
-		physicsComp.mass = atof(physics_node->first_attribute("Mass")->value());
-		physicsComp.useGravity = atoi(physics_node->first_attribute("UseGravity")->value()) == 1 ? true : false;
+		Rigidbody rigidbodyComp;
+		rigidbodyComp.entID = atoi(rigidbodyNode->first_attribute("EntID")->value());
+		rigidbodyComp.mass = atof(rigidbodyNode->first_attribute("Mass")->value());
+		rigidbodyComp.useGravity = atoi(rigidbodyNode->first_attribute("UseGravity")->value()) == 1 ? true : false;
 
-		editor->scene.physicsComponents.push_back(physicsComp);
-		editor->scene.entities[physicsComp.entID].physicsComponentIndex = editor->scene.physicsComponents.size() - 1;
+		editor->scene.rigidbodyComponents.push_back(rigidbodyComp);
+		editor->scene.entities[rigidbodyComp.entID].rigidbodyComponentIndex = editor->scene.rigidbodyComponents.size() - 1;
+	}
+
+	file.close();
+	return true;
+}
+
+bool SaveLoadSystem::saveMeshColliderComponents(Editor* editor) {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* components = doc.allocate_node(rapidxml::node_element, "MeshColliderComponents");
+	doc.append_node(components);
+
+	for (auto& it : editor->scene.meshColliderComponents) {
+
+		rapidxml::xml_node<>* meshColliderNode = doc.allocate_node(rapidxml::node_element, "MeshColliderComponent");
+		meshColliderNode->append_attribute(doc.allocate_attribute("EntID", doc.allocate_string(std::to_string(it.entID).c_str())));
+		meshColliderNode->append_attribute(doc.allocate_attribute("Convex", doc.allocate_string(std::to_string(it.convex ? 1 : 0).c_str())));
+		meshColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(it.trigger ? 1 : 0).c_str())));
+		components->append_node(meshColliderNode);
+	}
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\meshcollider_db.xml");
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+	return true;
+}
+
+bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor) {
+
+	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\meshcollider_db.xml");
+
+	if (file.fail())
+		return false;
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* components = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	components = doc.first_node("MeshColliderComponents");
+
+	for (rapidxml::xml_node<>* meshColliderNode = components->first_node("MeshColliderComponent"); meshColliderNode; meshColliderNode = meshColliderNode->next_sibling()) {
+
+		MeshCollider meshColliderComp;
+		meshColliderComp.entID = atoi(meshColliderNode->first_attribute("EntID")->value());
+		meshColliderComp.convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1 ? true : false;
+		meshColliderComp.trigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+
+		editor->scene.meshColliderComponents.push_back(meshColliderComp);
+		editor->scene.entities[meshColliderComp.entID].meshColliderComponentIndex = editor->scene.meshColliderComponents.size() - 1;
 	}
 
 	file.close();

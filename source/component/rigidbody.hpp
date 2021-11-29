@@ -1,6 +1,6 @@
 #pragma once
 
-class PhysicsComponent {
+class Rigidbody {
 
 public:
 
@@ -8,6 +8,5 @@ public:
 	float mass = 1;
 	bool useGravity = false;
 
-
-	PhysicsComponent();
+	Rigidbody();
 };

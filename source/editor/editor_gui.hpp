@@ -109,7 +109,8 @@ public:
 	unsigned int eyeTextureID;
 	unsigned int materialTextureID;
 	unsigned int materialSmallTextureID;
-	unsigned int physicsTextureID;
+	unsigned int rigidbodyTextureID;
+	unsigned int meshColliderTextureID;
 
 	EditorGUI();
 
@@ -151,7 +152,9 @@ public:
 
 	void showLightComponent();
 
-	void showPhysicsComponent();
+	void showRigidbodyComponent();
+
+	void showMeshColliderComponent();
 
 	void showMaterialProperties(MaterialFile& material);
 
