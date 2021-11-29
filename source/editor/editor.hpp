@@ -11,6 +11,7 @@
 #include "model.hpp"
 #include "texture.hpp"
 #include "input.hpp"
+#include "physics.hpp"
 
 class Editor {
 
@@ -24,6 +25,7 @@ public:
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
 	Scene scene;
+	Physics physics;
 
 	Editor();
 

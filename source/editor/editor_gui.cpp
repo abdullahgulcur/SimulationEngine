@@ -165,6 +165,7 @@ void EditorGUI::loadTextures() {
 	eyeTextureID = TextureNS::loadDDS("resource/icons/eye.DDS");
 	materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
 	materialSmallTextureID = TextureNS::loadDDS("resource/icons/materialSmall.DDS");
+	physicsTextureID = TextureNS::loadDDS("resource/icons/physics.DDS");
 }
 
 void EditorGUI::handleInputs() {
@@ -503,6 +504,9 @@ void EditorGUI::createInspectorPanel() {
 		if (editor->scene.entities[lastSelectedEntityID].lightComponentIndex != -1)
 			EditorGUI::showLightComponent();
 
+		if (editor->scene.entities[lastSelectedEntityID].physicsComponentIndex != -1)
+			EditorGUI::showPhysicsComponent();
+
 		ImGui::PopStyleColor(); // for the separator
 
 		EditorGUI::addComponentButton();
@@ -574,8 +578,9 @@ void EditorGUI::addComponentButton() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::Selectable("   Rigid Body")) {
+		if (ImGui::Selectable("   Physics")) {
 
+			editor->scene.entities[lastSelectedEntityID].addPhysicsComponent(editor->scene.physicsComponents);
 		}
 		ImGui::Separator();
 
@@ -1024,8 +1029,6 @@ void EditorGUI::showLightComponent() {
 	ImGui::Separator();
 }
 
-
-
 void EditorGUI::showMaterialProperties(MaterialFile& material) {
 
 	float width = ImGui::GetContentRegionAvail().x;
@@ -1237,6 +1240,67 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 	}
 
 	ImGui::PopStyleColor();
+	ImGui::Separator();
+}
+
+void EditorGUI::showPhysicsComponent() {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	bool treeNodeOpen = ImGui::TreeNode("##4");
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)physicsTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Physics");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::Physics)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		ImGui::Text("Mass");
+
+		ImGui::SameLine(110);
+
+		float mass = editor->scene.physicsComponents[editor->scene.entities[lastSelectedEntityID].physicsComponentIndex].mass;
+		if (ImGui::DragFloat("##0", &mass, 0.1f, 0.0f, 0.0f, "%.2f"))
+			editor->scene.physicsComponents[editor->scene.entities[lastSelectedEntityID].physicsComponentIndex].mass = mass;
+
+		ImGui::Text("Use Gravity");
+
+		ImGui::SameLine(110);
+
+		bool& useGravity = editor->scene.physicsComponents[editor->scene.entities[lastSelectedEntityID].physicsComponentIndex].useGravity;
+
+		ImGui::Checkbox("##1", &useGravity);
+
+		ImGui::TreePop();
+	}
+
 	ImGui::Separator();
 }
 

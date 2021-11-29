@@ -109,6 +109,7 @@ public:
 	unsigned int eyeTextureID;
 	unsigned int materialTextureID;
 	unsigned int materialSmallTextureID;
+	unsigned int physicsTextureID;
 
 	EditorGUI();
 
@@ -149,6 +150,8 @@ public:
 	void showMeshRendererComponent(MeshRenderer& m_renderer);
 
 	void showLightComponent();
+
+	void showPhysicsComponent();
 
 	void showMaterialProperties(MaterialFile& material);
 

@@ -12,6 +12,7 @@ void Editor::startEditorScreen() {
 	scene.init(this);
 	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
+	physics.init();
 
 	scene.start();
 }

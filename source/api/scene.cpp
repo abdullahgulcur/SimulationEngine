@@ -29,6 +29,7 @@ void Scene::initSceneGraph() {
 		SaveLoadSystem::loadLights(editor);
 		Scene::generateSceneGraph();
 		SaveLoadSystem::loadTransforms(editor);
+		SaveLoadSystem::loadPhysicsComponents(editor);
 	}
 }
 
@@ -223,16 +224,11 @@ void Scene::deleteEntityCompletely(int id) {
 	Transform* parent = entities[id].transform->parent;
 	Scene::deleteEntityFromTree(parent, id);
 
-	//for (auto& iter : indices) {
-
-	//	delete[] entities[iter].name;
-	//	delete entities[iter].transform;
-	//}
-
 	std::vector<Entity> newEntList;
 
 	std::vector<std::pair<int, int>> m_renderer_transform_PairList;
 	std::vector<std::pair<int, int>> light_transform_PairList;
+	std::vector<std::pair<int, int>> physics_transform_PairList;
 
 	int counter = 0;
 	for (Entity& ent : entities) {
@@ -257,14 +253,30 @@ void Scene::deleteEntityCompletely(int id) {
 				pair.second = ent.transform->id;
 				light_transform_PairList.push_back(pair);
 			}
+
+			if (ent.physicsComponentIndex != -1) {
+
+				std::pair<int, int> pair;
+				pair.first = ent.physicsComponentIndex;
+				pair.second = ent.transform->id;
+				physics_transform_PairList.push_back(pair);
+			}
+
 			counter++;
 		}
+	}
+
+	for (auto& iter : indices) {
+
+		delete[] entities[iter].name;
+		delete entities[iter].transform;
 	}
 
 	entities = newEntList;
 
 	std::vector<MeshRenderer> newMeshRendererComponentList;
 	std::vector<Light> newLightComponentList;
+	std::vector<PhysicsComponent> newPhysicsComponentList;
 
 	counter = 0;
 	for (auto& pair : m_renderer_transform_PairList) {
@@ -275,8 +287,7 @@ void Scene::deleteEntityCompletely(int id) {
 		counter++;
 	}
 	meshRendererComponents = newMeshRendererComponentList;
-		
-
+	
 	counter = 0;
 	for (auto& pair : light_transform_PairList) {
 
@@ -287,6 +298,16 @@ void Scene::deleteEntityCompletely(int id) {
 	}
 	lightComponents = newLightComponentList;
 	Scene::recompileAllMaterials();
+
+	counter = 0;
+	for (auto& pair : physics_transform_PairList) {
+
+		newPhysicsComponentList.push_back(physicsComponents[pair.first]);
+		newPhysicsComponentList[counter].entID = pair.second;
+		entities[pair.second].physicsComponentIndex = counter;
+		counter++;
+	}
+	physicsComponents = newPhysicsComponentList;
 }
 
 int Scene::duplicateEntity(int id) {
@@ -294,8 +315,8 @@ int Scene::duplicateEntity(int id) {
 	Transform* transform = new Transform(entities[id].transform->parent, entities[id].transform, entities.size());
 
 	char* name = new char[strlen(entities[id].name) + 5];
-	strcpy((char*)name, entities[id].name);
-	strcat((char*)name, "_cpy\0");
+	strcpy(name, entities[id].name);
+	strcat(name, "_cpy\0");
 	Entity ent(name, transform, entities);
 
 	Scene::cloneComponents(id, transform->id);
@@ -311,7 +332,11 @@ void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 	for (int i = 0; i < base->children.size(); i++) {
 
 		Transform* transform = new Transform(copied, base->children[i], entities.size());
-		Entity ent(entities[base->children[i]->id].name, transform, entities);
+		int len = strlen(entities[base->children[i]->id].name);
+		char* name = new char[len + 1];
+		strcpy(name, entities[base->children[i]->id].name);
+		name[len] = '\0';
+		Entity ent(name, transform, entities);
 
 		Scene::cloneComponents(base->children[i]->id, transform->id);
 		Scene::cloneEntityRecursively(base->children[i], transform);
@@ -342,6 +367,14 @@ void Scene::cloneComponents(int base, int entID) {
 		lightComponents.push_back(comp);
 		entities[entID].lightComponentIndex = lightComponents.size() - 1;
 	}
+
+	if (entities[base].physicsComponentIndex != -1) {
+
+		PhysicsComponent comp = physicsComponents[entities[base].physicsComponentIndex];
+		comp.entID = entID;
+		physicsComponents.push_back(comp);
+		entities[entID].physicsComponentIndex = physicsComponents.size() - 1;
+	}
 }
 
 Transform* Scene::newEntity(int parentID, const char* name){
@@ -371,6 +404,7 @@ void Scene::saveEditorProperties() {
 	SaveLoadSystem::saveTransforms(editor);
 	SaveLoadSystem::saveMeshRenderers(editor);
 	SaveLoadSystem::saveLights(editor);
+	SaveLoadSystem::savePhysicsComponents(editor);
 } 
 
 std::string Scene::getLightType(LightType type) {

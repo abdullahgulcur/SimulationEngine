@@ -12,8 +12,7 @@ Entity::Entity(const char* name, std::vector<Entity>& entities) {
 
 Entity::Entity(const char* name, Transform* transform, std::vector<Entity>& entities) {
 
-	this->name = new char[strlen(name)];
-	strcpy(this->name, name);
+	this->name = (char*)name;
 	this->transform = transform;
 	entities.push_back(*this);
 }
@@ -64,6 +63,17 @@ void Entity::addLightComponent(std::vector<Light>& lightComponents, Scene* scene
 	scene->recompileAllMaterials();
 }
 
+void Entity::addPhysicsComponent(std::vector<PhysicsComponent>& physicsComponents) {
+
+	if (physicsComponentIndex != -1)
+		return;
+
+	PhysicsComponent comp;
+	comp.entID = transform->id;
+	physicsComponents.push_back(comp);
+	physicsComponentIndex = physicsComponents.size() - 1;
+}
+
 void Entity::removeComponent(ComponentType type, Scene* scene) {
 
 	switch (type) {
@@ -91,6 +101,15 @@ void Entity::removeComponent(ComponentType type, Scene* scene) {
 
 		scene->meshRendererComponents.erase(scene->meshRendererComponents.begin() + m_rendererComponentIndex);
 		m_rendererComponentIndex = -1;
+		break;
+	}
+	case ComponentType::Physics: {
+
+		for (int i = physicsComponentIndex; i < scene->physicsComponents.size() - 1; i++)
+			scene->entities[scene->physicsComponents[i + 1].entID].physicsComponentIndex--;
+
+		scene->physicsComponents.erase(scene->physicsComponents.begin() + physicsComponentIndex);
+		physicsComponentIndex = -1;
 		break;
 	}
 	}

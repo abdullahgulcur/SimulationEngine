@@ -43,4 +43,8 @@ namespace SaveLoadSystem {
 
 	bool loadMeshRenderers(Editor* editor);
 
+	bool savePhysicsComponents(Editor* editor);
+
+	bool loadPhysicsComponents(Editor* editor);
+
 }

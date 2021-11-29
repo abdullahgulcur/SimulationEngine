@@ -18,6 +18,7 @@
 
 #include "meshrenderer.hpp"
 #include "light.hpp"
+#include "physics_comp.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
 
@@ -43,6 +44,7 @@ public:
 
 	std::vector<MeshRenderer> meshRendererComponents;
 	std::vector<Light> lightComponents;
+	std::vector<PhysicsComponent> physicsComponents;
 
 	MousePick mousepick;
 
