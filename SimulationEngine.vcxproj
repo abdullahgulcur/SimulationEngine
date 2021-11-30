@@ -96,14 +96,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML;$(ProjectDir)source/include/physx</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mtd.lib;glfw3.lib;opengl32.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)source/lib;$(ProjectDir)source/lib/assimp;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_32.lib;PhysXCommon_32.lib;PhysXFoundation_32.lib;assimp-vc142-mtd.lib;glfw3.lib;opengl32.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)source/lib;$(ProjectDir)source/lib/assimp;$(ProjectDir)source/lib/physx</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -114,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)source;$(ProjectDir)source/app;$(ProjectDir)source/include;$(ProjectDir)source/editor;$(ProjectDir)source/include/assimp;$(ProjectDir)source/api;$(ProjectDir)source/component;$(ProjectDir)source/include/rapidXML;$(ProjectDir)source/include/physx</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -122,8 +122,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp-vc142-mtd.lib;glfw3.lib;opengl32.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)source/lib;$(ProjectDir)source/lib/assimp;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_32.lib;PhysXCommon_32.lib;PhysXFoundation_32.lib;assimp-vc142-mtd.lib;glfw3.lib;opengl32.lib;glew32s.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)source/lib;$(ProjectDir)source/lib/assimp;$(ProjectDir)source/lib/physx</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -598,9 +598,36 @@
     <ClInclude Include="source\include\physx\extensions\PxStringTableExt.h" />
     <ClInclude Include="source\include\physx\extensions\PxTriangleMeshExt.h" />
     <ClInclude Include="source\include\physx\filebuf\PxFileBuf.h" />
+    <ClInclude Include="source\include\physx\foundation\Px.h" />
+    <ClInclude Include="source\include\physx\foundation\PxAllocatorCallback.h" />
     <ClInclude Include="source\include\physx\foundation\PxAssert.h" />
+    <ClInclude Include="source\include\physx\foundation\PxBitAndData.h" />
+    <ClInclude Include="source\include\physx\foundation\PxBounds3.h" />
+    <ClInclude Include="source\include\physx\foundation\PxErrorCallback.h" />
+    <ClInclude Include="source\include\physx\foundation\PxErrors.h" />
+    <ClInclude Include="source\include\physx\foundation\PxFlags.h" />
     <ClInclude Include="source\include\physx\foundation\PxFoundationConfig.h" />
+    <ClInclude Include="source\include\physx\foundation\PxIntrinsics.h" />
+    <ClInclude Include="source\include\physx\foundation\PxIO.h" />
+    <ClInclude Include="source\include\physx\foundation\PxMat33.h" />
+    <ClInclude Include="source\include\physx\foundation\PxMat44.h" />
+    <ClInclude Include="source\include\physx\foundation\PxMath.h" />
     <ClInclude Include="source\include\physx\foundation\PxMathUtils.h" />
+    <ClInclude Include="source\include\physx\foundation\PxMemory.h" />
+    <ClInclude Include="source\include\physx\foundation\PxPlane.h" />
+    <ClInclude Include="source\include\physx\foundation\PxPreprocessor.h" />
+    <ClInclude Include="source\include\physx\foundation\PxProfiler.h" />
+    <ClInclude Include="source\include\physx\foundation\PxQuat.h" />
+    <ClInclude Include="source\include\physx\foundation\PxSharedAssert.h" />
+    <ClInclude Include="source\include\physx\foundation\PxSimpleTypes.h" />
+    <ClInclude Include="source\include\physx\foundation\PxStrideIterator.h" />
+    <ClInclude Include="source\include\physx\foundation\PxTransform.h" />
+    <ClInclude Include="source\include\physx\foundation\PxUnionCast.h" />
+    <ClInclude Include="source\include\physx\foundation\PxVec2.h" />
+    <ClInclude Include="source\include\physx\foundation\PxVec3.h" />
+    <ClInclude Include="source\include\physx\foundation\PxVec4.h" />
+    <ClInclude Include="source\include\physx\foundation\unix\PxUnixIntrinsics.h" />
+    <ClInclude Include="source\include\physx\foundation\windows\PxWindowsIntrinsics.h" />
     <ClInclude Include="source\include\physx\geometry\PxBoxGeometry.h" />
     <ClInclude Include="source\include\physx\geometry\PxBVHStructure.h" />
     <ClInclude Include="source\include\physx\geometry\PxCapsuleGeometry.h" />
