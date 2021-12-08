@@ -7,6 +7,7 @@
 #include <string>
 
 class File;
+class MeshRenderer;
 
 namespace Mesh {
 
@@ -26,7 +27,10 @@ namespace Mesh {
 
         File* fileAddr;
         unsigned int VAO;
-        unsigned int indiceSize;
+        unsigned int indiceSize; // delete
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices;
+        std::vector<MeshRenderer*> meshRendererCompAddrs;
 
         MeshFile();
 

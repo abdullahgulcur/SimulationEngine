@@ -1,5 +1,6 @@
 #include "mesh.hpp"
 #include "filesystem.hpp"
+#include "meshrenderer.hpp"
 
 Mesh::MeshFile::MeshFile() {
 
@@ -12,6 +13,8 @@ Mesh::MeshFile::MeshFile(std::vector<Mesh::Vertex>& vertices, std::vector<unsign
 
     fileAddr = file;
     indiceSize = indices.size();
+    this->vertices = vertices;
+    this->indices = indices;
     Mesh::MeshFile::initBuffers(vertices, indices);
 }
 

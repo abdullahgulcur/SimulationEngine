@@ -104,7 +104,7 @@ void EditorGUI::setTheme()
 	colors[ImGuiCol_TabUnfocused] = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
 	colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
 	colors[ImGuiCol_DockingPreview] = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
-	colors[ImGuiCol_DockingEmptyBg] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+	colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
 	colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
 	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
 	colors[ImGuiCol_PlotHistogram] = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
@@ -193,22 +193,22 @@ void EditorGUI::handleInputs() {
 
 			if (lastSelectedEntityID != -1) {
 				
-				MeshRenderer& m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
-				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[m_renderer.mat->fileAddr->id].path, *m_renderer.mat);
+				MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>(); 
+				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
 
-				m_renderer.mat->deleteProgram();
-				m_renderer.mat->compileShaders(editor->fileSystem.getVertShaderPath(m_renderer.mat->vertShaderFileAddr),
-					editor->fileSystem.getFragShaderPath(m_renderer.mat->fragShaderFileAddr),
-					editor->scene.dirLightCount, editor->scene.pointLightCount);
+				meshRendererComp->mat->deleteProgram();
+				meshRendererComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
+					editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
+					editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
 			}
 			else {
 				
-				MaterialNS::MaterialFile& mat = editor->fileSystem.getMaterial(lastSelectedItemID);
+				Material::MaterialFile& mat = editor->fileSystem.getMaterialFile(lastSelectedItemID);
 				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[mat.fileAddr->id].path, mat);
 
 				mat.deleteProgram();
 				mat.compileShaders(editor->fileSystem.getVertShaderPath(mat.vertShaderFileAddr), editor->fileSystem.getFragShaderPath(mat.fragShaderFileAddr),
-					editor->scene.dirLightCount, editor->scene.pointLightCount);
+					editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
 			}
 
 			materialChanged = false;
@@ -440,7 +440,7 @@ void EditorGUI::createScenePanel() {
 				break;
 			}
 
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChildTransforms(optype);
+			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChildTransforms();
 		}
 	}
 
@@ -494,22 +494,31 @@ void EditorGUI::createInspectorPanel() {
 
 		EditorGUI::showTransformComponent();
 
-		if (editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex != -1) {
+		MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>();
+		if (meshRendererComp != nullptr) {
 
-			MeshRenderer& m_renderer = editor->scene.meshRendererComponents[editor->scene.entities[lastSelectedEntityID].m_rendererComponentIndex];
-			MaterialFile& material = *m_renderer.mat;
-			EditorGUI::showMeshRendererComponent(m_renderer);
+			MaterialFile& material = *meshRendererComp->mat;
+			EditorGUI::showMeshRendererComponent(meshRendererComp);
 			EditorGUI::showMaterialProperties(material);
 		}
 
-		if (editor->scene.entities[lastSelectedEntityID].lightComponentIndex != -1)
+		Light* lightComp = editor->scene.entities[lastSelectedEntityID].getComponent<Light>();
+		if (lightComp != nullptr) {
+
 			EditorGUI::showLightComponent();
+		}
 
-		if (editor->scene.entities[lastSelectedEntityID].rigidbodyComponentIndex != -1)
+		Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>();
+		if (rigidbodyComp != nullptr) {
+
 			EditorGUI::showRigidbodyComponent();
+		}
 
-		if (editor->scene.entities[lastSelectedEntityID].meshColliderComponentIndex != -1)
+		MeshCollider* meshColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>();
+		if (meshColliderComp != nullptr) {
+
 			EditorGUI::showMeshColliderComponent();
+		}
 
 		ImGui::PopStyleColor(); // for the separator
 
@@ -518,7 +527,7 @@ void EditorGUI::createInspectorPanel() {
 
 	if (lastSelectedItemID != -1 && editor->fileSystem.files[lastSelectedItemID].type == FileType::material) {
 
-		MaterialFile& material = editor->fileSystem.getMaterial(lastSelectedItemID);
+		MaterialFile& material = editor->fileSystem.getMaterialFile(lastSelectedItemID);
 		EditorGUI::showMaterialProperties(material);
 	}
 
@@ -563,29 +572,57 @@ void EditorGUI::addComponentButton() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::Selectable("   Light")) {
+		if (ImGui::Selectable("   Collider (Box)"))
+			editor->scene.entities[lastSelectedEntityID].addComponent<BoxCollider>();
 
-			editor->scene.entities[lastSelectedEntityID].addLightComponent(editor->scene.lightComponents, &editor->scene);
-		}
 		ImGui::Separator();
 
-		if (ImGui::Selectable("   Mesh Collider")) {
+		if (ImGui::Selectable("   Collider (Capsule)"))
+			editor->scene.entities[lastSelectedEntityID].addComponent<CapsuleCollider>();
 
-			editor->scene.entities[lastSelectedEntityID].addMeshColliderComponent(editor->scene.meshColliderComponents);
+		ImGui::Separator();
+
+		if (ImGui::Selectable("   Collider (Mesh)"))
+			editor->scene.entities[lastSelectedEntityID].addComponent<MeshCollider>();
+
+		ImGui::Separator();
+
+		if (ImGui::Selectable("   Collider (Sphere)"))
+			editor->scene.entities[lastSelectedEntityID].addComponent<SphereCollider>();
+
+		ImGui::Separator();
+
+		if (ImGui::Selectable("   Light")) {
+
+			if (Light* lightComp = editor->scene.entities[lastSelectedEntityID].addComponent<Light>()) {
+
+				Transform* lighTransform = editor->scene.entities[lastSelectedEntityID].transform;
+				editor->scene.pointLightTransforms.push_back(lighTransform);
+				editor->scene.recompileAllMaterials();
+			}
 		}
+
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			MeshFile* mesh = &editor->fileSystem.meshes["Null"];
-			MaterialFile* mat = &editor->fileSystem.materials["Default"];
-			editor->scene.entities[lastSelectedEntityID].addMeshRendererComponent(mesh, mat, editor->scene.meshRendererComponents);
+			if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].addComponent<MeshRenderer>()) {
+
+				meshRendererComp->mesh = &editor->fileSystem.meshes["Null"];
+				meshRendererComp->mat = &editor->fileSystem.materials["Default"];
+			}
 		}
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Rigidbody")) {
 
-			editor->scene.entities[lastSelectedEntityID].addRigidbodyComponent(editor->scene.rigidbodyComponents);
+			if (Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].addComponent<Rigidbody>()) {
+
+				//editor->scene.entities[lastSelectedEntityID].addRigidbodyComponent(editor->scene.rigidbodyComponents,
+				//editor->scene.meshRendererComponents, &editor->physics);
+			}
+
+			
 		}
 		ImGui::Separator();
 
@@ -790,7 +827,7 @@ void EditorGUI::showTransformComponent() {
 	ImGui::Separator();
 }
 
-void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
+void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp) {
 
 	float width = ImGui::GetContentRegionAvail().x;
 
@@ -829,38 +866,32 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		//const char* meshName = editor->fileSystem.meshNames[m_renderer.VAO].c_str();
-		unsigned int vao = m_renderer.VAO;
-
-		const char* matPath;
-		if (m_renderer.mat->fileAddr == NULL)
-			matPath = "Default";
-		else
-			matPath = editor->fileSystem.files[m_renderer.mat->fileAddr->id].path.c_str();
-
 		int size_meshes = editor->fileSystem.meshes.size();
 		int size_mats = editor->fileSystem.materials.size();
 		const char** meshNames = new const char* [size_meshes];
-		unsigned int* meshVAOs = new unsigned int[size_meshes];
-		unsigned int* meshIndiceSizes = new unsigned int [size_meshes];
+		const char** meshPaths = new const char* [size_meshes];
 		const char** matPaths = new const char* [size_mats];
 		const char** matNames = new const char* [size_mats];
 
-		int meshIndex = -1;
-		int matIndex = -1;
+		int meshIndex = 0;
+		int matIndex = 0;
 
-		int i = 0;
+		meshNames[0] = "Null";
+		meshPaths[0] = "Null";
+
+		matPaths[0] = "Default";
+		matNames[0] = "Default";
+
+		int i = 1;
 		for (auto& it : editor->fileSystem.meshes) {
 
 			if (it.second.fileAddr == NULL)
-				meshNames[i] = "Null";
-			else
-				meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+				continue;
 
-			//meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
-			meshVAOs[i] = it.second.VAO;
-			meshIndiceSizes[i] = it.second.indiceSize;
-			if (it.second.VAO == vao)
+			meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			meshPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+
+			if (meshRendererComp->mesh->fileAddr == it.second.fileAddr)
 				meshIndex = i;
 			i++;
 		}
@@ -872,23 +903,20 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImGui::SetNextItemWidth(width - 130);
 
 		if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
-			m_renderer.VAO = meshVAOs[meshIndex];
-			m_renderer.indiceSize = meshIndiceSizes[meshIndex];
+			meshRendererComp->mesh = &editor->fileSystem.meshes[meshPaths[meshIndex]];
+			meshRendererComp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
 		}
 
-		i = 0;
+		i = 1;
 		for (auto& it : editor->fileSystem.materials) {
 
-			if (it.second.fileAddr == NULL) {
-				matPaths[i] = "Default";
-				matNames[i] = "Default";
-			}
-			else {
-				matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-				matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
-			}
+			if (it.second.fileAddr == NULL)
+				continue;
 
-			if (strcmp(matPath, matPaths[i]) == 0)
+			matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+			matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+
+			if (meshRendererComp->mat->fileAddr == it.second.fileAddr)
 				matIndex = i;
 			i++;
 		}
@@ -899,12 +927,12 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer& m_renderer) {
 		ImGui::SetNextItemWidth(width - 130);
 
 		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
-
-			m_renderer.mat = &editor->fileSystem.materials[matPaths[matIndex]];
+			meshRendererComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
+			meshRendererComp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
 		}
+		
 		delete[] meshNames;
-		delete[] meshVAOs;
-		delete[] meshIndiceSizes;
+		delete[] meshPaths;
 		delete[] matPaths;
 		delete[] matNames;
 
@@ -960,7 +988,8 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::PushItemWidth(80);
 
-		int item = editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type == LightType::DirectionalLight ? 0 : 1;
+		int item = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType == LightType::DirectionalLight ? 0 : 1;
+
 		const char* items[] = { "Directional", "Point" };
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
@@ -968,13 +997,21 @@ void EditorGUI::showLightComponent() {
 		ImGui::SetNextItemWidth(width - 180);
 		if (ImGui::Combo("##0", &item, items, IM_ARRAYSIZE(items))) {
 
-			if (editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type == LightType::DirectionalLight) {
+			if (editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType == LightType::DirectionalLight) {
 
 				if (item == 1) {
 
-					editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type = LightType::PointLight;
-					editor->scene.dirLightCount--;
-					editor->scene.pointLightCount++;
+					editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType = LightType::PointLight;
+					
+					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
+
+						if ((*it) == editor->scene.entities[lastSelectedEntityID].transform) {
+							editor->scene.dirLightTransforms.erase(it);
+							break;
+						}
+					}
+					editor->scene.pointLightTransforms.push_back(editor->scene.entities[lastSelectedEntityID].transform);
+
 					editor->scene.recompileAllMaterials();
 				}
 			}
@@ -982,9 +1019,17 @@ void EditorGUI::showLightComponent() {
 
 				if (item == 0) {
 
-					editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].type = LightType::DirectionalLight;
-					editor->scene.dirLightCount++;
-					editor->scene.pointLightCount--;
+					editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType = LightType::DirectionalLight;
+					
+					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
+
+						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+							editor->scene.pointLightTransforms.erase(it);
+							break;
+						}
+					}
+					editor->scene.dirLightTransforms.push_back(editor->scene.entities[lastSelectedEntityID].transform);
+
 					editor->scene.recompileAllMaterials();
 				}
 			}
@@ -996,9 +1041,9 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::SameLine(95);
 
-		float power = editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].power;
+		float power = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->power;
 		if (ImGui::DragFloat("##1", &power, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].power = power;
+			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->power = power;
 
 		ImGui::Text("Color");
 
@@ -1006,9 +1051,9 @@ void EditorGUI::showLightComponent() {
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 
-		ImVec4 color = ImVec4(editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.x,
-			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.y,
-			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color.z, 1.f);
+		ImVec4 color = ImVec4(editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.x,
+			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.y,
+			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.z, 1.f);
 
 		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
 		static ImVec4 backup_color;
@@ -1021,7 +1066,7 @@ void EditorGUI::showLightComponent() {
 		if (ImGui::BeginPopup("mypicker"))
 		{
 			ImGui::ColorPicker4("##3", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-			editor->scene.lightComponents[editor->scene.entities[lastSelectedEntityID].lightComponentIndex].color = glm::vec3(color.x, color.y, color.z);
+			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color = glm::vec3(color.x, color.y, color.z);
 
 			ImGui::EndPopup();
 		}
@@ -1068,104 +1113,89 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		{
-			std::vector<ShaderFile>& vertShaderFiles = editor->fileSystem.vertShaderFiles;
+			std::unordered_map<std::string, ShaderFile>& vertShaders = editor->fileSystem.vertShaders;
 			ImGui::Text("Vert Shader");
 
-			int indiceSize = vertShaderFiles.size() + 1;
+			int indiceSize = vertShaders.size();
 			const char** shaderNames = new const char* [indiceSize];
+			const char** shaderPaths = new const char* [indiceSize];
 			shaderNames[0] = "Default\0";
+			shaderPaths[0] = "source/shader/Default.vert\0";
 
 			const char* vertShaderPath = editor->fileSystem.getVertShaderPath(material.vertShaderFileAddr);
 
 			int index = 0;
 			int i = 1;
 
-			for (auto& shaderFile : vertShaderFiles) {
+			for (auto& shaderFile : vertShaders) {
 
-				shaderNames[i] = files[shaderFile.fileAddr->id].name.c_str();
+				if (shaderFile.second.fileAddr == NULL)
+					continue;
+
+				shaderNames[i] = files[shaderFile.second.fileAddr->id].name.c_str();
+				shaderPaths[i] = files[shaderFile.second.fileAddr->id].path.c_str();
+
+				if(shaderFile.second.fileAddr == material.vertShaderFileAddr)
+					index = i;
+
 				i++;
-			}
-
-			if (indiceSize == 1 || strcmp(vertShaderPath, "source/shader/Default.vert") == 0)
-				index = 0;
-			else {
-
-				i = 1;
-				for (auto& shaderFile :vertShaderFiles) {
-
-					if (strcmp(vertShaderPath, files[shaderFile.fileAddr->id].path.c_str()) == 0) {
-						index = i;
-						break;
-					}
-					i++;
-				}
 			}
 
 			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
 
 			if (ImGui::Combo("##0", &index, shaderNames, indiceSize)) {
-				if (index == 0)
-					material.vertShaderFileAddr = NULL;
-				else
-					material.vertShaderFileAddr = vertShaderFiles[index - 1].fileAddr;
+
+				material.vertShaderFileAddr = vertShaders[shaderPaths[index]].fileAddr;
 				materialChanged = true;
 			}
 
 			delete[] shaderNames;
+			delete[] shaderPaths;
 		}
 
 		{
-			std::vector<ShaderFile>& fragShaderFiles = editor->fileSystem.fragShaderFiles;
+			std::unordered_map<std::string, ShaderFile>& fragShaders = editor->fileSystem.fragShaders;
 			ImGui::Text("Frag Shader");
 
-			int indiceSize = fragShaderFiles.size() + 1;
+			int indiceSize = fragShaders.size();
 			const char** shaderNames = new const char* [indiceSize];
+			const char** shaderPaths = new const char* [indiceSize];
 			shaderNames[0] = "Default";
+			shaderPaths[0] = "source/shader/Default.frag\0";
 
 			const char* fragShaderPath = editor->fileSystem.getFragShaderPath(material.fragShaderFileAddr);;
 
 			int index = 0;
 			int i = 1;
 
-			for (auto& shaderFile : fragShaderFiles) {
+			for (auto& shaderFile : fragShaders) {
 
-				shaderNames[i] = files[shaderFile.fileAddr->id].name.c_str();
+				if (shaderFile.second.fileAddr == NULL)
+					continue;
+
+				shaderNames[i] = files[shaderFile.second.fileAddr->id].name.c_str();
+				shaderPaths[i] = files[shaderFile.second.fileAddr->id].path.c_str();
+
+				if (shaderFile.second.fileAddr == material.fragShaderFileAddr)
+					index = i;
+
 				i++;
-			}
-
-			if (indiceSize == 1 || strcmp(fragShaderPath, "source/shader/Default.frag") == 0)
-				index = 0;
-			else {
-
-				i = 1;
-				for (auto& shaderFile : fragShaderFiles) {
-
-					if (strcmp(fragShaderPath, files[shaderFile.fileAddr->id].path.c_str()) == 0) {
-						index = i;
-						break;
-					}
-					i++;
-				}
 			}
 
 			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
 
 			bool matShaderSourceChange = false;
 			if (ImGui::Combo("##1", &index, shaderNames, indiceSize)) {
-				if (index == 0)
-					material.fragShaderFileAddr = NULL;
-				else
-					material.fragShaderFileAddr = fragShaderFiles[index - 1].fileAddr;
+
+				material.fragShaderFileAddr = fragShaders[shaderPaths[index]].fileAddr;
 				materialChanged = true;
 				matShaderSourceChange = true;
 			}
 
-			delete[] shaderNames;
-
 			if (index != 0) {
 
-				int sampler2DCount = fragShaderFiles[index - 1].sampler2DNames.size();
-				int floatCount = fragShaderFiles[index - 1].floatNames.size();
+				int sampler2DCount = fragShaders[shaderPaths[index]].sampler2DNames.size();
+				int floatCount = fragShaders[shaderPaths[index]].floatNames.size();
 
 				if (matShaderSourceChange) {
 
@@ -1198,12 +1228,12 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 					ImGui::PopID();
 					ImGui::SameLine();
 					pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-					ImGui::Text(fragShaderFiles[index - 1].sampler2DNames[i].c_str());
+					ImGui::Text(fragShaders[shaderPaths[index]].sampler2DNames[i].c_str());
 				}
 
 				for (int i = 0; i < floatCount; i++) {
 
-					ImGui::Text(fragShaderFiles[index - 1].floatNames[i].c_str());
+					ImGui::Text(fragShaders[shaderPaths[index]].floatNames[i].c_str());
 
 					char temp[8];
 					sprintf(temp, "##%d\0", i + 10);
@@ -1222,6 +1252,9 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 					material.floatUnits.clear();
 				}
 			}
+
+			delete[] shaderNames;
+			delete[] shaderPaths;
 		}
 
 		//ImVec4 color = ImVec4(material.albedoColor.x, material.albedoColor.y, material.albedoColor.z, 1.0f);
@@ -1291,16 +1324,14 @@ void EditorGUI::showRigidbodyComponent() {
 
 		ImGui::SameLine(110);
 
-		float mass = editor->scene.rigidbodyComponents[editor->scene.entities[lastSelectedEntityID].rigidbodyComponentIndex].mass;
-		if (ImGui::DragFloat("##0", &mass, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.rigidbodyComponents[editor->scene.entities[lastSelectedEntityID].rigidbodyComponentIndex].mass = mass;
+		float& mass = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->mass;
+		ImGui::DragFloat("##0", &mass, 0.1f, 0.0f, 0.0f, "%.2f");
 
 		ImGui::Text("Use Gravity");
 
 		ImGui::SameLine(110);
 
-		bool& useGravity = editor->scene.rigidbodyComponents[editor->scene.entities[lastSelectedEntityID].rigidbodyComponentIndex].useGravity;
-
+		bool& useGravity = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->useGravity;
 		ImGui::Checkbox("##1", &useGravity);
 
 		ImGui::TreePop();
@@ -1352,16 +1383,14 @@ void EditorGUI::showMeshColliderComponent() {
 
 		ImGui::SameLine(110);
 
-		bool& convex = editor->scene.meshColliderComponents[editor->scene.entities[lastSelectedEntityID].meshColliderComponentIndex].convex;
-
+		bool& convex = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>()->convex;
 		ImGui::Checkbox("##0", &convex);
 
 		ImGui::Text("Trigger");
 
 		ImGui::SameLine(110);
 
-		bool& trigger = editor->scene.meshColliderComponents[editor->scene.entities[lastSelectedEntityID].meshColliderComponentIndex].trigger;
-
+		bool& trigger = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>()->trigger;
 		ImGui::Checkbox("##1", &trigger);
 
 		ImGui::TreePop();
@@ -1459,8 +1488,70 @@ bool EditorGUI::contextMenuPopup(ComponentType type) {
 
 		if (ImGui::Selectable("   Remove")) {
 
-			if(type != ComponentType::Transform)
-				editor->scene.entities[lastSelectedEntityID].removeComponent(type, &editor->scene);
+			switch (type) {
+			case ComponentType::Animation : {
+				break;
+			}
+			case ComponentType::Animator : {
+				break;
+			}
+			case ComponentType::BoxCollider : {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<BoxCollider>();
+				break;
+			}
+			case ComponentType::CapsuleCollider: {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<CapsuleCollider>();
+				break;
+			}
+			case ComponentType::Light: {
+
+				LightType type = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType;
+				editor->scene.entities[lastSelectedEntityID].removeComponent<Light>();
+
+				if (type == LightType::PointLight) {
+
+					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
+
+						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+							editor->scene.pointLightTransforms.erase(it);
+							break;
+						}
+					}
+				}
+				else {
+
+					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
+
+						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+							editor->scene.dirLightTransforms.erase(it);
+							break;
+						}
+					}
+				}
+				editor->scene.recompileAllMaterials();
+
+				break;
+			}
+			case ComponentType::MeshCollider: {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<MeshCollider>();
+				break;
+			}
+			case ComponentType::MeshRenderer: {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<MeshRenderer>();
+				break;
+			}
+			case ComponentType::Script: {
+				break;
+			}
+			case ComponentType::SphereCollider: {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<SphereCollider>();
+				break;
+			}
+			case ComponentType::Rigidbody: {
+				editor->scene.entities[lastSelectedEntityID].removeComponent<Rigidbody>();
+				break;
+			}
+			}
 
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1540,13 +1631,13 @@ void EditorGUI::createHierarchyPanel() {
 			{
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
-				editor->scene.moveEntity(payload_n, editor->scene.rootTransform->id);
+				editor->scene.moveEntity(payload_n, 0);
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::Unindent(15);
-		EditorGUI::createSceneGraphRecursively(editor->scene.rootTransform);
+		EditorGUI::createSceneGraphRecursively(editor->scene.entities[0].transform);
 		ImGui::TreePop();
 	}
 
@@ -1577,7 +1668,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, " %d", transform->children[i]->id); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
@@ -1734,7 +1825,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Entity")) {
 
-			lastSelectedEntityID = editor->scene.newEntity(editor->scene.rootTransform->id, "Entity")->id;
+			lastSelectedEntityID = editor->scene.newEntity(0, "Entity")->id;
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1747,7 +1838,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			lastSelectedEntityID = editor->scene.newLight(editor->scene.rootTransform->id, "Sun", LightType::DirectionalLight);
+			lastSelectedEntityID = editor->scene.newLight(0, "Sun", LightType::DirectionalLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -1756,7 +1847,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			lastSelectedEntityID = editor->scene.newLight(editor->scene.rootTransform->id, "Point_Light", LightType::PointLight);
+			lastSelectedEntityID = editor->scene.newLight(0, "Point_Light", LightType::PointLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();

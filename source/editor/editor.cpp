@@ -19,6 +19,13 @@ void Editor::startEditorScreen() {
 
 void Editor::run() {
 
+	float currentTime = (float)glfwGetTime();
+	float dt = currentTime - time;
+	time = currentTime;
+
+	physics.gScene->simulate(dt);
+	physics.gScene->fetchResults(true);
+
 	window.handleCallBacks(this);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
@@ -27,7 +34,7 @@ void Editor::run() {
 
 	editorGUI.newFrameImGui();
 
-	scene.update();
+	scene.update(dt);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

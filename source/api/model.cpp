@@ -93,5 +93,4 @@ void Model::processMesh(std::string const& path, aiMesh* mesh, const aiScene* sc
     
     Mesh::MeshFile meshFile(vertices, indices, file);
     fileSystem->meshes.insert({ path, meshFile });
-    fileSystem->meshPaths.insert({ meshFile.VAO, path });
 }

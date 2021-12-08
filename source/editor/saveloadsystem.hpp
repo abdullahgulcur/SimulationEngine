@@ -5,19 +5,26 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <map>
 
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
+#include "entity.hpp"
 #include "transform.hpp"
+#include "light.hpp"
+#include "meshrenderer.hpp"
+#include "rigidbody.hpp"
+#include "collider.hpp"
 
+using namespace Mesh;
+using namespace Material;
 
 class Editor;
-class Camera;
 
 namespace SaveLoadSystem {
 
-	bool loadSceneGraph(Editor* editor);
+	bool loadSceneGraph(Editor* editor, std::map<int, std::vector<int>>& initialSceneGrap);
 
 	bool saveSceneGraph(Editor* editor);
 
@@ -31,24 +38,24 @@ namespace SaveLoadSystem {
 
 	bool loadSceneCamera(Editor* editor);
 
-	bool saveTransforms(Editor* editor);
+	bool saveTransformComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Transform* transform);
 
-	bool loadTransforms(Editor* editor);
+	bool loadTransformComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveLights(Editor* editor);
+	bool saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light);
 
-	bool loadLights(Editor* editor);
+	bool loadLightComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveMeshRenderers(Editor* editor);
+	bool saveMeshRendererComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer);
 
-	bool loadMeshRenderers(Editor* editor);
+	bool loadMeshRendererComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveRigidbodyComponents(Editor* editor);
+	bool saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Rigidbody* rigidbody);
 
-	bool loadRigidbodyComponents(Editor* editor);
+	bool loadRigidbodyComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveMeshColliderComponents(Editor* editor);
+	bool saveMeshColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
 
-	bool loadMeshColliderComponents(Editor* editor);
+	bool loadMeshColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
 }

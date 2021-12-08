@@ -19,7 +19,7 @@
 #include "shader.hpp"
 //#include "log.hpp"
 
-using namespace MaterialNS;
+using namespace Material;
 using namespace TextureNS;
 using namespace ShaderNS;
 using namespace Mesh;
@@ -69,7 +69,9 @@ private:
 
 	void generateFileStructure(File* file);
 
-	void loadAllFilesToEngine();
+	void loadFilesToEngine();
+
+	void loadFilesToEngine(std::vector<int>& indices);
 
 	unsigned int getSubFileIndex(File* file);
 
@@ -84,13 +86,11 @@ public:
 	File* rootFile;
 	std::vector<FileNode> files;
 
-	std::unordered_map<unsigned int, std::string> meshPaths;
-
 	std::unordered_map<std::string, MeshFile> meshes;
 	std::unordered_map<std::string, MaterialFile> materials;
 	std::unordered_map<std::string, TextureFile> textures;
-	std::vector<ShaderFile> vertShaderFiles;
-	std::vector<ShaderFile> fragShaderFiles;
+	std::unordered_map<std::string, ShaderFile> vertShaders;
+	std::unordered_map<std::string, ShaderFile> fragShaders;
 
 	EditorTextures editorTextures;
 
@@ -154,9 +154,15 @@ public:
 
 	void loadDefaultAssets();
 
-	MaterialFile& getMaterial(int id);
+	MaterialFile& getMaterialFile(int id);
 
-	TextureFile& getTexture(int id);
+	TextureFile& getTextureFile(int id);
+
+	ShaderFile& getFragShaderFile(int id);
+
+	ShaderFile& getVertShaderFile(int id);
+
+	MeshFile& getMeshFile(int id);
 
 	void setEditor(Editor* editor);
 };

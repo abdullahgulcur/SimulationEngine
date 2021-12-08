@@ -1,9 +1,10 @@
 #include "material.hpp"
 #include "filesystem.hpp"
+#include "meshrenderer.hpp"
 
-MaterialNS::MaterialFile::MaterialFile() {}
+Material::MaterialFile::MaterialFile() {}
 
-MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
+Material::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
 
 	fileAddr = NULL;
 	this->vertShaderFileAddr = NULL;
@@ -11,7 +12,7 @@ MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char*
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, 0, 0);
 }
 
-MaterialNS::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path,
+Material::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path,
 	int dirLightCount, int pointLightCount) {
 
 	fileAddr = file;
@@ -20,7 +21,7 @@ MaterialNS::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, Fil
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, dirLightCount, pointLightCount);
 }
 
-void MaterialNS::MaterialFile::compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount) {
+void Material::MaterialFile::compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount) {
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -117,7 +118,7 @@ void MaterialNS::MaterialFile::compileShaders(const char* vertex_file_path, cons
 	programID = ProgramID;
 }
 
-void MaterialNS::MaterialFile::deleteProgram() {
+void Material::MaterialFile::deleteProgram() {
 
 	glDeleteProgram(programID);
 }

@@ -2,17 +2,18 @@
 
 #include <glm/glm.hpp>
 
+#include "component.hpp"
+
 enum LightType { PointLight, DirectionalLight };
 
-class Light {
+class Light : public Component {
 
 private:
 
 public:
 
-	int entID;
-	LightType type;
-	float power;
+	LightType lightType;
+	float power = 40.f;
 	glm::vec3 color;
 
 	Light();

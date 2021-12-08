@@ -6,7 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <set>
+#include <unordered_set>
 
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
@@ -20,9 +20,9 @@
 #include "light.hpp"
 #include "rigidbody.hpp"
 #include "collider.hpp"
+#include "component.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
-
 
 class Editor;
 
@@ -36,17 +36,10 @@ public:
 
 	std::string name;
 
-	int dirLightCount = 0;
-	int pointLightCount = 0;
-
-	Transform* rootTransform;
 	std::vector<Entity> entities;
-	std::map<int, std::vector<int>> initialSceneGraph;
 
-	std::vector<MeshRenderer> meshRendererComponents;
-	std::vector<Light> lightComponents;
-	std::vector<Rigidbody> rigidbodyComponents;
-	std::vector<MeshCollider> meshColliderComponents;
+	std::vector<Transform*> pointLightTransforms;
+	std::vector<Transform*> dirLightTransforms;
 
 	MousePick mousepick;
 
@@ -56,13 +49,15 @@ public:
 
 	void initSceneGraph();
 
-	void generateSceneGraph();
+	void generateSceneGraph(std::map<int, std::vector<int>>& initialSceneGraph);
 
-	void generateSceneGraphRecursively(Transform* transform);
+	void generateSceneGraphRecursively(Transform* parent, std::map<int, std::vector<int>>& initialSceneGraph);
+
+	void loadLights();
 
 	void start();
 
-	void update();
+	void update(float dt);
 
 	void setTransformsOfComponents();
 
@@ -74,7 +69,7 @@ public:
 
 	void moveEntity(int toBeMoved, int moveTo);
 
-	void getTreeIndices(Transform* transform, std::set<int, std::greater<int>>& indices);
+	void getTreeIndices(Transform* transform, std::unordered_set<int>& indices);
 
 	void deleteEntityFromTree(Transform* parent, int id);
 
@@ -85,8 +80,6 @@ public:
 	int duplicateEntity(int id);
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
-
-	void cloneComponents(int base, int entID);
 
 	Transform* newEntity(int parentID, const char* name);
 

@@ -9,8 +9,9 @@
 #include <glm/glm.hpp>
 
 struct File;
+class MeshRenderer;
 
-namespace MaterialNS {
+namespace Material {
 
 	class MaterialFile {
 
@@ -22,6 +23,7 @@ namespace MaterialNS {
 		File* vertShaderFileAddr;
 		File* fragShaderFileAddr;
 
+		std::vector<MeshRenderer*> meshRendererCompAddrs;
 		std::vector<File*> textureUnitFileAddrs;
 		std::vector<unsigned int> textureUnits;
 

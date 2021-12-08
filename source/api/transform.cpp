@@ -1,7 +1,10 @@
 #include "transform.hpp"
+#include "transform.hpp"
+#include "entity.hpp"
 
-Transform::Transform() {
+Transform::Transform(Entity* ent) {
 
+	this->entity = ent;
 	this->parent = NULL;
 	id = 0;
 
@@ -9,8 +12,9 @@ Transform::Transform() {
 	localScale = glm::vec3(1, 1, 1);
 }
 
-Transform::Transform(Transform* parent, unsigned int id) {
+Transform::Transform(Entity* ent, Transform* parent, unsigned int id) {
 
+	this->entity = ent;
 	this->parent = parent;
 	this->id = id;
 	(this->parent->children).push_back(this);
@@ -19,8 +23,9 @@ Transform::Transform(Transform* parent, unsigned int id) {
 	model = glm::mat4(1.0);
 }
 
-Transform::Transform(Transform* parent, Transform* base, unsigned int id) {
+Transform::Transform(Entity* ent, Transform* parent, Transform* base, unsigned int id) {
 
+	this->entity = ent;
 	localPosition = base->localPosition;
 	localRotation = base->localRotation;
 	localScale = base->localScale;
@@ -50,7 +55,7 @@ glm::mat4 Transform::getLocalModelMatrix()
 		glm::scale(glm::mat4(1.0f), localScale);
 }
 
-void Transform::updateSelfAndChildTransforms(int type)
+void Transform::updateSelfAndChildTransforms()
 {
 	glm::mat4 localTransform = glm::inverse(parent->model) * model;
 
@@ -81,18 +86,19 @@ void Transform::updateSelfAndChildRecursively()
 	for (Transform* transform : children) {
 
 		transform->model = model * transform->getLocalModelMatrix();
+		transform->setGlobalTransformation();
 		transform->updateSelfAndChildRecursively();
 	}
 }
 
-glm::vec3 Transform::getWorldPosition() {
+void Transform::setGlobalTransformation() {
 
 	glm::vec3 scale;
-	glm::quat rotation;
-	glm::vec3 translation;
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::decompose(model, scale, rotation, translation, skew, perspective);
+	glm::vec3 rotation;
+	glm::vec3 position;
+	Math::decompose(model, scale, rotation, position);
 
-	return translation;
+	globalPosition = position;
+	globalRotation = rotation;
+	globalScale = scale;
 }

@@ -16,7 +16,7 @@
 
 #include <imguizmo/imguizmo.h>
 
-using namespace MaterialNS;
+using namespace Material;
 
 class Editor;
 
@@ -148,7 +148,7 @@ public:
 
 	void showTransformComponent();
 
-	void showMeshRendererComponent(MeshRenderer& m_renderer);
+	void showMeshRendererComponent(MeshRenderer* meshRendererComp);
 
 	void showLightComponent();
 

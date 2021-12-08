@@ -1,19 +1,9 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
+#include <iostream>
 
 #include "transform.hpp"
-#include "meshrenderer.hpp"
-#include "mesh.hpp"
-#include "light.hpp"
-#include "rigidbody.hpp"
-#include "collider.hpp"
-
-using namespace MaterialNS;
-using namespace Mesh;
-
-enum class ComponentType{Light, MeshRenderer, Rigidbody, MeshCollider, Transform, Script, Animation, Animator};
+#include "component.hpp"
 
 class Scene;
 
@@ -21,31 +11,66 @@ class Entity {
 
 private:
 
+	void deepCopyComponents(std::vector<Component*> components, Scene& scene);
+
 public:
 
 	char* name;
 	Transform* transform;
-
-	unsigned int m_rendererComponentIndex = -1;
-	unsigned int lightComponentIndex = -1;
-	unsigned int rigidbodyComponentIndex = -1;
-	unsigned int meshColliderComponentIndex = -1;
+	std::vector<Component*> components;
 
 	Entity(const char* name, std::vector<Entity>& entities);
 
-	Entity(const char* name, Transform* transform, std::vector<Entity>& entities);
+	Entity(Entity* ent, Transform* parent, Scene& scene);
+
+	Entity(const char* name, Entity* parent, Scene& scene);
 
 	~Entity();
 
-	void addTransformComponent(Transform* transform);
+	template <class T>
+	T* addComponent() {
 
-	void addMeshRendererComponent(MeshFile* mesh, MaterialFile* mat, std::vector<MeshRenderer>& m_rendererComponents);
+		if (getComponent<T>() != nullptr) {
+			
+			std::cout << "There is existing component in the same type!" << std::endl;
+			return nullptr;
+		}
 
-	void addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type = LightType::DirectionalLight);
+		T* comp = new T;
+		components.push_back(comp);
 
-	void addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents);
+		return comp;
+	}
 
-	void addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents);
+	template <class T>
+	T* getComponent() {
+	
+		for (auto& it : components) {
+	
+			T* comp = dynamic_cast<T*>(it);
 
-	void removeComponent(ComponentType type, Scene* scene);
+			if (comp != nullptr)
+				return comp;
+		}
+		return nullptr;
+	}
+
+	template <class T>
+	void removeComponent() {
+
+		for (auto it = components.begin(); it < components.end(); it++) {
+
+			T* comp = dynamic_cast<T*>(*it);
+
+			if (comp != nullptr) {
+
+				delete *it;
+				components.erase(it);
+				return;
+			}
+		}
+	}
+
+	bool destroy(Scene* scene);
+
 };

@@ -27,6 +27,8 @@ public:
 	Scene scene;
 	Physics physics;
 
+	float time = 0;
+
 	Editor();
 
 	void startEditorScreen();

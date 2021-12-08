@@ -1,137 +1,162 @@
 #include "entity.hpp"
 #include "scene.hpp"
 
+// new ent
 Entity::Entity(const char* name, std::vector<Entity>& entities) {
 
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
 	std::cout << name << std::endl;
-	entities.push_back(*this);
+	transform = new Transform(this);
+	//entities.push_back(*this);
 }
 
-Entity::Entity(const char* name, Transform* transform, std::vector<Entity>& entities) {
+// clone
+Entity::Entity(Entity* ent, Transform* parent, Scene& scene) {
 
-	this->name = (char*)name;
-	this->transform = transform;
-	entities.push_back(*this);
+	transform = new Transform(this, parent, ent->transform, scene.entities.size());
+
+	char* name = new char[strlen(ent->name) + 5];
+	strcpy(name, ent->name);
+	strcat(name, "_cpy\0");
+	this->name = name;
+
+	Entity::deepCopyComponents(ent->components, scene);
+	//scene.entities.push_back(*this);
+}
+
+//create empty from parent
+Entity::Entity(const char* name, Entity* parent, Scene& scene) {
+
+	transform = new Transform(this, parent->transform, scene.entities.size());
+
+	this->name = new char[strlen(name) + 1];
+	strcpy(this->name, name);
+	this->name[strlen(name)] = '\0';
+
+	//scene.entities.push_back(*this);
 }
 
 Entity::~Entity() {
 
 }
 
-void Entity::addTransformComponent(Transform* transform) {
+// internal usage only
+void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene) {
 
-	this->transform = transform;
-}
+	for (auto& it : components) {
 
-void Entity::addMeshRendererComponent(MeshFile* mesh, MaterialFile* mat, std::vector<MeshRenderer>& m_rendererComponents) {
+		if (MeshRenderer* comp = dynamic_cast<MeshRenderer*>(it))
+		{
+			MeshRenderer* meshRendererComp = addComponent<MeshRenderer>();
+			meshRendererComp->mesh = comp->mesh;
+			meshRendererComp->mat = comp->mat;
+			comp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
+			comp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
+		}
+		else if (Rigidbody* comp = dynamic_cast<Rigidbody*>(it))
+		{
+			Rigidbody* rbComp = addComponent<Rigidbody>();
+			rbComp->body = comp->body;
+			rbComp->freezePos = comp->freezePos;
+			rbComp->freezeRot = comp->freezeRot;
+			rbComp->isKinematic = comp->isKinematic;
+			rbComp->mass = comp->mass;
+			rbComp->useGravity = comp->useGravity;
+		}
+		else if (MeshCollider* comp = dynamic_cast<MeshCollider*>(it))
+		{
+			MeshCollider* meshColliderComp = addComponent<MeshCollider>();
+			meshColliderComp->convex = comp->convex;
+			meshColliderComp->shape = comp->shape;
+			meshColliderComp->trigger = comp->trigger;
+		}
+		else if (Light* comp = dynamic_cast<Light*>(it))
+		{
+			Light* lightComp = addComponent<Light>();
+			lightComp->color = comp->color;
+			lightComp->lightType = comp->lightType;
+			lightComp->power = comp->power;
 
-	if (m_rendererComponentIndex != -1)
-		return;
+			if (lightComp->lightType == LightType::DirectionalLight)
+				scene.dirLightTransforms.push_back(transform);
+			else
+				scene.pointLightTransforms.push_back(transform);
 
-	MeshRenderer component;
-	component.entID = transform->id;
-	component.VAO = mesh->VAO;
-	component.indiceSize = mesh->indiceSize;
-	component.mat = mat;
-
-	m_rendererComponents.push_back(component);
-	m_rendererComponentIndex = m_rendererComponents.size() - 1;
-}
-
-void Entity::addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type) {
-
-	if (lightComponentIndex != -1)
-		return;
-	
-	Light component;
-	component.entID = transform->id;
-	component.type = type;
-	component.power = 40.f;
-	component.color = glm::vec3(1.f, 1.f, 1.f);
-
-	lightComponents.push_back(component);
-	lightComponentIndex = lightComponents.size() - 1;
-
-	if (type == LightType::PointLight)
-		scene->pointLightCount++;
-	else
-		scene->dirLightCount++;
-
-	scene->recompileAllMaterials();
-}
-
-void Entity::addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents) {
-
-	if (rigidbodyComponentIndex != -1)
-		return;
-
-	Rigidbody comp;
-	comp.entID = transform->id;
-	physicsComponents.push_back(comp);
-	rigidbodyComponentIndex = physicsComponents.size() - 1;
-}
-
-void Entity::addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents) {
-
-	if (meshColliderComponentIndex != -1)
-		return;
-
-	MeshCollider comp;
-	comp.entID = transform->id;
-	meshColliderComponents.push_back(comp);
-	meshColliderComponentIndex = meshColliderComponents.size() - 1;
-}
-
-void Entity::removeComponent(ComponentType type, Scene* scene) {
-
-	switch (type) {
-
-	case ComponentType::Light : {
-
-		if (scene->lightComponents[lightComponentIndex].type == LightType::DirectionalLight)
-			scene->dirLightCount--;
-		else
-			scene->pointLightCount--;
-
-		for (int i = lightComponentIndex; i < scene->lightComponents.size() - 1; i++)
-			scene->entities[scene->lightComponents[i + 1].entID].lightComponentIndex--;
-
-		scene->lightComponents.erase(scene->lightComponents.begin() + lightComponentIndex);
-		lightComponentIndex = -1;
-
-		scene->recompileAllMaterials();
-		break;
+			scene.recompileAllMaterials();
+		}
 	}
-	case ComponentType::MeshRenderer : {
+}
 
-		for (int i = m_rendererComponentIndex; i < scene->meshRendererComponents.size() - 1; i++)
-			scene->entities[scene->meshRendererComponents[i + 1].entID].m_rendererComponentIndex--;
+bool Entity::destroy(Scene* scene) {
 
-		scene->meshRendererComponents.erase(scene->meshRendererComponents.begin() + m_rendererComponentIndex);
-		m_rendererComponentIndex = -1;
-		break;
-	}
-	case ComponentType::Rigidbody: {
+	Light* lightComp = getComponent<Light>();
+	if (lightComp != nullptr) {
 
-		for (int i = rigidbodyComponentIndex; i < scene->rigidbodyComponents.size() - 1; i++)
-			scene->entities[scene->rigidbodyComponents[i + 1].entID].rigidbodyComponentIndex--;
+		if (lightComp->lightType == LightType::DirectionalLight) {
 
-		scene->rigidbodyComponents.erase(scene->rigidbodyComponents.begin() + rigidbodyComponentIndex);
-		rigidbodyComponentIndex = -1;
-		break;
-	}
-	case ComponentType::MeshCollider: {
+			for (auto it = scene->dirLightTransforms.begin(); it < scene->dirLightTransforms.end(); it++) {
 
-		for (int i = meshColliderComponentIndex; i < scene->meshColliderComponents.size() - 1; i++)
-			scene->entities[scene->meshColliderComponents[i + 1].entID].meshColliderComponentIndex--;
+				if (*it == transform) {
+					scene->dirLightTransforms.erase(it);
+					scene->recompileAllMaterials();
+					break;
+				}
+			}
+		}
+		else {
 
-		scene->meshColliderComponents.erase(scene->meshColliderComponents.begin() + meshColliderComponentIndex);
-		meshColliderComponentIndex = -1;
-		break;
-	}
+			for (auto it = scene->pointLightTransforms.begin(); it < scene->pointLightTransforms.end(); it++) {
+
+				if (*it == transform) {
+					scene->pointLightTransforms.erase(it);
+					scene->recompileAllMaterials();
+					break;
+				}
+			}
+		}
 	}
 
+	delete[] name;
+	delete transform;
+
+	for (auto& it : components)
+		delete it;
+
+	return true;
 }
+
+//void Entity::addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents,
+//	std::vector<MeshRenderer>& m_rendererComponents, Physics* physics) {
+//
+//	if (rigidbodyComponentIndex != -1)
+//		return;
+//
+//	Rigidbody comp;
+//	comp.entID = transform->id;
+//	physicsComponents.push_back(comp);
+//	rigidbodyComponentIndex = physicsComponents.size() - 1;
+//
+//	for (auto& it : m_rendererComponents) {
+//
+//		if (it.entID == transform->id) {
+//
+//			physics->addConvexMesh(&it, transform, &physicsComponents[rigidbodyComponentIndex]);
+//			break;
+//		}
+//	}
+//
+//}
+//
+//void Entity::addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents, 
+//	std::vector<MeshRenderer>& m_rendererComponents, Physics* physics) {
+//
+//	if (meshColliderComponentIndex != -1)
+//		return;
+//
+//	MeshCollider comp;
+//	comp.entID = transform->id;
+//	meshColliderComponents.push_back(comp);
+//	meshColliderComponentIndex = meshColliderComponents.size() - 1;
+//}
