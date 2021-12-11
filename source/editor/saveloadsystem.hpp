@@ -52,10 +52,21 @@ namespace SaveLoadSystem {
 
 	bool saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Rigidbody* rigidbody);
 
-	bool loadRigidbodyComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
 	bool saveMeshColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
 
 	bool loadMeshColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
+	bool saveBoxColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider);
+
+	bool loadBoxColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+
+	bool saveSphereColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider);
+
+	bool loadSphereColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+
+	bool saveCapsuleColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider);
+
+	bool loadCapsuleColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 }

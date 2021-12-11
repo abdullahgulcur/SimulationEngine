@@ -14,8 +14,8 @@ public:
 	bool useGravity = false;
 	bool isKinematic = false;
 
-	glm::vec3 freezePos;
-	glm::vec3 freezeRot;
+	glm::bvec3 freezePos;
+	glm::bvec3 freezeRot;
 
 	PxRigidDynamic* body;
 

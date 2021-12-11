@@ -68,6 +68,7 @@ void Transform::updateSelfAndChildTransforms()
 	localRotation = rotation * (180.f / glm::pi<float>());
 	localPosition = position;
 
+	Transform::setGlobalTransformation();
 	Transform::updateSelfAndChildRecursively();
 }
 
@@ -77,7 +78,6 @@ void Transform::updateSelfAndChild()
 
 		model = parent->model * getLocalModelMatrix();
 	}
-
 	Transform::updateSelfAndChildRecursively();
 }
 

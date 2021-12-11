@@ -37,6 +37,7 @@ public:
 	std::string name;
 
 	std::vector<Entity> entities;
+	std::vector<Transform*> tempTransforms;
 
 	std::vector<Transform*> pointLightTransforms;
 	std::vector<Transform*> dirLightTransforms;
@@ -53,11 +54,17 @@ public:
 
 	void generateSceneGraphRecursively(Transform* parent, std::map<int, std::vector<int>>& initialSceneGraph);
 
+	void loadPhysicsComponents();
+
 	void loadLights();
 
 	void start();
 
 	void update(float dt);
+
+	void simulateInEditor(float dt);
+
+	//void simulateInGame(float dt);
 
 	void setTransformsOfComponents();
 

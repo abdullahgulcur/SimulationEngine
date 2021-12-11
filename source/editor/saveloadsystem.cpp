@@ -84,21 +84,26 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 
 		saveTransformComponent(doc, entity, ent.transform);
 
-		Light* lightComp = ent.getComponent<Light>();
-		if(lightComp != NULL)
+		if(Light* lightComp = ent.getComponent<Light>())
 			saveLightComponent(editor, doc, entity, lightComp);
 
-		MeshRenderer* meshRendererComp = ent.getComponent<MeshRenderer>();
-		if (meshRendererComp != NULL)
+		if (MeshRenderer* meshRendererComp = ent.getComponent<MeshRenderer>())
 			saveMeshRendererComponent(editor, doc, entity, meshRendererComp);
 
-		Rigidbody* rigidbodyComp = ent.getComponent<Rigidbody>();
-		if (rigidbodyComp != NULL)
+		if (Rigidbody* rigidbodyComp = ent.getComponent<Rigidbody>())
 			saveRigidbodyComponent(doc, entity, rigidbodyComp);
 
-		MeshCollider* meshColliderComp = ent.getComponent<MeshCollider>();
-		if (meshColliderComp != NULL)
+		if (MeshCollider* meshColliderComp = ent.getComponent<MeshCollider>())
 			saveMeshColliderComponent(doc, entity, meshColliderComp);
+
+		if (BoxCollider* boxColliderComp = ent.getComponent<BoxCollider>())
+			saveBoxColliderComponent(doc, entity, boxColliderComp);
+
+		if (SphereCollider* sphereColliderComp = ent.getComponent<SphereCollider>())
+			saveSphereColliderComponent(doc, entity, sphereColliderComp);
+
+		if (CapsuleCollider* capsuleColliderComp = ent.getComponent<CapsuleCollider>())
+			saveCapsuleColliderComponent(doc, entity, capsuleColliderComp);
 
 		entitiesNode->append_node(entity);
 	}
@@ -138,8 +143,11 @@ bool SaveLoadSystem::loadEntities(Editor* editor) {
 		SaveLoadSystem::loadTransformComponent(&editor->scene.entities.back(), entity_node);
 		SaveLoadSystem::loadLightComponent(editor, &editor->scene.entities.back(), entity_node);
 		SaveLoadSystem::loadMeshRendererComponent(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadRigidbodyComponent(&editor->scene.entities.back(), entity_node);
+		SaveLoadSystem::loadRigidbodyComponent(editor, &editor->scene.entities.back(), entity_node);
 		SaveLoadSystem::loadMeshColliderComponent(&editor->scene.entities.back(), entity_node);
+		SaveLoadSystem::loadBoxColliderComponent(&editor->scene.entities.back(), entity_node);
+		SaveLoadSystem::loadSphereColliderComponent(&editor->scene.entities.back(), entity_node);
+		SaveLoadSystem::loadCapsuleColliderComponent(&editor->scene.entities.back(), entity_node);
 	}
 
 	file.close();
@@ -350,7 +358,7 @@ bool SaveLoadSystem::saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapid
 	return true;
 }
 
-bool SaveLoadSystem::loadRigidbodyComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	rapidxml::xml_node<>* rigidbodyNode = entNode->first_node("Rigidbody");
 
@@ -384,6 +392,128 @@ bool SaveLoadSystem::loadMeshColliderComponent(Entity* ent, rapidxml::xml_node<>
 	MeshCollider* meshColliderComp = ent->addComponent<MeshCollider>();
 	meshColliderComp->convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1 ? true : false;
 	meshColliderComp->trigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+
+	return true;
+}
+
+bool SaveLoadSystem::saveBoxColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider) {
+
+	rapidxml::xml_node<>* boxColliderNode = doc.allocate_node(rapidxml::node_element, "BoxCollider");
+	boxColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(boxCollider->trigger ? 1 : 0).c_str())));
+
+	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
+	centerNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(boxCollider->center.x).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(boxCollider->center.y).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(boxCollider->center.z).c_str())));
+	boxColliderNode->append_node(centerNode);
+
+	rapidxml::xml_node<>* sizeNode = doc.allocate_node(rapidxml::node_element, "Size");
+	sizeNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(boxCollider->size.x).c_str())));
+	sizeNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(boxCollider->size.y).c_str())));
+	sizeNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(boxCollider->size.z).c_str())));
+	boxColliderNode->append_node(sizeNode);
+
+	entNode->append_node(boxColliderNode);
+
+	return true;
+}
+
+bool SaveLoadSystem::loadBoxColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+	rapidxml::xml_node<>* boxColliderNode = entNode->first_node("BoxCollider");
+
+	if (boxColliderNode == NULL)
+		return false;
+
+	BoxCollider* boxColliderComp = ent->addComponent<BoxCollider>();
+
+	boxColliderComp->trigger = atoi(boxColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+
+	boxColliderComp->center.x = atof(boxColliderNode->first_node("Center")->first_attribute("X")->value());
+	boxColliderComp->center.y = atof(boxColliderNode->first_node("Center")->first_attribute("Y")->value());
+	boxColliderComp->center.z = atof(boxColliderNode->first_node("Center")->first_attribute("Z")->value());
+
+	boxColliderComp->size.x = atof(boxColliderNode->first_node("Size")->first_attribute("X")->value());
+	boxColliderComp->size.y = atof(boxColliderNode->first_node("Size")->first_attribute("Y")->value());
+	boxColliderComp->size.z = atof(boxColliderNode->first_node("Size")->first_attribute("Z")->value());
+
+	return true;
+}
+
+bool SaveLoadSystem::saveSphereColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider) {
+
+	rapidxml::xml_node<>* sphereColliderNode = doc.allocate_node(rapidxml::node_element, "SphereCollider");
+
+	sphereColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(sphereCollider->trigger ? 1 : 0).c_str())));
+	sphereColliderNode->append_attribute(doc.allocate_attribute("Radius", doc.allocate_string(std::to_string(sphereCollider->radius).c_str())));
+
+	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
+	centerNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(sphereCollider->center.x).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(sphereCollider->center.y).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(sphereCollider->center.z).c_str())));
+	sphereColliderNode->append_node(centerNode);
+
+	entNode->append_node(sphereColliderNode);
+
+	return true;
+}
+
+bool SaveLoadSystem::loadSphereColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+	rapidxml::xml_node<>* sphereColliderNode = entNode->first_node("SphereCollider");
+
+	if (sphereColliderNode == NULL)
+		return false;
+
+	SphereCollider* sphereColliderComp = ent->addComponent<SphereCollider>();
+
+	sphereColliderComp->trigger = atoi(sphereColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+	sphereColliderComp->radius = atof(sphereColliderNode->first_attribute("Radius")->value());
+
+	sphereColliderComp->center.x = atof(sphereColliderNode->first_node("Center")->first_attribute("X")->value());
+	sphereColliderComp->center.y = atof(sphereColliderNode->first_node("Center")->first_attribute("Y")->value());
+	sphereColliderComp->center.z = atof(sphereColliderNode->first_node("Center")->first_attribute("Z")->value());
+
+	return true;
+}
+
+bool SaveLoadSystem::saveCapsuleColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider) {
+
+	rapidxml::xml_node<>* capsuleColliderNode = doc.allocate_node(rapidxml::node_element, "CapsuleCollider");
+
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(capsuleCollider->trigger ? 1 : 0).c_str())));
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Radius", doc.allocate_string(std::to_string(capsuleCollider->radius).c_str())));
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(capsuleCollider->height).c_str())));
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Axis", doc.allocate_string(std::to_string(capsuleCollider->axis).c_str())));
+
+	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
+	centerNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(capsuleCollider->center.x).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(capsuleCollider->center.y).c_str())));
+	centerNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(capsuleCollider->center.z).c_str())));
+	capsuleColliderNode->append_node(centerNode);
+
+	entNode->append_node(capsuleColliderNode);
+
+	return true;
+}
+
+bool SaveLoadSystem::loadCapsuleColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+	rapidxml::xml_node<>* capsuleColliderNode = entNode->first_node("CapsuleCollider");
+
+	if (capsuleColliderNode == NULL)
+		return false;
+
+	CapsuleCollider* capsuleColliderComp = ent->addComponent<CapsuleCollider>();
+
+	capsuleColliderComp->trigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+	capsuleColliderComp->radius = atof(capsuleColliderNode->first_attribute("Radius")->value());
+	capsuleColliderComp->height = atof(capsuleColliderNode->first_attribute("Height")->value());
+	capsuleColliderComp->axis = atoi(capsuleColliderNode->first_attribute("Axis")->value());
+
+	capsuleColliderComp->center.x = atof(capsuleColliderNode->first_node("Center")->first_attribute("X")->value());
+	capsuleColliderComp->center.y = atof(capsuleColliderNode->first_node("Center")->first_attribute("Y")->value());
+	capsuleColliderComp->center.z = atof(capsuleColliderNode->first_node("Center")->first_attribute("Z")->value());
 
 	return true;
 }

@@ -77,7 +77,8 @@ void Physics::addConvexMesh(MeshRenderer* mRenderer, Transform* transform, Rigid
 	PxShape* shape = gPhysics->createShape(PxBoxGeometry(1, 1, 1), *gMaterial);
 
 	glm::quat myquaternion = glm::quat(transform->globalRotation);
-	PxTransform tm(PxVec3(transform->globalPosition.x, transform->globalPosition.y, transform->globalPosition.z), PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
+	PxTransform tm(PxVec3(transform->globalPosition.x, transform->globalPosition.y, transform->globalPosition.z),
+		PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
 
 	PxRigidDynamic* body = gPhysics->createRigidDynamic(tm);
 	body->attachShape(*shape);

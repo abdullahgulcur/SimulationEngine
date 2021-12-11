@@ -50,13 +50,20 @@ void Scene::generateSceneGraphRecursively(Transform* parent, std::map<int, std::
 	}
 }
 
+void Scene::loadPhysicsComponents() {
+
+	for (auto& it : entities) {
+
+		if (Rigidbody* rigidbodyComp = it.getComponent<Rigidbody>())
+			editor->physics.addConvexMesh(it.getComponent<MeshRenderer>(), it.transform, rigidbodyComp);
+	}
+}
+
 void Scene::loadLights() {
 
 	for (auto& it : entities) {
 
-		Light* lightComp = it.getComponent<Light>();
-
-		if (lightComp != NULL) {
+		if (Light* lightComp = it.getComponent<Light>()) {
 
 			if (lightComp->lightType == LightType::PointLight)
 				editor->scene.pointLightTransforms.push_back(it.transform);
@@ -73,6 +80,14 @@ void Scene::start() {
 }
 
 void Scene::update(float dt) {
+
+	//if (editor->gameStarted)
+	//Scene::simulateInGame(dt);
+	//else
+	Scene::simulateInEditor(dt);
+}
+
+void Scene::simulateInEditor(float dt) {
 
 	for (auto& val : editor->scene.entities)
 	{
@@ -91,7 +106,7 @@ void Scene::update(float dt) {
 		int plightCounter = 0;
 
 		for (auto const& pl_val : pointLightTransforms) {
-		
+
 			char lightCounterTxt[4];
 			sprintf(lightCounterTxt, "%d", plightCounter);
 
@@ -174,52 +189,209 @@ void Scene::update(float dt) {
 		glBindVertexArray(meshRendererComp->mesh->VAO);
 		glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
 		glBindVertexArray(0);
+
+		if (editor->gameStarted) {
+
+			static bool firstCycle = true;
+
+			if (firstCycle) {
+
+				firstCycle = false;
+				Scene::loadPhysicsComponents();
+			}
+
+			Rigidbody* rigidbodyComp = val.getComponent<Rigidbody>();
+
+			if (rigidbodyComp == nullptr)
+				continue;
+
+			PxMat44 matrix4(rigidbodyComp->body->getGlobalPose());
+
+			val.transform->model[0][0] = matrix4[0][0];
+			val.transform->model[0][1] = matrix4[0][1];
+			val.transform->model[0][2] = matrix4[0][2];
+			val.transform->model[0][3] = matrix4[0][3];
+
+			val.transform->model[1][0] = matrix4[1][0];
+			val.transform->model[1][1] = matrix4[1][1];
+			val.transform->model[1][2] = matrix4[1][2];
+			val.transform->model[1][3] = matrix4[1][3];
+
+			val.transform->model[2][0] = matrix4[2][0];
+			val.transform->model[2][1] = matrix4[2][1];
+			val.transform->model[2][2] = matrix4[2][2];
+			val.transform->model[2][3] = matrix4[2][3];
+
+			val.transform->model[3][0] = matrix4[3][0];
+			val.transform->model[3][1] = matrix4[3][1];
+			val.transform->model[3][2] = matrix4[3][2];
+			val.transform->model[3][3] = matrix4[3][3];
+
+			val.transform->updateSelfAndChildTransforms();
+		}
 	}
 
-	//for (auto& it : rigidbodyComponents) {
+	if (editor->gameStarted) {
 
-	//	PxMat44 matrix4(it.body->getGlobalPose());
-
-	//	//it.body->set
-
-	//	entities[it.entID].transform->model[0][0] = matrix4[0][0];
-	//	entities[it.entID].transform->model[0][1] = matrix4[0][1];
-	//	entities[it.entID].transform->model[0][2] = matrix4[0][2];
-	//	entities[it.entID].transform->model[0][3] = matrix4[0][3];
-
-	//	entities[it.entID].transform->model[1][0] = matrix4[1][0];
-	//	entities[it.entID].transform->model[1][1] = matrix4[1][1];
-	//	entities[it.entID].transform->model[1][2] = matrix4[1][2];
-	//	entities[it.entID].transform->model[1][3] = matrix4[1][3];
-
-	//	entities[it.entID].transform->model[2][0] = matrix4[2][0];
-	//	entities[it.entID].transform->model[2][1] = matrix4[2][1];
-	//	entities[it.entID].transform->model[2][2] = matrix4[2][2];
-	//	entities[it.entID].transform->model[2][3] = matrix4[2][3];
-
-	//	entities[it.entID].transform->model[3][0] = matrix4[3][0];
-	//	entities[it.entID].transform->model[3][1] = matrix4[3][1];
-	//	entities[it.entID].transform->model[3][2] = matrix4[3][2];
-	//	entities[it.entID].transform->model[3][3] = matrix4[3][3];
-
-	//	//entities[it.entID].transform->model =
-
-	//	//entities[it.entID].transform->model = it.body->getGlobalPose();
-	//	// 
-	//	//if (it.useGravity) {
-
-	//	//entities[it.entID].transform->localPosition.x = it.body->getGlobalPose().p.x;
-	//	//entities[it.entID].transform->localPosition.y = it.body->getGlobalPose().p.y;
-	//	//entities[it.entID].transform->localPosition.z = it.body->getGlobalPose().p.z;
-
-	//	//entities[it.entID].transform->updateSelfAndChild();
-	//	//}
-
-	//	entities[it.entID].transform->updateSelfAndChildTransforms();
-
-	//}
-
+		editor->physics.gScene->simulate(dt);
+		editor->physics.gScene->fetchResults(true);
+	}
 }
+
+//void Scene::simulateInGame(float dt) {
+//
+//	static bool first = true;
+//
+//	if (first) {
+//
+//		//entitiesInGame = entities;
+//
+//		for (auto& it : entities) {
+//
+//			Entity ent = it.copy(this);
+//			entitiesInGame.push_back(ent);
+//		}
+//
+//		Scene::loadPhysicsComponents();
+//		first = false;
+//	}
+//	else {
+//
+//		for (auto& val : editor->scene.entitiesInGame)
+//		{
+//			MeshRenderer* meshRendererComp = val.getComponent<MeshRenderer>();
+//
+//			if (meshRendererComp == nullptr)
+//				continue;
+//
+//			glUseProgram(meshRendererComp->mat->programID);
+//			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &val.transform->model[0][0]);
+//			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+//			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+//			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
+//
+//			int dlightCounter = 0;
+//			int plightCounter = 0;
+//
+//			for (auto const& pl_val : pointLightTransforms) {
+//
+//				char lightCounterTxt[4];
+//				sprintf(lightCounterTxt, "%d", plightCounter);
+//
+//				char* tempLPos = new char[25];
+//				strcpy(tempLPos, "pointLightPositions[");
+//				strcat(tempLPos, lightCounterTxt);
+//				strcat(tempLPos, "]\0");
+//
+//				char* tempLCol = new char[25];
+//				strcpy(tempLCol, "pointLightColors[");
+//				strcat(tempLCol, lightCounterTxt);
+//				strcat(tempLCol, "]\0");
+//
+//				char* tempLPow = new char[25];
+//				strcpy(tempLPow, "pointLightPowers[");
+//				strcat(tempLPow, lightCounterTxt);
+//				strcat(tempLPow, "]\0");
+//
+//				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &pl_val->globalPosition[0]);
+//				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &entitiesInGame[pl_val->id].getComponent<Light>()->color[0]);
+//				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), entitiesInGame[pl_val->id].getComponent<Light>()->power);
+//
+//				delete tempLPos;
+//				delete tempLCol;
+//				delete tempLPow;
+//
+//				plightCounter++;
+//			}
+//
+//			for (auto const& dl_val : dirLightTransforms) {
+//
+//				char lightCounterTxt[4];
+//				sprintf(lightCounterTxt, "%d", dlightCounter);
+//
+//				char* tempLPos = new char[25];
+//				strcpy(tempLPos, "dirLightDirections[");
+//				strcat(tempLPos, lightCounterTxt);
+//				strcat(tempLPos, "]\0");
+//
+//				char* tempLCol = new char[25];
+//				strcpy(tempLCol, "dirLightColors[");
+//				strcat(tempLCol, lightCounterTxt);
+//				strcat(tempLCol, "]\0");
+//
+//				char* tempLPow = new char[25];
+//				strcpy(tempLPow, "dirLightPowers[");
+//				strcat(tempLPow, lightCounterTxt);
+//				strcat(tempLPow, "]\0");
+//
+//				glm::vec3 direction(-cos(dl_val->localRotation.x / 180.f) * sin(dl_val->localRotation.y / 180.f), -sin(dl_val->localRotation.x / 180.f),
+//					-cos(dl_val->localRotation.x / 180.f) * cos(dl_val->localRotation.y / 180.f));
+//				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &direction[0]);
+//				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &entitiesInGame[dl_val->id].getComponent<Light>()->color[0]);
+//				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), entitiesInGame[dl_val->id].getComponent<Light>()->power);
+//
+//				delete tempLPos;
+//				delete tempLCol;
+//				delete tempLPow;
+//
+//				dlightCounter++;
+//			}
+//
+//			for (int i = 0; i < meshRendererComp->mat->textureUnits.size(); i++) {
+//
+//				char str[16];
+//				sprintf(str, "texture%d\0", i);
+//
+//				glActiveTexture(GL_TEXTURE0 + i);
+//				glBindTexture(GL_TEXTURE_2D, meshRendererComp->mat->textureUnits[i]);
+//				glUniform1i(glGetUniformLocation(meshRendererComp->mat->programID, str), i);
+//			}
+//
+//			for (int i = 0; i < meshRendererComp->mat->floatUnits.size(); i++) {
+//
+//				char str[16];
+//				sprintf(str, "float%d\0", i);
+//				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, str), meshRendererComp->mat->floatUnits[i]);
+//			}
+//
+//			glBindVertexArray(meshRendererComp->mesh->VAO);
+//			glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
+//			glBindVertexArray(0);
+//
+//			Rigidbody* rigidbodyComp = val.getComponent<Rigidbody>();
+//
+//			if (rigidbodyComp == nullptr)
+//				continue;
+//
+//			PxMat44 matrix4(rigidbodyComp->body->getGlobalPose());
+//
+//			val.transform->model[0][0] = matrix4[0][0];
+//			val.transform->model[0][1] = matrix4[0][1];
+//			val.transform->model[0][2] = matrix4[0][2];
+//			val.transform->model[0][3] = matrix4[0][3];
+//			
+//			val.transform->model[1][0] = matrix4[1][0];
+//			val.transform->model[1][1] = matrix4[1][1];
+//			val.transform->model[1][2] = matrix4[1][2];
+//			val.transform->model[1][3] = matrix4[1][3];
+//			
+//			val.transform->model[2][0] = matrix4[2][0];
+//			val.transform->model[2][1] = matrix4[2][1];
+//			val.transform->model[2][2] = matrix4[2][2];
+//			val.transform->model[2][3] = matrix4[2][3];
+//			
+//			val.transform->model[3][0] = matrix4[3][0];
+//			val.transform->model[3][1] = matrix4[3][1];
+//			val.transform->model[3][2] = matrix4[3][2];
+//			val.transform->model[3][3] = matrix4[3][3];
+//
+//			val.transform->updateSelfAndChildTransforms();
+//		}
+//
+//		editor->physics.gScene->simulate(dt);
+//		editor->physics.gScene->fetchResults(true);
+//	}
+//}
 
 void Scene::recompileAllMaterials() {
 

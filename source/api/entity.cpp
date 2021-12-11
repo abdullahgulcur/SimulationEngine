@@ -42,6 +42,12 @@ Entity::~Entity() {
 
 }
 
+Entity Entity::copy(Scene* scene) {
+
+	Entity ent(&scene->entities[transform->id], transform->parent, *scene);
+	return ent;
+}
+
 // internal usage only
 void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene) {
 

@@ -28,6 +28,7 @@ public:
 	Physics physics;
 
 	float time = 0;
+	bool gameStarted = false;
 
 	Editor();
 

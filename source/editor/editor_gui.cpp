@@ -1,5 +1,6 @@
 #include "editor.hpp"
 #include "editor_gui.hpp"
+#include <source/include/imgui/imgui_internal.h>
 
 EditorGUI::EditorGUI() {}
 
@@ -72,7 +73,7 @@ void EditorGUI::setTheme()
 	//colors[ImGuiCol_ChildBg] = ImVec4(0.9f, 0.00f, 0.00f,1.00f);
 	colors[ImGuiCol_PopupBg] = ImVec4(0.8f, 0.8f, 0.8f, 1.f);
 	colors[ImGuiCol_Border] = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
-	colors[ImGuiCol_FrameBg] = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.1f, 0.1f, 0.1f, 1.f);
 	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
 	colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
 	colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
@@ -166,7 +167,10 @@ void EditorGUI::loadTextures() {
 	materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
 	materialSmallTextureID = TextureNS::loadDDS("resource/icons/materialSmall.DDS");
 	rigidbodyTextureID = TextureNS::loadDDS("resource/icons/rigidbody.DDS");
-	meshColliderTextureID = TextureNS::loadDDS("resource/icons/meshcollider.DDS");
+	colliderTextureID = TextureNS::loadDDS("resource/icons/meshcollider.DDS");
+	startTextureID = TextureNS::loadDDS("resource/icons/start.DDS");
+	stopTextureID = TextureNS::loadDDS("resource/icons/stop.DDS");
+	pauseTextureID = TextureNS::loadDDS("resource/icons/pause.DDS");
 }
 
 void EditorGUI::handleInputs() {
@@ -357,6 +361,71 @@ void EditorGUI::mainMenuBar()
 	ImGui::PopStyleColor();
 }
 
+void EditorGUI::secondaryMenuBar()
+{
+	ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)ImGui::GetMainViewport();
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
+	float height = ImGui::GetFrameHeight();
+
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.13f, 0.13f, 0.13f, 1.f));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 6));
+	if (ImGui::BeginViewportSideBar("##SecondaryMenuBar", viewport, ImGuiDir_Up, height + 6, window_flags)) {
+		if (ImGui::BeginMenuBar()) {
+			
+			float width = ImGui::GetWindowSize().x;
+			ImVec2 pos = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(pos.x + width / 2 - 20, pos.y + 5));
+
+			int frame_padding = 1;
+			ImVec2 size = ImVec2(16.0f, 16.0f);
+			ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+			ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+			ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+			ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+			ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+			if (!editor->gameStarted) {
+
+				if (ImGui::ImageButton((ImTextureID)startTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+					editor->gameStarted = true;
+				}
+			}
+			else {
+
+				if (ImGui::ImageButton((ImTextureID)stopTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+					editor->gameStarted = false;
+				}
+			}
+			ImGui::SameLine();
+
+			if (ImGui::ImageButton((ImTextureID)pauseTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+			}
+
+			ImGui::EndMenuBar();
+		}
+		ImGui::End();
+	}
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar();
+
+
+	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 4));
+	if (ImGui::BeginViewportSideBar("##MainStatusBar", viewport, ImGuiDir_Down, height + 4, window_flags)) {
+		if (ImGui::BeginMenuBar()) {
+			ImGui::Text(statusMessage.c_str());
+			ImGui::EndMenuBar();
+		}
+		ImGui::End();
+	}
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar();
+}
+
+
 void EditorGUI::createPanels() {
 
 	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
@@ -384,6 +453,7 @@ void EditorGUI::createPanels() {
 	}
 
 	EditorGUI::mainMenuBar();
+	EditorGUI::secondaryMenuBar();
 	EditorGUI::createInspectorPanel();
 	EditorGUI::createAppPanel();
 	EditorGUI::createHierarchyPanel();
@@ -494,31 +564,30 @@ void EditorGUI::createInspectorPanel() {
 
 		EditorGUI::showTransformComponent();
 
-		MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>();
-		if (meshRendererComp != nullptr) {
+		if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>()) {
 
 			MaterialFile& material = *meshRendererComp->mat;
 			EditorGUI::showMeshRendererComponent(meshRendererComp);
 			EditorGUI::showMaterialProperties(material);
 		}
 
-		Light* lightComp = editor->scene.entities[lastSelectedEntityID].getComponent<Light>();
-		if (lightComp != nullptr) {
-
+		if (Light* lightComp = editor->scene.entities[lastSelectedEntityID].getComponent<Light>())
 			EditorGUI::showLightComponent();
-		}
 
-		Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>();
-		if (rigidbodyComp != nullptr) {
-
+		if (Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>())
 			EditorGUI::showRigidbodyComponent();
-		}
 
-		MeshCollider* meshColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>();
-		if (meshColliderComp != nullptr) {
+		if (BoxCollider* boxColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<BoxCollider>())
+			EditorGUI::showBoxColliderComponent(boxColliderComp);
 
-			EditorGUI::showMeshColliderComponent();
-		}
+		if (SphereCollider* sphereColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<SphereCollider>())
+			EditorGUI::showSphereColliderComponent(sphereColliderComp);
+
+		if (CapsuleCollider* capsuleColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<CapsuleCollider>())
+			EditorGUI::showCapsuleColliderComponent(capsuleColliderComp);
+
+		if (MeshCollider* meshColliderComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>())
+			EditorGUI::showMeshColliderComponent(meshColliderComp);
 
 		ImGui::PopStyleColor(); // for the separator
 
@@ -600,6 +669,9 @@ void EditorGUI::addComponentButton() {
 				editor->scene.pointLightTransforms.push_back(lighTransform);
 				editor->scene.recompileAllMaterials();
 			}
+			else
+				statusMessage = "There is existing component in the same type!";
+
 		}
 
 		ImGui::Separator();
@@ -611,6 +683,8 @@ void EditorGUI::addComponentButton() {
 				meshRendererComp->mesh = &editor->fileSystem.meshes["Null"];
 				meshRendererComp->mat = &editor->fileSystem.materials["Default"];
 			}
+			else
+				statusMessage = "There is existing component in the same type!";
 		}
 		ImGui::Separator();
 
@@ -618,10 +692,13 @@ void EditorGUI::addComponentButton() {
 
 			if (Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].addComponent<Rigidbody>()) {
 
-				//editor->scene.entities[lastSelectedEntityID].addRigidbodyComponent(editor->scene.rigidbodyComponents,
-				//editor->scene.meshRendererComponents, &editor->physics);
+				//if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>())
+				//	editor->physics.addConvexMesh(meshRendererComp, editor->scene.entities[lastSelectedEntityID].transform, rigidbodyComp);
+				//else
+				//	statusMessage = "There is no mesh renderer component attached to that entity!";
 			}
-
+			else
+				statusMessage = "There is existing component in the same type!";
 			
 		}
 		ImGui::Separator();
@@ -697,15 +774,14 @@ void EditorGUI::showTransformComponent() {
 
 	if (treeNodeOpen) {
 
-		ImGui::Unindent(8);
+		//ImGui::Unindent(8);
 
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		ImGui::Text("Position  X");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float pos_x = editor->scene.entities[lastSelectedEntityID].transform->localPosition.x;
 		if (ImGui::DragFloat("##0", &pos_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -713,12 +789,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Y");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float pos_y = editor->scene.entities[lastSelectedEntityID].transform->localPosition.y;
 		if (ImGui::DragFloat("##1", &pos_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -726,12 +800,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Z");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float pos_z = editor->scene.entities[lastSelectedEntityID].transform->localPosition.z;
 		if (ImGui::DragFloat("##2", &pos_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -739,12 +811,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 
 		ImGui::Text("Rotation  X");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float rot_x = editor->scene.entities[lastSelectedEntityID].transform->localRotation.x;
 		if (ImGui::DragFloat("##3", &rot_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -752,12 +822,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Y");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float rot_y = editor->scene.entities[lastSelectedEntityID].transform->localRotation.y;
 		if (ImGui::DragFloat("##4", &rot_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -765,12 +833,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Z");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float rot_z = editor->scene.entities[lastSelectedEntityID].transform->localRotation.z;
 		if (ImGui::DragFloat("##5", &rot_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -778,12 +844,9 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
-
 		ImGui::Text("Scale     X");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float scale_x = editor->scene.entities[lastSelectedEntityID].transform->localScale.x;
 		if (ImGui::DragFloat("##6", &scale_x, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -791,12 +854,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Y");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float scale_y = editor->scene.entities[lastSelectedEntityID].transform->localScale.y;
 		if (ImGui::DragFloat("##7", &scale_y, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -804,12 +865,10 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::Text("Z");
 		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.f));
-		ImGui::PushItemWidth((width - 140) / 3);
+		ImGui::PushItemWidth((width - 150) / 3);
 
 		float scale_z = editor->scene.entities[lastSelectedEntityID].transform->localScale.z;
 		if (ImGui::DragFloat("##8", &scale_z, 0.1f, 0.0f, 0.0f, "%.2f")) {
@@ -817,11 +876,9 @@ void EditorGUI::showTransformComponent() {
 			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
 		}
 
-		ImGui::PopStyleColor();
-
 		ImGui::TreePop();
 
-		ImGui::Indent(8);
+		//ImGui::Indent(8);
 	}
 
 	ImGui::Separator();
@@ -896,11 +953,10 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp) {
 			i++;
 		}
 
-		ImGui::Text("Mesh");
-		ImGui::SameLine(95);
-		ImGui::PushItemWidth(80);
+		ImGui::Text("Mesh        ");
+		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
-		ImGui::SetNextItemWidth(width - 130);
+		ImGui::SetNextItemWidth(width - 115);
 
 		if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
 			meshRendererComp->mesh = &editor->fileSystem.meshes[meshPaths[meshIndex]];
@@ -921,10 +977,9 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp) {
 			i++;
 		}
 
-		ImGui::Text("Material");
-		ImGui::SameLine(95);
-		ImGui::PushItemWidth(80);
-		ImGui::SetNextItemWidth(width - 130);
+		ImGui::Text("Material    ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 115);
 
 		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
 			meshRendererComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
@@ -1141,7 +1196,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 				i++;
 			}
 
-			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
+			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 115);
 
 			if (ImGui::Combo("##0", &index, shaderNames, indiceSize)) {
 
@@ -1182,7 +1237,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material) {
 				i++;
 			}
 
-			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 120);
+			ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 115);
 
 			bool matShaderSourceChange = false;
 			if (ImGui::Combo("##1", &index, shaderNames, indiceSize)) {
@@ -1320,19 +1375,41 @@ void EditorGUI::showRigidbodyComponent() {
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		ImGui::Text("Mass");
+		ImGui::Text("Mass                ");
+		ImGui::SameLine();
+		ImGui::DragFloat("##0", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->mass, 0.1f, 0.0f, 0.0f, "%.2f");
 
-		ImGui::SameLine(110);
+		ImGui::Text("Use Gravity         ");
+		ImGui::SameLine();
+		ImGui::Checkbox("##1", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->useGravity);
 
-		float& mass = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->mass;
-		ImGui::DragFloat("##0", &mass, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::Text("Is Kinematic        ");
+		ImGui::SameLine();
+		ImGui::Checkbox("##2", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->isKinematic);
 
-		ImGui::Text("Use Gravity");
+		ImGui::Text("Freeze Position    X");
+		ImGui::SameLine();
+		ImGui::Checkbox("##3", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.x);
+		ImGui::SameLine();
+		ImGui::Text("Y");
+		ImGui::SameLine();
+		ImGui::Checkbox("##4", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.y);
+		ImGui::SameLine();
+		ImGui::Text("Z");
+		ImGui::SameLine();
+		ImGui::Checkbox("##5", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.z);
 
-		ImGui::SameLine(110);
-
-		bool& useGravity = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->useGravity;
-		ImGui::Checkbox("##1", &useGravity);
+		ImGui::Text("Freeze Rotation    X");
+		ImGui::SameLine();
+		ImGui::Checkbox("##6", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.x);
+		ImGui::SameLine();
+		ImGui::Text("Y");
+		ImGui::SameLine();
+		ImGui::Checkbox("##7", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.y);
+		ImGui::SameLine();
+		ImGui::Text("Z");
+		ImGui::SameLine();
+		ImGui::Checkbox("##8", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.z);
 
 		ImGui::TreePop();
 	}
@@ -1340,7 +1417,7 @@ void EditorGUI::showRigidbodyComponent() {
 	ImGui::Separator();
 }
 
-void EditorGUI::showMeshColliderComponent() {
+void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp) {
 
 	float width = ImGui::GetContentRegionAvail().x;
 
@@ -1357,7 +1434,7 @@ void EditorGUI::showMeshColliderComponent() {
 	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
 
 	ImGui::SameLine(25);
-	ImGui::Image((ImTextureID)meshColliderTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::Image((ImTextureID)colliderTextureID, size, uv0, uv1, tint_col, border_col);
 	ImGui::SameLine();
 	ImGui::Text("  Mesh Collider");
 
@@ -1379,25 +1456,285 @@ void EditorGUI::showMeshColliderComponent() {
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		ImGui::Text("Convex");
+		ImGui::Text("Trigger     "); ImGui::SameLine();
+		ImGui::Checkbox("##0", &meshColliderComp->trigger);
 
-		ImGui::SameLine(110);
+		ImGui::Text("Convex      "); ImGui::SameLine();
+		ImGui::Checkbox("##1", &meshColliderComp->convex);
 
-		bool& convex = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>()->convex;
-		ImGui::Checkbox("##0", &convex);
+		int index = 0;
+		const char** pmats = new const char* [2];
+		pmats[0] = "test0\0";
+		pmats[1] = "test1\0";
 
-		ImGui::Text("Trigger");
+		ImGui::Text("Material    "); ImGui::SameLine();
 
-		ImGui::SameLine(110);
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
+		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
+		if (ImGui::Combo("##2", &index, pmats, 2)) {
 
-		bool& trigger = editor->scene.entities[lastSelectedEntityID].getComponent<MeshCollider>()->trigger;
-		ImGui::Checkbox("##1", &trigger);
+		}
+		ImGui::PopStyleColor();
+		delete[] pmats;
 
 		ImGui::TreePop();
 	}
 
 	ImGui::Separator();
 }
+
+void EditorGUI::showBoxColliderComponent(BoxCollider* boxColliderComp) {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	bool treeNodeOpen = ImGui::TreeNode("##6");
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)colliderTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Box Collider");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::BoxCollider)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		ImGui::Text("Trigger     "); ImGui::SameLine();
+		ImGui::Checkbox("##0", &boxColliderComp->trigger);
+
+		int index = 0;
+		const char** pmats = new const char*[2];
+		pmats[0] = "test0\0";
+		pmats[1] = "test1\0";
+
+		ImGui::Text("Material    "); ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
+		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
+		if (ImGui::Combo("##7", &index, pmats, 2)) {
+
+		}
+		ImGui::PopStyleColor();
+		delete[] pmats;
+
+		ImGui::Text("Center     X"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##1", &boxColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##2", &boxColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##3", &boxColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		ImGui::Text("Size       X"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##4", &boxColliderComp->size.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##5", &boxColliderComp->size.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##6", &boxColliderComp->size.z, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		ImGui::TreePop();
+	}
+
+	ImGui::Separator();
+}
+
+void EditorGUI::showSphereColliderComponent(SphereCollider* sphereColliderComp) {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	bool treeNodeOpen = ImGui::TreeNode("##7");
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)colliderTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Sphere Collider");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::SphereCollider)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		ImGui::Text("Trigger     "); ImGui::SameLine();
+		ImGui::Checkbox("##0", &sphereColliderComp->trigger);
+
+		int index = 0;
+		const char** pmats = new const char* [2];
+		pmats[0] = "test0\0";
+		pmats[1] = "test1\0";
+
+		ImGui::Text("Material    "); ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
+		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
+		if (ImGui::Combo("##7", &index, pmats, 2)) {
+
+		}
+		ImGui::PopStyleColor();
+		delete[] pmats;
+
+		ImGui::Text("Center     X"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##1", &sphereColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##2", &sphereColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##3", &sphereColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		ImGui::Text("Radius     X"); ImGui::SameLine();
+		ImGui::DragFloat("##4", &sphereColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		ImGui::TreePop();
+	}
+
+	ImGui::Separator();
+}
+
+void EditorGUI::showCapsuleColliderComponent(CapsuleCollider* capsuleColliderComp) {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	bool treeNodeOpen = ImGui::TreeNode("##8");
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)colliderTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Capsule Collider");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::CapsuleCollider)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		ImGui::Text("Trigger     "); ImGui::SameLine();
+		ImGui::Checkbox("##0", &capsuleColliderComp->trigger);
+
+		int index = 0;
+		const char** pmats = new const char* [2];
+		pmats[0] = "test0\0";
+		pmats[1] = "test1\0";
+
+		ImGui::Text("Material    "); ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
+		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
+		if (ImGui::Combo("##1", &index, pmats, 2)) {
+
+		}
+		ImGui::PopStyleColor();
+		delete[] pmats;
+
+		ImGui::Text("Center     X"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##2", &capsuleColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##3", &capsuleColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
+		ImGui::PushItemWidth((width - 155) / 3);
+		ImGui::DragFloat("##4", &capsuleColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		ImGui::Text("Radius     X"); ImGui::SameLine();
+		ImGui::DragFloat("##5", &capsuleColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f");
+		ImGui::Text("Height     X"); ImGui::SameLine();
+		ImGui::DragFloat("##6", &capsuleColliderComp->height, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		const char** axisNames = new const char* [3];
+		axisNames[0] = "X Axis\0";
+		axisNames[1] = "Y Axis\0";
+		axisNames[2] = "Z Axis\0";
+
+		ImGui::Text("Axis        "); ImGui::SameLine();
+
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
+		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
+		if (ImGui::Combo("##7", &capsuleColliderComp->axis, axisNames, 3)) {
+
+		}
+		ImGui::PopStyleColor();
+		delete[] axisNames;
+
+		ImGui::TreePop();
+	}
+
+	ImGui::Separator();
+}
+
 
 void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) {
 
@@ -1668,7 +2005,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, " %d", transform->children[i]->id); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 

@@ -5,6 +5,8 @@ Editor::Editor() {
 
 void Editor::startEditorScreen() {
 
+	physics.init();
+
 	window.init();
 	render.init();
 	fileSystem.init(this);
@@ -12,7 +14,6 @@ void Editor::startEditorScreen() {
 	scene.init(this);
 	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
-	physics.init();
 
 	scene.start();
 }
@@ -22,9 +23,6 @@ void Editor::run() {
 	float currentTime = (float)glfwGetTime();
 	float dt = currentTime - time;
 	time = currentTime;
-
-	physics.gScene->simulate(dt);
-	physics.gScene->fetchResults(true);
 
 	window.handleCallBacks(this);
 

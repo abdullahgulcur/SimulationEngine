@@ -73,4 +73,6 @@ public:
 
 	bool destroy(Scene* scene);
 
+	Entity copy(Scene* scene);
+
 };

@@ -80,6 +80,8 @@ private:
 
 public:
 
+	std::string statusMessage = "Ready";
+
 	ImVec2 scenePos;
 	ImVec2 sceneRegion;
 
@@ -110,7 +112,10 @@ public:
 	unsigned int materialTextureID;
 	unsigned int materialSmallTextureID;
 	unsigned int rigidbodyTextureID;
-	unsigned int meshColliderTextureID;
+	unsigned int colliderTextureID;
+	unsigned int startTextureID;
+	unsigned int stopTextureID;
+	unsigned int pauseTextureID;
 
 	EditorGUI();
 
@@ -131,6 +136,8 @@ public:
 	void handleInputs();
 
 	void mainMenuBar();
+
+	void secondaryMenuBar();
 
 	void createPanels();
 
@@ -154,7 +161,13 @@ public:
 
 	void showRigidbodyComponent();
 
-	void showMeshColliderComponent();
+	void showMeshColliderComponent(MeshCollider* meshColliderComp);
+
+	void showBoxColliderComponent(BoxCollider* boxColliderComp);
+
+	void showCapsuleColliderComponent(CapsuleCollider* capsuleColliderComp);
+
+	void showSphereColliderComponent(SphereCollider* sphereColliderComp);
 
 	void showMaterialProperties(MaterialFile& material);
 

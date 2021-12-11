@@ -14,6 +14,7 @@ public:
 	bool convex = false;
 	bool trigger = false;
 	PxShape* shape;
+	PxMaterial* mat;
 
 	MeshCollider();
 };
@@ -26,6 +27,7 @@ public:
 	glm::vec3 center;
 	glm::vec3 size;
 	PxShape* shape;
+	PxMaterial* mat;
 
 	BoxCollider();
 };
@@ -38,6 +40,7 @@ public:
 	glm::vec3 center;
 	float radius = 0.5f;
 	PxShape* shape;
+	PxMaterial* mat;
 
 	SphereCollider();
 };
@@ -50,7 +53,9 @@ public:
 	glm::vec3 center;
 	float radius = 0.5f;
 	float height = 1.f;
+	int axis = 0;
 	PxShape* shape;
+	PxMaterial* mat;
 
 	CapsuleCollider();
 };
