@@ -75,6 +75,7 @@ void FileSystem::initEditorTextures() {
 	editorTextures.folderBigTextureID = TextureNS::loadDDS("resource/icons/folder_closed_big.DDS");
 	editorTextures.plusTextureID = TextureNS::loadDDS("resource/icons/plus.DDS");
 	editorTextures.materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
+	editorTextures.physicmaterialTextureID = TextureNS::loadDDS("resource/icons/physicmat.DDS");
 }
 
 void FileSystem::generateFileStructure(File* file) {
@@ -110,6 +111,7 @@ void FileSystem::loadFilesToEngine() {
 	std::vector<int> fragfileIDs;
 	std::vector<int> texturefileIDs;
 	std::vector<int> matfileIDs;
+	std::vector<int> pmatfileIDs;
 	std::vector<int> objfileIDs;
 
 	for (int i = 1; i < files.size(); i++) {
@@ -120,6 +122,9 @@ void FileSystem::loadFilesToEngine() {
 			break;
 		case FileType::material:
 			matfileIDs.push_back(i);
+			break;
+		case FileType::physicmaterial:
+			pmatfileIDs.push_back(i);
 			break;
 		case FileType::object:
 			objfileIDs.push_back(i);
@@ -142,6 +147,9 @@ void FileSystem::loadFilesToEngine() {
 		loadFileToEngine(files[i]);
 
 	for (int& i : texturefileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : pmatfileIDs)
 		loadFileToEngine(files[i]);
 
 	for (int& i : matfileIDs) {
@@ -391,6 +399,22 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 
 		break;
 	}
+	case FileType::physicmaterial: {
+
+		std::vector<Collider*> addrs = physicmaterials[previousPath].colliderCompAddrs;
+		PhysicMaterialFile pmat = physicmaterials[previousPath];
+		auto it = physicmaterials.extract(previousPath);
+		it.key() = newPath;
+		physicmaterials[it.key()] = pmat;
+		physicmaterials.insert(std::move(it));
+
+		for (auto& pmat_it : addrs)
+			pmat_it->pmat = &physicmaterials[newPath];
+
+		editor->scene.saveEditorProperties();
+
+		break;
+	}
 	case FileType::vertshader: {
 
 		for (auto& it : materials) {
@@ -471,6 +495,18 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& it : addrs)
 				it->mat = &materials["Default"];
+
+			editor->scene.saveEditorProperties();
+
+			break;
+		}
+		case FileType::physicmaterial: {
+
+			std::vector<Collider*> addrs = physicmaterials[files[indices[i]].path].colliderCompAddrs;
+			physicmaterials.erase(files[indices[i]].path);
+
+			for (auto& it : addrs)
+				it->pmat = &physicmaterials["Default"];
 
 			editor->scene.saveEditorProperties();
 
@@ -629,6 +665,36 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	files[subFile->id].textureID = editorTextures.materialTextureID;
 }
 
+void FileSystem::newPhysicMaterial(int currentDirID, const char* fileName) {
+
+	File* subFile = new File;
+	subFile->id = files.size();
+	subFile->parent = files[currentDirID].addr;
+
+	FileNode tempFileNode;
+	std::string temp = fileName;
+	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".pmat";
+	tempFileNode.name = temp;
+	tempFileNode.extension = ".pmat";
+	tempFileNode.type = FileType::physicmaterial;
+	tempFileNode.addr = subFile;
+	files.push_back(tempFileNode);
+
+	if (files[currentDirID].addr->subfiles.size() == 0)
+		(files[currentDirID].addr->subfiles).push_back(subFile);
+	else {
+
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+	}
+
+	PhysicMaterialFile mat(subFile, editor->physics.gPhysics);
+	physicmaterials.insert({ files[subFile->id].path, mat });
+	FileSystem::writePhysicMaterialFile(files[subFile->id].path, mat);
+	files[subFile->id].textureID = editorTextures.physicmaterialTextureID;
+}
+
 void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 
 	std::ifstream file(path);
@@ -734,6 +800,58 @@ void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
 	doc.clear();
 }
 
+void FileSystem::readPhysicMaterialFile(File* filePtr, std::string path) {
+
+	std::ifstream file(path);
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("PhysicMaterial");
+
+	PhysicMaterialFile mat(filePtr, editor->physics.gPhysics);
+
+	mat.pxmat->setDynamicFriction(atof(root_node->first_attribute("DynamicFriction")->value()));
+	mat.pxmat->setStaticFriction(atof(root_node->first_attribute("StaticFriction")->value()));
+	mat.pxmat->setRestitution(atof(root_node->first_attribute("Restitution")->value()));
+	mat.pxmat->setFrictionCombineMode(static_cast<PxCombineMode::Enum>(atoi(root_node->first_attribute("FrictionCombine")->value())));
+	mat.pxmat->setRestitutionCombineMode(static_cast<PxCombineMode::Enum>(atoi(root_node->first_attribute("RestitutionCombine")->value())));
+
+	physicmaterials.insert({ path, mat });
+}
+
+void FileSystem::writePhysicMaterialFile(std::string path, PhysicMaterialFile& mat) {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
+
+	materialNode->append_attribute(doc.allocate_attribute("DynamicFriction", doc.allocate_string(std::to_string((float)mat.pxmat->getDynamicFriction()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("StaticFriction", doc.allocate_string(std::to_string((float)mat.pxmat->getStaticFriction()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("Restitution", doc.allocate_string(std::to_string((float)mat.pxmat->getRestitution()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("FrictionCombine", doc.allocate_string(std::to_string((int)mat.pxmat->getFrictionCombineMode()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("RestitutionCombine", doc.allocate_string(std::to_string((int)mat.pxmat->getRestitutionCombineMode()).c_str())));
+
+	doc.append_node(materialNode);
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored(path);
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+}
+
 File* FileSystem::getTextureFileAddr(const char* path) {
 
 	if (strcmp(path, "whitetexture") == 0)
@@ -775,6 +893,17 @@ File* FileSystem::getVertShaderAddr(const char* path) {
 	return vertShaders[path].fileAddr;
 }
 
+File* FileSystem::getPhysicMaterialAddr(const char* path) {
+
+	if (strcmp(path, "Default") == 0)
+		return NULL;
+
+	if (physicmaterials.find(path) == physicmaterials.end())
+		return NULL;
+
+	return physicmaterials[path].fileAddr;
+}
+
 const char* FileSystem::getFragShaderPath(File* fileAddr) {
 
 	if (fileAddr == NULL)
@@ -799,6 +928,18 @@ const char* FileSystem::getVertShaderPath(File* fileAddr) {
 	}
 }
 
+const char* FileSystem::getPhysicMaterialPath(File* fileAddr) {
+
+	if (fileAddr == NULL)
+		return "Default";
+
+	for (auto& pm : physicmaterials) {
+
+		if (pm.second.fileAddr == fileAddr)
+			return files[pm.second.fileAddr->id].path.c_str();
+	}
+}
+
 void FileSystem::rename(int id, const char* newName) {
 
 	if (Utility::iequals(newName, files[id].name) == 0)
@@ -813,9 +954,11 @@ void FileSystem::rename(int id, const char* newName) {
 	FileSystem::updateChildrenPathRecursively(files[id].addr);
 	FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
 
-	if (files[id].type == FileType::material) {
+	if (files[id].type == FileType::material)
 		writeMaterialFile(files[id].path, materials[files[id].path]);
-	}
+	else if (files[id].type == FileType::physicmaterial)
+		writePhysicMaterialFile(files[id].path, physicmaterials[files[id].path]);
+
 }
 
 unsigned int FileSystem::getSubFileIndex(File* file) {
@@ -930,6 +1073,8 @@ FileType FileSystem::getFileType(std::string extension) {
 		return FileType::texture;
 	else if (extension == ".mat")
 		return FileType::material; 
+	else if (extension == ".pmat")
+		return FileType::physicmaterial;
 	else if (extension == ".frag")
 		return FileType::fragshader;
 	else if (extension == ".vert")
@@ -974,6 +1119,12 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 
 		fileNode.textureID = editorTextures.materialTextureID;
 		readMaterialFile(fileNode.addr, fileNode.path);
+		break;
+	}
+	case FileType::physicmaterial: {
+
+		fileNode.textureID = editorTextures.physicmaterialTextureID;
+		readPhysicMaterialFile(fileNode.addr, fileNode.path);
 		break;
 	}
 	case FileType::fragshader: {
@@ -1062,6 +1213,9 @@ void FileSystem::loadDefaultAssets() {
 	MaterialFile mat("source/shader/Default.vert", "source/shader/Default.frag");
 	materials.insert({ "Default", mat });
 
+	PhysicMaterialFile pmat(editor->physics.gPhysics);
+	physicmaterials.insert({ "Default", pmat });
+
 	TextureFile textureWhite("resource/textures/empty_texture_map.DDS");
 	textures.insert({ "whitetexture", textureWhite });
 
@@ -1075,6 +1229,11 @@ void FileSystem::loadDefaultAssets() {
 MaterialFile& FileSystem::getMaterialFile(int id) {
 
 	return materials.find(files[id].path)->second;
+}
+
+PhysicMaterialFile& FileSystem::getPhysicMaterialFile(int id) {
+
+	return physicmaterials.find(files[id].path)->second;
 }
 
 TextureFile& FileSystem::getTextureFile(int id) {

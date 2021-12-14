@@ -138,6 +138,9 @@
     <ClCompile Include="source\api\component.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\api\object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -2154,6 +2157,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\component.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\api\object.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,60 +2,61 @@
 
 #include "GLM/glm.hpp"
 
-#include "physics.hpp"
+#include "PxPhysicsAPI.h"
 #include "component.hpp"
+#include "material.hpp"
 
 using namespace physx;
+using namespace Material;
 
-class MeshCollider : public Component {
+class Collider : public Component {
+
+public:
+
+	bool trigger = false;;
+	PxShape* shape;
+	PhysicMaterialFile* pmat;
+
+	Collider();
+};
+
+class MeshCollider : public Collider {
 
 public:
 
 	bool convex = false;
-	bool trigger = false;
-	PxShape* shape;
-	PxMaterial* mat;
 
 	MeshCollider();
 };
 
-class BoxCollider : public Component {
+class BoxCollider : public Collider {
 
 public:
 
-	bool trigger = false;
 	glm::vec3 center;
 	glm::vec3 size;
-	PxShape* shape;
-	PxMaterial* mat;
 
 	BoxCollider();
 };
 
-class SphereCollider : public Component {
+class SphereCollider : public Collider {
 
 public:
 
-	bool trigger = false;
 	glm::vec3 center;
 	float radius = 0.5f;
-	PxShape* shape;
-	PxMaterial* mat;
 
 	SphereCollider();
 };
 
-class CapsuleCollider : public Component {
+class CapsuleCollider : public Collider {
 
 public:
 
-	bool trigger = false;
 	glm::vec3 center;
 	float radius = 0.5f;
 	float height = 1.f;
 	int axis = 0;
-	PxShape* shape;
-	PxMaterial* mat;
 
 	CapsuleCollider();
 };

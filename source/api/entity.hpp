@@ -4,6 +4,7 @@
 
 #include "transform.hpp"
 #include "component.hpp"
+#include "collider.hpp"
 
 class Scene;
 
@@ -30,16 +31,23 @@ public:
 	template <class T>
 	T* addComponent() {
 
-		if (getComponent<T>() != nullptr) {
+		T* comp = getComponent<T>();
+
+		if (comp != nullptr) {
 			
-			std::cout << "There is existing component in the same type!" << std::endl;
-			return nullptr;
+			Collider* colliderComp = dynamic_cast<Collider*>(comp);
+
+			if (!colliderComp) {
+
+				std::cout << "There is existing component in the same type!" << std::endl;
+				return nullptr;
+			}
 		}
 
-		T* comp = new T;
-		components.push_back(comp);
+		T* newcomp = new T;
+		components.push_back(newcomp);
 
-		return comp;
+		return newcomp;
 	}
 
 	template <class T>
@@ -56,6 +64,21 @@ public:
 	}
 
 	template <class T>
+	std::vector<T*> getComponents() {
+
+		std::vector<T*> compList;
+
+		for (auto& it : components) {
+
+			T* comp = dynamic_cast<T*>(it);
+
+			if (comp != nullptr)
+				compList.push_back(comp);
+		}
+		return compList;
+	}
+
+	template <class T>
 	void removeComponent() {
 
 		for (auto it = components.begin(); it < components.end(); it++) {
@@ -69,6 +92,23 @@ public:
 				return;
 			}
 		}
+	}
+
+	template <class T>
+	bool removeComponent(T* component) {
+
+		for (auto it = components.begin(); it < components.end(); it++) {
+
+			T* comp = dynamic_cast<T*>(*it);
+
+			if (comp == component) {
+
+				delete* it;
+				components.erase(it);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool destroy(Scene* scene);

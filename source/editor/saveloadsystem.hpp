@@ -54,19 +54,19 @@ namespace SaveLoadSystem {
 
 	bool loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveMeshColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
+	bool saveMeshColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
 
-	bool loadMeshColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadMeshColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveBoxColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider);
+	bool saveBoxColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider);
 
-	bool loadBoxColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadBoxColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveSphereColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider);
+	bool saveSphereColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider);
 
-	bool loadSphereColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadSphereColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveCapsuleColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider);
+	bool saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider);
 
-	bool loadCapsuleColliderComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadCapsuleColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 }

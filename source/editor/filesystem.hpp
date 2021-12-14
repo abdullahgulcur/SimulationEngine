@@ -9,6 +9,8 @@
 #include <shlobj.h>
 #include <fstream>
 
+#include "PxPhysicsAPI.h"
+
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
@@ -23,10 +25,11 @@ using namespace Material;
 using namespace TextureNS;
 using namespace ShaderNS;
 using namespace Mesh;
+using namespace physx;
 
 class Editor;
 
-enum class FileType {folder, object, material, texture, fragshader, vertshader, audio, script, undefined};
+enum class FileType {folder, object, material, physicmaterial, texture, fragshader, vertshader, audio, script, undefined};
 
 struct EditorTextures {
 
@@ -40,6 +43,7 @@ struct EditorTextures {
 	unsigned int folderBigTextureID;
 	unsigned int plusTextureID;
 	unsigned int materialTextureID;
+	unsigned int physicmaterialTextureID;
 };
 
 struct File {
@@ -88,6 +92,7 @@ public:
 
 	std::unordered_map<std::string, MeshFile> meshes;
 	std::unordered_map<std::string, MaterialFile> materials;
+	std::unordered_map<std::string, PhysicMaterialFile> physicmaterials;
 	std::unordered_map<std::string, TextureFile> textures;
 	std::unordered_map<std::string, ShaderFile> vertShaders;
 	std::unordered_map<std::string, ShaderFile> fragShaders;
@@ -128,9 +133,15 @@ public:
 
 	void newMaterial(int currentDirID, const char* fileName);
 
+	void newPhysicMaterial(int currentDirID, const char* fileName);
+
 	void readMaterialFile(File* filePtr, std::string path);
 
 	void writeMaterialFile(std::string path, MaterialFile& mat);
+
+	void readPhysicMaterialFile(File* filePtr, std::string path);
+
+	void writePhysicMaterialFile(std::string path, PhysicMaterialFile& mat);
 
 	File* getTextureFileAddr(const char* path);
 
@@ -140,9 +151,13 @@ public:
 
 	File* getVertShaderAddr(const char* path);
 
+	File* getPhysicMaterialAddr(const char* path);
+
 	const char* getFragShaderPath(File* fileAddr);
 
 	const char* getVertShaderPath(File* fileAddr);
+
+	const char* getPhysicMaterialPath(File* fileAddr);
 
 	void rename(int id, const char* newName);
 
@@ -155,6 +170,8 @@ public:
 	void loadDefaultAssets();
 
 	MaterialFile& getMaterialFile(int id);
+
+	PhysicMaterialFile& getPhysicMaterialFile(int id);
 
 	TextureFile& getTextureFile(int id);
 

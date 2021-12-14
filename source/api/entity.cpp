@@ -71,12 +71,46 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			rbComp->mass = comp->mass;
 			rbComp->useGravity = comp->useGravity;
 		}
+		else if (BoxCollider* comp = dynamic_cast<BoxCollider*>(it))
+		{
+			BoxCollider* boxColliderComp = addComponent<BoxCollider>();
+			boxColliderComp->center = comp->center;
+			boxColliderComp->size = comp->size;
+			boxColliderComp->shape = comp->shape;
+			boxColliderComp->trigger = comp->trigger;
+			boxColliderComp->pmat = comp->pmat;
+			boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
+		}
+		else if (SphereCollider* comp = dynamic_cast<SphereCollider*>(it))
+		{
+			SphereCollider* sphereColliderComp = addComponent<SphereCollider>();
+			sphereColliderComp->center = comp->center;
+			sphereColliderComp->radius = comp->radius;
+			sphereColliderComp->shape = comp->shape;
+			sphereColliderComp->trigger = comp->trigger;
+			sphereColliderComp->pmat = comp->pmat;
+			sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
+		}
+		else if (CapsuleCollider* comp = dynamic_cast<CapsuleCollider*>(it))
+		{
+			CapsuleCollider* capsuleColliderComp = addComponent<CapsuleCollider>();
+			capsuleColliderComp->axis = comp->axis;
+			capsuleColliderComp->height = comp->height;
+			capsuleColliderComp->center = comp->center;
+			capsuleColliderComp->radius = comp->radius;
+			capsuleColliderComp->shape = comp->shape;
+			capsuleColliderComp->trigger = comp->trigger;
+			capsuleColliderComp->pmat = comp->pmat;
+			capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
+		}
 		else if (MeshCollider* comp = dynamic_cast<MeshCollider*>(it))
 		{
 			MeshCollider* meshColliderComp = addComponent<MeshCollider>();
 			meshColliderComp->convex = comp->convex;
 			meshColliderComp->shape = comp->shape;
 			meshColliderComp->trigger = comp->trigger;
+			meshColliderComp->pmat = comp->pmat;
+			meshColliderComp->pmat->colliderCompAddrs.push_back(meshColliderComp);
 		}
 		else if (Light* comp = dynamic_cast<Light*>(it))
 		{

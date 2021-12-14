@@ -122,3 +122,26 @@ void Material::MaterialFile::deleteProgram() {
 
 	glDeleteProgram(programID);
 }
+
+
+//-------- PHYSICS ---------
+
+PhysicMaterialFile::PhysicMaterialFile(){}
+
+PhysicMaterialFile::PhysicMaterialFile(PxPhysics* gPhysics) {
+
+	fileAddr = NULL;
+	pxmat = gPhysics->createMaterial(0.5f, 0.5f, 0.0f);
+	pxmat->setFrictionCombineMode(PxCombineMode::eAVERAGE);
+	pxmat->setRestitutionCombineMode(PxCombineMode::eAVERAGE);
+}
+
+PhysicMaterialFile::PhysicMaterialFile(File* file, PxPhysics* gPhysics) {
+
+	this->fileAddr = file;
+	pxmat = gPhysics->createMaterial(0.0f, 0.0f, 0.0f);
+}
+
+void Material::PhysicMaterialFile::destroy() {
+
+}

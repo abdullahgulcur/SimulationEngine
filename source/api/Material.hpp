@@ -5,11 +5,16 @@
 #include <fstream>
 #include <vector>
 
+#include "PxPhysicsAPI.h"
+
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
 struct File;
 class MeshRenderer;
+class Collider;
+
+using namespace physx;
 
 namespace Material {
 
@@ -40,6 +45,23 @@ namespace Material {
 		void compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
 
 		void deleteProgram();
+	};
+
+	class PhysicMaterialFile {
+
+	public:
+
+		File* fileAddr;
+		PxMaterial* pxmat;
+		std::vector<Collider*> colliderCompAddrs;
+
+		PhysicMaterialFile();
+
+		PhysicMaterialFile(PxPhysics* gPhysics);
+
+		PhysicMaterialFile(File* file, PxPhysics* gPhysics);
+
+		void destroy();
 	};
 }
 

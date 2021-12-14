@@ -1,5 +1,9 @@
 #include "collider.hpp"
 
+Collider::Collider() {
+
+}
+
 MeshCollider::MeshCollider() {
 
 	//type = ComponentType::MeshCollider;
