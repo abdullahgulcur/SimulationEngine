@@ -5,6 +5,7 @@
 #include "PxPhysicsAPI.h"
 #include "component.hpp"
 #include "material.hpp"
+#include "shader.hpp"
 
 using namespace physx;
 using namespace Material;
@@ -13,11 +14,14 @@ class Collider : public Component {
 
 public:
 
-	bool trigger = false;;
 	PxShape* shape;
 	PhysicMaterialFile* pmat;
 
 	Collider();
+
+	virtual void updatePoseGeometry();
+
+	virtual void updatePoseGeometryAndRelease();
 };
 
 class MeshCollider : public Collider {
@@ -37,6 +41,10 @@ public:
 	glm::vec3 size;
 
 	BoxCollider();
+
+	void updatePoseGeometry();
+
+	void updatePoseGeometryAndRelease();
 };
 
 class SphereCollider : public Collider {
@@ -47,6 +55,10 @@ public:
 	float radius = 0.5f;
 
 	SphereCollider();
+
+	void updatePoseGeometry();
+
+	void updatePoseGeometryAndRelease();
 };
 
 class CapsuleCollider : public Collider {
@@ -59,4 +71,9 @@ public:
 	int axis = 0;
 
 	CapsuleCollider();
+
+	void updatePoseGeometry();
+
+	void updatePoseGeometryAndRelease();
+
 };

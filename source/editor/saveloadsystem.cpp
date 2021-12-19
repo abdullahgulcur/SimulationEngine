@@ -1,71 +1,6 @@
 #include "saveloadsystem.hpp"
 #include "editor.hpp"
 
-bool SaveLoadSystem::loadSceneGraph(Editor* editor, std::map<int, std::vector<int>>& initialSceneGraph) {
-
-	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenegraph.txt");
-
-	if (file.fail())
-		return false;
-
-	std::string transformIDs;
-	while (std::getline(file, transformIDs)) {
-
-		std::stringstream ss(transformIDs);
-		std::vector<int> numbers;
-
-		int i = 0;
-		ss >> i;
-		int index = i;
-
-		for (int i = 1; ss >> i; )
-			numbers.push_back(i);
-
-		initialSceneGraph[index] = numbers;
-	}
-
-	file.close();
-	return true;
-}
-
-bool SaveLoadSystem::saveSceneGraph(Editor* editor) {
-
-	std::ofstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenegraph.txt");
-
-	if (file.fail())
-		return false;
-
-	std::ostringstream fileTextStream;
-
-	std::queue<Transform*> entQueue;
-	entQueue.push(editor->scene.entities[0].transform);
-	SaveLoadSystem::writeSceneGraphFileRecursively(entQueue, fileTextStream);
-
-	file << fileTextStream.str();
-	file.close();
-	return true;
-}
-
-bool SaveLoadSystem::writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream) {
-
-	if (entQueue.size() == 0)
-		return false;
-
-	Transform* entity = entQueue.front();
-	entQueue.pop();
-
-	fileTextStream << entity->id << ' ';
-
-	for (int i = 0; i < entity->children.size(); i++) {
-
-		fileTextStream << entity->children[i]->id << ' ';
-		entQueue.push(entity->children[i]);
-	}
-	fileTextStream << '\n';
-	SaveLoadSystem::writeSceneGraphFileRecursively(entQueue, fileTextStream);
-	return true;
-}
-
 bool SaveLoadSystem::saveEntities(Editor* editor) {
 
 	rapidxml::xml_document<> doc;
@@ -77,36 +12,12 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	rapidxml::xml_node<>* entitiesNode = doc.allocate_node(rapidxml::node_element, "Entities");
 	doc.append_node(entitiesNode);
 
-	for (Entity& ent : editor->scene.entities) {
+	rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
+	entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(editor->scene.entities[0]->name)));
+	saveTransformComponent(doc, entity, editor->scene.entities[0]->transform);
+	entitiesNode->append_node(entity);
 
-		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
-		entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(ent.name)));
-
-		saveTransformComponent(doc, entity, ent.transform);
-
-		if(Light* lightComp = ent.getComponent<Light>())
-			saveLightComponent(editor, doc, entity, lightComp);
-
-		if (MeshRenderer* meshRendererComp = ent.getComponent<MeshRenderer>())
-			saveMeshRendererComponent(editor, doc, entity, meshRendererComp);
-
-		if (Rigidbody* rigidbodyComp = ent.getComponent<Rigidbody>())
-			saveRigidbodyComponent(doc, entity, rigidbodyComp);
-
-		for(auto& comp: ent.getComponents<BoxCollider>())
-			saveBoxColliderComponent(editor, doc, entity, comp);
-
-		for (auto& comp : ent.getComponents<SphereCollider>())
-			saveSphereColliderComponent(editor, doc, entity, comp);
-
-		for (auto& comp : ent.getComponents<CapsuleCollider>())
-			saveCapsuleColliderComponent(editor, doc, entity, comp);
-
-		for (auto& comp : ent.getComponents<MeshCollider>())
-			saveMeshColliderComponent(editor, doc, entity, comp);
-
-		entitiesNode->append_node(entity);
-	}
+	SaveLoadSystem::saveEntitiesRecursively(editor, editor->scene.entities[0]->transform, doc, entity);
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
@@ -118,12 +29,53 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	return true;
 }
 
-bool SaveLoadSystem::loadEntities(Editor* editor) {
+void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode) {
+
+	for (auto& child : parent->children) {
+
+		rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
+		entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(child->entity->name)));
+
+		saveTransformComponent(doc, entity, child);
+
+		if (Light* lightComp = child->entity->getComponent<Light>())
+			saveLightComponent(editor, doc, entity, lightComp);
+
+		if (MeshRenderer* meshRendererComp = child->entity->getComponent<MeshRenderer>())
+			saveMeshRendererComponent(editor, doc, entity, meshRendererComp);
+
+		if (Rigidbody* rigidbodyComp = child->entity->getComponent<Rigidbody>())
+			saveRigidbodyComponent(doc, entity, rigidbodyComp);
+
+		for (auto& comp : child->entity->getComponents<BoxCollider>())
+			saveBoxColliderComponent(editor, doc, entity, comp);
+
+		for (auto& comp : child->entity->getComponents<SphereCollider>())
+			saveSphereColliderComponent(editor, doc, entity, comp);
+
+		for (auto& comp : child->entity->getComponents<CapsuleCollider>())
+			saveCapsuleColliderComponent(editor, doc, entity, comp);
+
+		for (auto& comp : child->entity->getComponents<MeshCollider>())
+			saveMeshColliderComponent(editor, doc, entity, comp);
+
+		entityNode->append_node(entity);
+
+		SaveLoadSystem::saveEntitiesRecursively(editor, child, doc, entity);
+	}
+}
+
+void SaveLoadSystem::loadEntities(Editor* editor) {
 
 	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\entity.xml");
 
-	if (file.fail())
-		return false;
+	if (file.fail()) {
+
+		Entity* ent = new Entity("Root");
+		editor->scene.entities.push_back(ent);
+		SaveLoadSystem::saveEntities(editor);
+		return;
+	}
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root_node = NULL;
@@ -135,24 +87,33 @@ bool SaveLoadSystem::loadEntities(Editor* editor) {
 
 	root_node = doc.first_node("Entities");
 
-	for (rapidxml::xml_node<>* entity_node = root_node->first_node("Entity"); entity_node; entity_node = entity_node->next_sibling()) {
-		
-		Entity ent(entity_node->first_attribute("Name")->value(), editor->scene.entities);
-		editor->scene.entities.push_back(ent);
+	Entity* ent = new Entity("Root");
+	editor->scene.entities.push_back(ent);
+	ent->transform->updateSelfAndChild();
 
-		SaveLoadSystem::loadTransformComponent(&editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadLightComponent(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadMeshRendererComponent(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadRigidbodyComponent(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadBoxColliderComponents(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadSphereColliderComponents(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadCapsuleColliderComponents(editor, &editor->scene.entities.back(), entity_node);
-		SaveLoadSystem::loadMeshColliderComponents(editor, &editor->scene.entities.back(), entity_node);
-
-	}
+	SaveLoadSystem::loadEntitiesRecursively(editor, root_node->first_node("Entity"), ent);
 
 	file.close();
-	return true;
+}
+
+void SaveLoadSystem::loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<>* parentNode, Entity* parent) {
+
+	for (rapidxml::xml_node<>* entityNode = parentNode->first_node("Entity"); entityNode; entityNode = entityNode->next_sibling()) {
+
+		Entity* ent = new Entity(entityNode->first_attribute("Name")->value(), parent->transform);
+		editor->scene.entities.push_back(ent);
+
+		SaveLoadSystem::loadTransformComponent(ent, entityNode);
+		SaveLoadSystem::loadLightComponent(editor, ent, entityNode);
+		SaveLoadSystem::loadMeshRendererComponent(editor, ent, entityNode);
+		SaveLoadSystem::loadBoxColliderComponents(editor, ent, entityNode);
+		SaveLoadSystem::loadSphereColliderComponents(editor, ent, entityNode);
+		SaveLoadSystem::loadCapsuleColliderComponents(editor, ent, entityNode);
+		SaveLoadSystem::loadMeshColliderComponents(editor, ent, entityNode);
+		SaveLoadSystem::loadRigidbodyComponent(editor, ent, entityNode);
+
+		SaveLoadSystem::loadEntitiesRecursively(editor, entityNode, ent);
+	}
 }
 
 bool SaveLoadSystem::saveSceneCamera(Editor* editor) {
@@ -258,6 +219,8 @@ bool SaveLoadSystem::loadTransformComponent(Entity* ent, rapidxml::xml_node<>* e
 	ent->transform->localScale.y = atof(transform_node->first_node("Scale")->first_attribute("Y")->value());
 	ent->transform->localScale.z = atof(transform_node->first_node("Scale")->first_attribute("Z")->value());
 
+	ent->transform->updateSelfAndChild();
+
 	return true;
 }
 
@@ -352,8 +315,28 @@ bool SaveLoadSystem::loadMeshRendererComponent(Editor* editor, Entity* ent, rapi
 bool SaveLoadSystem::saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Rigidbody* rigidbody) {
 
 	rapidxml::xml_node<>* rigidbodyNode = doc.allocate_node(rapidxml::node_element, "Rigidbody");
-	rigidbodyNode->append_attribute(doc.allocate_attribute("Mass", doc.allocate_string(std::to_string(rigidbody->mass).c_str())));
-	rigidbodyNode->append_attribute(doc.allocate_attribute("UseGravity", doc.allocate_string(std::to_string(rigidbody->useGravity ? 1 : 0).c_str())));
+	rigidbodyNode->append_attribute(doc.allocate_attribute("Mass", doc.allocate_string(std::to_string(rigidbody->body->getMass()).c_str())));
+	rigidbodyNode->append_attribute(doc.allocate_attribute("UseGravity", doc.allocate_string(std::to_string(rigidbody->body->getActorFlags() & PxActorFlag::eDISABLE_GRAVITY ? 0 : 1).c_str())));
+	rigidbodyNode->append_attribute(doc.allocate_attribute("IsKinematic", doc.allocate_string(std::to_string(rigidbody->body->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC ? 1 : 0).c_str())));
+
+	rapidxml::xml_node<>* lockPositionNode = doc.allocate_node(rapidxml::node_element, "LockPosition");
+	int lockPosX = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_X ? 1 : 0;
+	int lockPosY = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_Y ? 1 : 0;
+	int lockPosZ = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_Z ? 1 : 0;
+	lockPositionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(lockPosX).c_str())));
+	lockPositionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(lockPosY).c_str())));
+	lockPositionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(lockPosZ).c_str())));
+	rigidbodyNode->append_node(lockPositionNode);
+
+	rapidxml::xml_node<>* lockRotationNode = doc.allocate_node(rapidxml::node_element, "LockRotation");
+	int lockRotX = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_X ? 1 : 0;
+	int lockRotY = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y ? 1 : 0;
+	int lockRotZ = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z ? 1 : 0;
+	lockRotationNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(lockRotX).c_str())));
+	lockRotationNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(lockRotY).c_str())));
+	lockRotationNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(lockRotZ).c_str())));
+	rigidbodyNode->append_node(lockRotationNode);
+
 	entNode->append_node(rigidbodyNode);
 
 	return true;
@@ -366,9 +349,31 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 	if (rigidbodyNode == NULL)
 		return false;
 
+	glm::quat myquaternion = glm::quat(ent->transform->globalRotation);
+	PxTransform tm(PxVec3(ent->transform->globalPosition.x, ent->transform->globalPosition.y,
+		ent->transform->globalPosition.z),
+		PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
+
 	Rigidbody* rigidbodyComp = ent->addComponent<Rigidbody>();
-	rigidbodyComp->mass = atof(rigidbodyNode->first_attribute("Mass")->value());
-	rigidbodyComp->useGravity = atoi(rigidbodyNode->first_attribute("UseGravity")->value()) == 1 ? true : false;
+	rigidbodyComp->body = editor->physics.gPhysics->createRigidDynamic(tm);
+	rigidbodyComp->body->setMass(atof(rigidbodyNode->first_attribute("Mass")->value()));
+	rigidbodyComp->body->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, !(atoi(rigidbodyNode->first_attribute("UseGravity")->value()) == 1 ? true : false));
+	rigidbodyComp->body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, atoi(rigidbodyNode->first_attribute("IsKinematic")->value()) == 1 ? true : false);
+
+	rapidxml::xml_node<>* lockPositionNode = rigidbodyNode->first_node("LockPosition");
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_X, atoi(lockPositionNode->first_attribute("X")->value()) == 1 ? true : false);
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Y, atoi(lockPositionNode->first_attribute("Y")->value()) == 1 ? true : false);
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Z, atoi(lockPositionNode->first_attribute("Z")->value()) == 1 ? true : false);
+
+	rapidxml::xml_node<>* lockRotationNode = rigidbodyNode->first_node("LockRotation");
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_X, atoi(lockRotationNode->first_attribute("X")->value()) == 1 ? true : false);
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y, atoi(lockRotationNode->first_attribute("Y")->value()) == 1 ? true : false);
+	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, atoi(lockRotationNode->first_attribute("Z")->value()) == 1 ? true : false);
+
+	editor->physics.gScene->addActor(*rigidbodyComp->body);
+
+	for (auto& comp : ent->getComponents<Collider>())
+		rigidbodyComp->body->attachShape(*comp->shape);
 
 	return true;
 }
@@ -377,7 +382,9 @@ bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_doc
 
 	rapidxml::xml_node<>* meshColliderNode = doc.allocate_node(rapidxml::node_element, "MeshCollider");
 	meshColliderNode->append_attribute(doc.allocate_attribute("Convex", doc.allocate_string(std::to_string(meshCollider->convex ? 1 : 0).c_str())));
-	meshColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(meshCollider->trigger ? 1 : 0).c_str())));
+
+	int trigger = meshCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
+	meshColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 
 	rapidxml::xml_node<>* physicMatNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
 	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem.getPhysicMaterialPath(meshCollider->pmat->fileAddr)))));
@@ -398,7 +405,10 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 
 		MeshCollider* meshColliderComp = ent->addComponent<MeshCollider>();
 		meshColliderComp->convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1 ? true : false;
-		meshColliderComp->trigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+
+		bool isTrigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 
 		const char* pmatFilePath = meshColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
 		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
@@ -417,7 +427,8 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 bool SaveLoadSystem::saveBoxColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider) {
 
 	rapidxml::xml_node<>* boxColliderNode = doc.allocate_node(rapidxml::node_element, "BoxCollider");
-	boxColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(boxCollider->trigger ? 1 : 0).c_str())));
+	int trigger = boxCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
+	boxColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 
 	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
 	centerNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(boxCollider->center.x).c_str())));
@@ -450,7 +461,16 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 
 		BoxCollider* boxColliderComp = ent->addComponent<BoxCollider>();
 
-		boxColliderComp->trigger = atoi(boxColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		const char* pmatFilePath = boxColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
+		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
+
+		if (pmatFileAddr == NULL)
+			pmatFilePath = "Default";
+
+		boxColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
+		boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
+
+		bool isTrigger = atoi(boxColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
 
 		boxColliderComp->center.x = atof(boxColliderNode->first_node("Center")->first_attribute("X")->value());
 		boxColliderComp->center.y = atof(boxColliderNode->first_node("Center")->first_attribute("Y")->value());
@@ -460,14 +480,12 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 		boxColliderComp->size.y = atof(boxColliderNode->first_node("Size")->first_attribute("Y")->value());
 		boxColliderComp->size.z = atof(boxColliderNode->first_node("Size")->first_attribute("Z")->value());
 
-		const char* pmatFilePath = boxColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
-		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
-
-		if (pmatFileAddr == NULL)
-			pmatFilePath = "Default";
-
-		boxColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
-		boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
+		glm::vec3 size = ent->transform->globalScale * boxColliderComp->size / 2.f;
+		boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat);
+		boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
+		boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
 	}
 
 	return true;
@@ -476,8 +494,8 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 bool SaveLoadSystem::saveSphereColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider) {
 
 	rapidxml::xml_node<>* sphereColliderNode = doc.allocate_node(rapidxml::node_element, "SphereCollider");
-
-	sphereColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(sphereCollider->trigger ? 1 : 0).c_str())));
+	int trigger = sphereCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
+	sphereColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 	sphereColliderNode->append_attribute(doc.allocate_attribute("Radius", doc.allocate_string(std::to_string(sphereCollider->radius).c_str())));
 
 	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
@@ -504,13 +522,6 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 
 		SphereCollider* sphereColliderComp = ent->addComponent<SphereCollider>();
 
-		sphereColliderComp->trigger = atoi(sphereColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
-		sphereColliderComp->radius = atof(sphereColliderNode->first_attribute("Radius")->value());
-
-		sphereColliderComp->center.x = atof(sphereColliderNode->first_node("Center")->first_attribute("X")->value());
-		sphereColliderComp->center.y = atof(sphereColliderNode->first_node("Center")->first_attribute("Y")->value());
-		sphereColliderComp->center.z = atof(sphereColliderNode->first_node("Center")->first_attribute("Z")->value());
-
 		const char* pmatFilePath = sphereColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
 		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
 
@@ -519,6 +530,23 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 
 		sphereColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
 		sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
+
+		bool isTrigger = atoi(sphereColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		
+		sphereColliderComp->radius = atof(sphereColliderNode->first_attribute("Radius")->value());
+
+		sphereColliderComp->center.x = atof(sphereColliderNode->first_node("Center")->first_attribute("X")->value());
+		sphereColliderComp->center.y = atof(sphereColliderNode->first_node("Center")->first_attribute("Y")->value());
+		sphereColliderComp->center.z = atof(sphereColliderNode->first_node("Center")->first_attribute("Z")->value());
+
+		float max = ent->transform->globalScale.x > ent->transform->globalScale.y ? ent->transform->globalScale.x : ent->transform->globalScale.y;
+		max = max > ent->transform->globalScale.z ? max : ent->transform->globalScale.z;
+
+		sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius * max), *sphereColliderComp->pmat->pxmat);
+		sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
+		sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
 	}
 
 	return true;
@@ -527,8 +555,8 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 bool SaveLoadSystem::saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider) {
 
 	rapidxml::xml_node<>* capsuleColliderNode = doc.allocate_node(rapidxml::node_element, "CapsuleCollider");
-
-	capsuleColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(capsuleCollider->trigger ? 1 : 0).c_str())));
+	int trigger = capsuleCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Radius", doc.allocate_string(std::to_string(capsuleCollider->radius).c_str())));
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(capsuleCollider->height).c_str())));
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Axis", doc.allocate_string(std::to_string(capsuleCollider->axis).c_str())));
@@ -557,7 +585,10 @@ bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, 
 
 		CapsuleCollider* capsuleColliderComp = ent->addComponent<CapsuleCollider>();
 
-		capsuleColliderComp->trigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		bool isTrigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+
 		capsuleColliderComp->radius = atof(capsuleColliderNode->first_attribute("Radius")->value());
 		capsuleColliderComp->height = atof(capsuleColliderNode->first_attribute("Height")->value());
 		capsuleColliderComp->axis = atoi(capsuleColliderNode->first_attribute("Axis")->value());

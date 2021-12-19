@@ -20,11 +20,11 @@ public:
 	Transform* transform;
 	std::vector<Component*> components;
 
-	Entity(const char* name, std::vector<Entity>& entities);
+	Entity(const char* name);
 
 	Entity(Entity* ent, Transform* parent, Scene& scene);
 
-	Entity(const char* name, Entity* parent, Scene& scene);
+	Entity(const char* name, Transform* parent);
 
 	~Entity();
 
@@ -45,7 +45,9 @@ public:
 		}
 
 		T* newcomp = new T;
-		components.push_back(newcomp);
+		Component* compToAdd = dynamic_cast<Component*>(newcomp);
+		compToAdd->transform = transform;
+		components.push_back(compToAdd);
 
 		return newcomp;
 	}
@@ -113,6 +115,6 @@ public:
 
 	bool destroy(Scene* scene);
 
-	Entity copy(Scene* scene);
+	Entity* copy(Scene* scene);
 
 };

@@ -141,6 +141,9 @@
     <ClCompile Include="source\api\object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\editor\debugrenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -2162,6 +2165,9 @@
     <ClInclude Include="source\api\object.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\editor\debugrenderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\include\GLM\detail\func_common.inl">
@@ -2586,6 +2592,10 @@
     <None Include="source\shader\ObjectPick.vert" />
     <None Include="source\shader\Default.frag" />
     <None Include="source\shader\Default.vert" />
+    <None Include="source\shader\Line.frag" />
+    <None Include="source\shader\Line.vert" />
+    <None Include="source\shader\Circle.frag" />
+    <None Include="source\shader\Circle.vert" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

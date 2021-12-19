@@ -8,15 +8,17 @@
 #include <math.hpp>
 
 class Entity;
+class Editor;
 
 class Transform {
 
 private:
 
+	void updatePhysics();
+
 
 public:
 
-	unsigned int id;
 	Transform* parent;
 	Entity* entity;
 	std::vector<Transform*> children;
@@ -33,9 +35,9 @@ public:
 
 	Transform(Entity* ent);
 
-	Transform(Entity* ent, Transform* parent, unsigned int id);
+	Transform(Entity* ent, Transform* parent);
 
-	Transform(Entity* ent, Transform* parent, Transform* base, unsigned int id);
+	Transform(Entity* ent, Transform* parent, Transform* base);
 
 	glm::mat4 getLocalModelMatrix();
 
@@ -44,6 +46,8 @@ public:
 	void updateSelfAndChild();
 
 	void updateSelfAndChildRecursively();
+
+	void setLocalTransformation();
 
 	void setGlobalTransformation();
 

@@ -1,21 +1,21 @@
 #include "entity.hpp"
 #include "scene.hpp"
+#include "editor.hpp"
 
-// new ent
-Entity::Entity(const char* name, std::vector<Entity>& entities) {
+// first load
+Entity::Entity(const char* name) {
 
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
 	std::cout << name << std::endl;
 	transform = new Transform(this);
-	//entities.push_back(*this);
 }
 
 // clone
 Entity::Entity(Entity* ent, Transform* parent, Scene& scene) {
 
-	transform = new Transform(this, parent, ent->transform, scene.entities.size());
+	transform = new Transform(this, parent, ent->transform);
 
 	char* name = new char[strlen(ent->name) + 5];
 	strcpy(name, ent->name);
@@ -23,28 +23,25 @@ Entity::Entity(Entity* ent, Transform* parent, Scene& scene) {
 	this->name = name;
 
 	Entity::deepCopyComponents(ent->components, scene);
-	//scene.entities.push_back(*this);
 }
 
 //create empty from parent
-Entity::Entity(const char* name, Entity* parent, Scene& scene) {
+Entity::Entity(const char* name, Transform* parent) {
 
-	transform = new Transform(this, parent->transform, scene.entities.size());
+	transform = new Transform(this, parent);
 
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
-
-	//scene.entities.push_back(*this);
 }
 
 Entity::~Entity() {
 
 }
 
-Entity Entity::copy(Scene* scene) {
+Entity* Entity::copy(Scene* scene) {
 
-	Entity ent(&scene->entities[transform->id], transform->parent, *scene);
+	Entity* ent = new Entity(this, transform->parent, *scene);
 	return ent;
 }
 
@@ -64,22 +61,33 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 		else if (Rigidbody* comp = dynamic_cast<Rigidbody*>(it))
 		{
 			Rigidbody* rbComp = addComponent<Rigidbody>();
-			rbComp->body = comp->body;
-			rbComp->freezePos = comp->freezePos;
-			rbComp->freezeRot = comp->freezeRot;
-			rbComp->isKinematic = comp->isKinematic;
-			rbComp->mass = comp->mass;
-			rbComp->useGravity = comp->useGravity;
+			rbComp->body = scene.editor->physics.gPhysics->createRigidDynamic(comp->body->getGlobalPose());
+			rbComp->body->setMass(comp->body->getMass());
+			rbComp->body->setActorFlags(comp->body->getActorFlags());
+			rbComp->body->setRigidBodyFlags(comp->body->getRigidBodyFlags());
+			rbComp->body->setRigidDynamicLockFlags(comp->body->getRigidDynamicLockFlags());
+			scene.editor->physics.gScene->addActor(*rbComp->body);
+
+			for (auto& collider : getComponents<Collider>())
+				rbComp->body->attachShape(*collider->shape);
+
 		}
 		else if (BoxCollider* comp = dynamic_cast<BoxCollider*>(it))
 		{
 			BoxCollider* boxColliderComp = addComponent<BoxCollider>();
 			boxColliderComp->center = comp->center;
 			boxColliderComp->size = comp->size;
-			boxColliderComp->shape = comp->shape;
-			boxColliderComp->trigger = comp->trigger;
 			boxColliderComp->pmat = comp->pmat;
 			boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
+			glm::vec3 size = transform->globalScale * boxColliderComp->size / 2.f;
+			boxColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat);
+			boxColliderComp->shape->setFlags(comp->shape->getFlags());
+			glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
+			boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = getComponent<Rigidbody>())
+				rb->body->attachShape(*boxColliderComp->shape);
+
 		}
 		else if (SphereCollider* comp = dynamic_cast<SphereCollider*>(it))
 		{
@@ -87,9 +95,14 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			sphereColliderComp->center = comp->center;
 			sphereColliderComp->radius = comp->radius;
 			sphereColliderComp->shape = comp->shape;
-			sphereColliderComp->trigger = comp->trigger;
 			sphereColliderComp->pmat = comp->pmat;
 			sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
+			sphereColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius), *sphereColliderComp->pmat->pxmat);
+			glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
+			sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = getComponent<Rigidbody>())
+				rb->body->attachShape(*sphereColliderComp->shape);
 		}
 		else if (CapsuleCollider* comp = dynamic_cast<CapsuleCollider*>(it))
 		{
@@ -99,7 +112,6 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			capsuleColliderComp->center = comp->center;
 			capsuleColliderComp->radius = comp->radius;
 			capsuleColliderComp->shape = comp->shape;
-			capsuleColliderComp->trigger = comp->trigger;
 			capsuleColliderComp->pmat = comp->pmat;
 			capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
 		}
@@ -108,7 +120,6 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			MeshCollider* meshColliderComp = addComponent<MeshCollider>();
 			meshColliderComp->convex = comp->convex;
 			meshColliderComp->shape = comp->shape;
-			meshColliderComp->trigger = comp->trigger;
 			meshColliderComp->pmat = comp->pmat;
 			meshColliderComp->pmat->colliderCompAddrs.push_back(meshColliderComp);
 		}
@@ -131,8 +142,7 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 
 bool Entity::destroy(Scene* scene) {
 
-	Light* lightComp = getComponent<Light>();
-	if (lightComp != nullptr) {
+	if (Light* lightComp = getComponent<Light>()) {
 
 		if (lightComp->lightType == LightType::DirectionalLight) {
 
@@ -158,45 +168,19 @@ bool Entity::destroy(Scene* scene) {
 		}
 	}
 
+	//for (auto& comp : getComponents<Collider>())
+	//	comp->shape->
+
+	if (Rigidbody* rb = getComponent<Rigidbody>())
+		scene->editor->physics.gScene->removeActor(*rb->body);
+
 	delete[] name;
 	delete transform;
 
 	for (auto& it : components)
 		delete it;
 
+	delete this;
+
 	return true;
 }
-
-//void Entity::addRigidbodyComponent(std::vector<Rigidbody>& physicsComponents,
-//	std::vector<MeshRenderer>& m_rendererComponents, Physics* physics) {
-//
-//	if (rigidbodyComponentIndex != -1)
-//		return;
-//
-//	Rigidbody comp;
-//	comp.entID = transform->id;
-//	physicsComponents.push_back(comp);
-//	rigidbodyComponentIndex = physicsComponents.size() - 1;
-//
-//	for (auto& it : m_rendererComponents) {
-//
-//		if (it.entID == transform->id) {
-//
-//			physics->addConvexMesh(&it, transform, &physicsComponents[rigidbodyComponentIndex]);
-//			break;
-//		}
-//	}
-//
-//}
-//
-//void Entity::addMeshColliderComponent(std::vector<MeshCollider>& meshColliderComponents, 
-//	std::vector<MeshRenderer>& m_rendererComponents, Physics* physics) {
-//
-//	if (meshColliderComponentIndex != -1)
-//		return;
-//
-//	MeshCollider comp;
-//	comp.entID = transform->id;
-//	meshColliderComponents.push_back(comp);
-//	meshColliderComponentIndex = meshColliderComponents.size() - 1;
-//}

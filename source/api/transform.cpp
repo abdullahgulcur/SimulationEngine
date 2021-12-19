@@ -1,37 +1,46 @@
 #include "transform.hpp"
-#include "transform.hpp"
 #include "entity.hpp"
+#include "rigidbody.hpp"
 
 Transform::Transform(Entity* ent) {
 
 	this->entity = ent;
 	this->parent = NULL;
-	id = 0;
 
 	model = glm::mat4(1.0);
 	localScale = glm::vec3(1, 1, 1);
+	globalScale = glm::vec3(1, 1, 1);
 }
 
-Transform::Transform(Entity* ent, Transform* parent, unsigned int id) {
+Transform::Transform(Entity* ent, Transform* parent) {
 
 	this->entity = ent;
 	this->parent = parent;
-	this->id = id;
 	(this->parent->children).push_back(this);
 
+	localPosition = glm::vec3(0, 0, 0);
+	localRotation = glm::vec3(0, 0, 0);
 	localScale = glm::vec3(1, 1, 1);
-	model = glm::mat4(1.0);
+
+	globalPosition = parent->globalPosition;
+	globalRotation = parent->globalRotation;
+	globalScale = parent->globalScale;
+
+	model = parent->model;
 }
 
-Transform::Transform(Entity* ent, Transform* parent, Transform* base, unsigned int id) {
+Transform::Transform(Entity* ent, Transform* parent, Transform* base) {
 
 	this->entity = ent;
 	localPosition = base->localPosition;
 	localRotation = base->localRotation;
 	localScale = base->localScale;
 
+	globalPosition = base->globalPosition;
+	globalRotation = base->globalRotation;
+	globalScale = base->globalScale;
+
 	this->parent = parent;
-	this->id = id;
 	(this->parent->children).push_back(this);
 }
 
@@ -47,7 +56,6 @@ glm::mat4 Transform::getLocalModelMatrix()
 		glm::radians(localRotation.z),
 		glm::vec3(0.0f, 0.0f, 1.0f));
 
-	//const glm::mat4 roationMatrix = transformY * transformX * transformZ;
 	const glm::mat4 roationMatrix = transformZ * transformY * transformX;
 
 	return glm::translate(glm::mat4(1.0f), localPosition) *
@@ -57,18 +65,10 @@ glm::mat4 Transform::getLocalModelMatrix()
 
 void Transform::updateSelfAndChildTransforms()
 {
-	glm::mat4 localTransform = glm::inverse(parent->model) * model;
-
-	glm::vec3 scale;
-	glm::vec3 rotation;
-	glm::vec3 position;
-	Math::decompose(localTransform, scale, rotation, position);
-	
-	localScale = scale;
-	localRotation = rotation * (180.f / glm::pi<float>());
-	localPosition = position;
-
+	Transform::setLocalTransformation();
 	Transform::setGlobalTransformation();
+	Transform::updatePhysics();
+
 	Transform::updateSelfAndChildRecursively();
 }
 
@@ -77,6 +77,8 @@ void Transform::updateSelfAndChild()
 	if (parent != NULL) {
 
 		model = parent->model * getLocalModelMatrix();
+		Transform::setGlobalTransformation();
+		Transform::updatePhysics();
 	}
 	Transform::updateSelfAndChildRecursively();
 }
@@ -87,8 +89,24 @@ void Transform::updateSelfAndChildRecursively()
 
 		transform->model = model * transform->getLocalModelMatrix();
 		transform->setGlobalTransformation();
+		Transform::updatePhysics();
+
 		transform->updateSelfAndChildRecursively();
 	}
+}
+
+void Transform::setLocalTransformation() {
+
+	glm::mat4 localTransform = glm::inverse(parent->model) * model;
+
+	glm::vec3 scale;
+	glm::vec3 rotation;
+	glm::vec3 position;
+	Math::decompose(localTransform, scale, rotation, position);
+
+	localScale = scale;
+	localRotation = rotation * (180.f / glm::pi<float>());
+	localPosition = position;
 }
 
 void Transform::setGlobalTransformation() {
@@ -101,4 +119,19 @@ void Transform::setGlobalTransformation() {
 	globalPosition = position;
 	globalRotation = rotation;
 	globalScale = scale;
+}
+
+void Transform::updatePhysics() {
+
+	Rigidbody* rb = entity->getComponent<Rigidbody>();
+	if (rb)
+		rb->updateGlobalPose();
+
+	for (auto& comp : entity->getComponents<Collider>()) {
+
+		if (rb)
+			comp->updatePoseGeometryAndRelease();
+		else
+			comp->updatePoseGeometry();
+	}
 }

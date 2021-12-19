@@ -83,7 +83,7 @@ private:
 	
 
 	// Scene Graph
-	int renameEntityID = -1;
+	Entity* renameEntity = NULL;
 
 	ImVec2 cursorPosWhenFirstClickedItem;
 
@@ -127,7 +127,8 @@ public:
 
 	// File System
 	int lastClickedItemID = 1;
-	int lastSelectedEntityID = -1;
+	//int lastSelectedEntityID = -1;
+	Entity* lastSelectedEntity = NULL;
 
 	/*
 	* TEXTURE IDs

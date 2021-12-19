@@ -1,9 +1,13 @@
 #include "rigidbody.hpp"
 
-Rigidbody::Rigidbody() {
+Rigidbody::Rigidbody() {}
 
-	//type = ComponentType::Rigidbody;
+void Rigidbody::updateGlobalPose() {
 
-	freezePos = glm::vec3(false, false, false);
-	freezeRot = glm::vec3(false, false, false);
+	glm::quat myquaternion = glm::quat(transform->globalRotation);
+	PxTransform tm(PxVec3(transform->globalPosition.x, transform->globalPosition.y, transform->globalPosition.z),
+		PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
+
+	body->setGlobalPose(tm);
+	//body->release();
 }

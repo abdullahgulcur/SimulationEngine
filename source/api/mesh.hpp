@@ -39,5 +39,7 @@ namespace Mesh {
         void initBuffers(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
 
         void initEmtyBuffers();
+
+        void getBoxGeometryBoundaries(glm::vec3& min, glm::vec3& max);
     };
 }

@@ -114,6 +114,6 @@ void Physics::initPhysics()
 	//params.buildGPUData = true; //Enable GRB data being produced in cooking.
 	//gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 
-	PxRigidStatic* groundPlane = PxCreatePlane(*gPhysics, PxPlane(0, 1, 0, 0), *gMaterial);
-	gScene->addActor(*groundPlane);
+	//PxRigidStatic* groundPlane = PxCreatePlane(*gPhysics, PxPlane(0, 1, 0, 0), *gMaterial);
+	//gScene->addActor(*groundPlane);
 }

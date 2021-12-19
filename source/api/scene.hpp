@@ -30,13 +30,13 @@ class Scene {
 
 private:
 
-	Editor* editor;
-
 public:
+
+	Editor* editor;
 
 	std::string name;
 
-	std::vector<Entity> entities;
+	std::vector<Entity*> entities;
 	std::vector<Transform*> tempTransforms;
 
 	std::vector<Transform*> pointLightTransforms;
@@ -50,11 +50,7 @@ public:
 
 	void initSceneGraph();
 
-	void generateSceneGraph(std::map<int, std::vector<int>>& initialSceneGraph);
-
-	void generateSceneGraphRecursively(Transform* parent, std::map<int, std::vector<int>>& initialSceneGraph);
-
-	void loadPhysicsComponents();
+	void generateSceneGraphRecursively(int parentIndex, std::map<int, std::vector<int>>& initialSceneGraph);
 
 	void loadLights();
 
@@ -74,25 +70,27 @@ public:
 
 	bool subEntityAndItselfCheck(Transform* child, Transform* parent);
 
-	void moveEntity(int toBeMoved, int moveTo);
+	void moveEntity(Entity* toBeMoved, Entity* moveTo);
 
-	void getTreeIndices(Transform* transform, std::unordered_set<int>& indices);
+	void getAllEntities(Transform* transform, std::unordered_set<Entity*>& ents);
 
-	void deleteEntityFromTree(Transform* parent, int id);
+	void deleteEntityFromTree(Transform* parent, Entity* ent);
 
-	void deleteEntityCompletely(int id);
+	void deleteEntityCompletely(Entity* ent);
 
 	void deleteEntityCompletelyRecursively(Transform* transform);
 
-	int duplicateEntity(int id);
+	Entity* duplicateEntity(Entity* ent);
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
 
-	Transform* newEntity(int parentID, const char* name);
+	Transform* newEntity(Entity* parent, const char* name);
 
-	int newLight(int parentID, const char* name, LightType type);
+	int getEntityIndex(Entity* ent);
 
-	void renameEntity(int id, char* newName);
+	Entity* newLight(Entity* parent, const char* name, LightType type);
+
+	void renameEntity(Entity* ent, char* newName);
 
 	void saveEditorProperties();
 

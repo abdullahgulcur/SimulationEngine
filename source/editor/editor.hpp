@@ -12,6 +12,8 @@
 #include "texture.hpp"
 #include "input.hpp"
 #include "physics.hpp"
+#include "debugrenderer.hpp"
+
 
 class Editor {
 
@@ -26,6 +28,8 @@ public:
 	EditorGUI editorGUI;
 	Scene scene;
 	Physics physics;
+	BoxColliderRenderer* bcr = NULL;
+	SphereColliderRenderer* scr = NULL;
 
 	float time = 0;
 	bool gameStarted = false;

@@ -178,6 +178,7 @@
     <ClCompile Include="source\component\collider.cpp" />
     <ClCompile Include="source\component\meshrenderer.cpp" />
     <ClCompile Include="source\component\rigidbody.cpp" />
+    <ClCompile Include="source\editor\debugrenderer.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
     <ClCompile Include="source\editor\camera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
@@ -226,6 +227,7 @@
     <ClInclude Include="source\component\collider.hpp" />
     <ClInclude Include="source\component\meshrenderer.hpp" />
     <ClInclude Include="source\component\rigidbody.hpp" />
+    <ClInclude Include="source\editor\debugrenderer.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
     <ClInclude Include="source\editor\camera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
@@ -1018,8 +1020,12 @@
     <None Include="source\include\GLM\gtx\vector_angle.inl" />
     <None Include="source\include\GLM\gtx\vector_query.inl" />
     <None Include="source\include\GLM\gtx\wrap.inl" />
+    <None Include="source\shader\Circle.frag" />
+    <None Include="source\shader\Circle.vert" />
     <None Include="source\shader\Default.frag" />
     <None Include="source\shader\Default.vert" />
+    <None Include="source\shader\Line.frag" />
+    <None Include="source\shader\Line.vert" />
     <None Include="source\shader\ObjectPick.frag" />
     <None Include="source\shader\ObjectPick.vert" />
   </ItemGroup>

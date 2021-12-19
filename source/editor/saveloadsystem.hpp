@@ -7,6 +7,9 @@
 #include <sstream>
 #include <map>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
@@ -24,13 +27,11 @@ class Editor;
 
 namespace SaveLoadSystem {
 
-	bool loadSceneGraph(Editor* editor, std::map<int, std::vector<int>>& initialSceneGrap);
+	void saveEntitiesRecursively(Editor* editor, Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode);
 
-	bool saveSceneGraph(Editor* editor);
+	void loadEntities(Editor* editor);
 
-	bool writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream);
-
-	bool loadEntities(Editor* editor);
+	void loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<>* parentNode, Entity* parent);
 
 	bool saveEntities(Editor* editor);
 	

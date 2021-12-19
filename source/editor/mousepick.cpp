@@ -18,8 +18,8 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 
 	for (int i = 0; i < editor->scene.entities.size(); i++) {
 	
-		MeshRenderer* meshRendererComp = editor->scene.entities[i].getComponent<MeshRenderer>();
-		Transform* transform = editor->scene.entities[i].transform;
+		MeshRenderer* meshRendererComp = editor->scene.entities[i]->getComponent<MeshRenderer>();
+		Transform* transform = editor->scene.entities[i]->transform;
 
 		if (meshRendererComp != nullptr) {
 
@@ -38,23 +38,6 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 			glBindVertexArray(0);
 		}
 	}
-
-	//for (int i = 0; i < editor->scene.meshRendererComponents.size(); i++) {
-
-	//	glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &editor->scene.entities[editor->scene.meshRendererComponents[i].entID].transform->model[0][0]);
-	//	glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-	//	glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
-
-	//	int r = (editor->scene.meshRendererComponents[i].entID & 0x000000FF) >> 0;
-	//	int g = (editor->scene.meshRendererComponents[i].entID & 0x0000FF00) >> 8;
-	//	int b = (editor->scene.meshRendererComponents[i].entID & 0x00FF0000) >> 16;
-
-	//	glUniform4f(pickingColorID, r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
-
-	//	glBindVertexArray(editor->scene.meshRendererComponents[i].mesh->VAO);
-	//	glDrawElements(GL_TRIANGLES, editor->scene.meshRendererComponents[i].mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
-	//	glBindVertexArray(0);
-	//}
 
 	// Wait until all the pending drawing commands are really done.
 	// Ultra-mega-over slow ! 
@@ -79,7 +62,7 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		data[2] * 256 * 256;
 
 	if (pickedID == 0x00ffffff)
-		editor->editorGUI.lastSelectedEntityID = -1;
+		editor->editorGUI.lastSelectedEntity = NULL;
 	else
-		editor->editorGUI.lastSelectedEntityID = pickedID;
+		editor->editorGUI.lastSelectedEntity = editor->scene.entities[pickedID];
 }

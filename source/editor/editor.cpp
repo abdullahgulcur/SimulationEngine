@@ -14,6 +14,8 @@ void Editor::startEditorScreen() {
 	scene.init(this);
 	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
+	bcr = new BoxColliderRenderer();
+	scr = new SphereColliderRenderer();
 
 	scene.start();
 }

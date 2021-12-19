@@ -195,9 +195,9 @@ void EditorGUI::handleInputs() {
 
 		if (materialChanged) {
 
-			if (lastSelectedEntityID != -1) {
+			if (lastSelectedEntity) {
 				
-				MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>(); 
+				MeshRenderer* meshRendererComp = lastSelectedEntity->getComponent<MeshRenderer>();
 				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
 
 				meshRendererComp->mat->deleteProgram();
@@ -220,7 +220,7 @@ void EditorGUI::handleInputs() {
 
 		if (physicMaterialChanged) {
 
-			if (lastSelectedEntityID != -1) {
+			if (lastSelectedEntity) {
 
 				//MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>();
 				//editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat);
@@ -271,7 +271,7 @@ void EditorGUI::handleInputs() {
 		fileSystemControlVars.panelRightItemTab = false;
 
 		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing())
-			lastSelectedEntityID = -1;
+			lastSelectedEntity = NULL;
 
 		if (!ImGuizmo::IsUsing()) {
 
@@ -292,8 +292,8 @@ void EditorGUI::handleInputs() {
 
 		if (ImGui::IsKeyPressed('D')) {
 
-			if (lastSelectedEntityID != -1)
-				lastSelectedEntityID = editor->scene.duplicateEntity(lastSelectedEntityID);
+			if (lastSelectedEntity)
+				lastSelectedEntity = editor->scene.duplicateEntity(lastSelectedEntity);
 
 			if (fileSystemControlVars.lastSelectedItemID != -1)
 				fileSystemControlVars.lastSelectedItemID = editor->fileSystem.duplicateFile(fileSystemControlVars.lastSelectedItemID);
@@ -307,10 +307,10 @@ void EditorGUI::handleInputs() {
 
 	if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) {
 
-		if (lastSelectedEntityID != -1) {
+		if (lastSelectedEntity) {
 
-			editor->scene.deleteEntityCompletely(lastSelectedEntityID);
-			lastSelectedEntityID = -1;
+			editor->scene.deleteEntityCompletely(lastSelectedEntity);
+			lastSelectedEntity = NULL;
 		}
 
 		if (fileSystemControlVars.lastSelectedItemID != -1) {
@@ -489,7 +489,7 @@ void EditorGUI::createScenePanel() {
 
 	ImGui::Image((ImTextureID)editor->window.textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
 
-	if (lastSelectedEntityID != -1) {
+	if (lastSelectedEntity) {
 
 		ImGuizmo::SetOrthographic(false);
 		ImGuizmo::SetDrawlist();
@@ -498,7 +498,7 @@ void EditorGUI::createScenePanel() {
 		float windowHeight = (float)ImGui::GetWindowHeight();
 
 		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
-		glm::mat4& model = editor->scene.entities[lastSelectedEntityID].transform->model;
+		glm::mat4& model = lastSelectedEntity->transform->model;
 		ImGuizmo::Manipulate(glm::value_ptr(editor->editorCamera.ViewMatrix), glm::value_ptr(editor->editorCamera.ProjectionMatrix),
 			optype, ImGuizmo::LOCAL, glm::value_ptr(model));
 
@@ -519,7 +519,7 @@ void EditorGUI::createScenePanel() {
 				break;
 			}
 
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChildTransforms();
+			lastSelectedEntity->transform->updateSelfAndChildTransforms();
 		}
 	}
 
@@ -560,7 +560,7 @@ void EditorGUI::createInspectorPanel() {
 
 	ImGui::Indent(6);
 
-	if (lastSelectedEntityID != -1) {
+	if (lastSelectedEntity) {
 
 		EditorGUI::showEntityName();
 
@@ -572,35 +572,35 @@ void EditorGUI::createInspectorPanel() {
 		int index = 0;
 		EditorGUI::showTransformComponent(index++);
 
-		if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>()) {
+		if (MeshRenderer* meshRendererComp = lastSelectedEntity->getComponent<MeshRenderer>()) {
 
 			MaterialFile& material = *meshRendererComp->mat;
 			EditorGUI::showMeshRendererComponent(meshRendererComp, index++);
 			EditorGUI::showMaterialProperties(material, index++);
 		}
 
-		if (Light* lightComp = editor->scene.entities[lastSelectedEntityID].getComponent<Light>())
+		if (Light* lightComp = lastSelectedEntity->getComponent<Light>())
 			EditorGUI::showLightComponent(index++);
 
-		if (Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>())
+		if (Rigidbody* rigidbodyComp = lastSelectedEntity->getComponent<Rigidbody>())
 			EditorGUI::showRigidbodyComponent(index++);
 
-		std::vector<BoxCollider*> boxColliderCompList = editor->scene.entities[lastSelectedEntityID].getComponents<BoxCollider>();
+		std::vector<BoxCollider*> boxColliderCompList = lastSelectedEntity->getComponents<BoxCollider>();
 		int boxColliderCompIndex = 0;
 		for(auto& comp: boxColliderCompList)
 			EditorGUI::showBoxColliderComponent(comp, index++, boxColliderCompIndex++);
 
-		std::vector<SphereCollider*> sphereColliderCompList = editor->scene.entities[lastSelectedEntityID].getComponents<SphereCollider>();
+		std::vector<SphereCollider*> sphereColliderCompList = lastSelectedEntity->getComponents<SphereCollider>();
 		int sphereColliderCompIndex = 0;
 		for (auto& comp : sphereColliderCompList)
 			EditorGUI::showSphereColliderComponent(comp, index++, sphereColliderCompIndex++);
 
-		std::vector<CapsuleCollider*> capsuleColliderCompList = editor->scene.entities[lastSelectedEntityID].getComponents<CapsuleCollider>();
+		std::vector<CapsuleCollider*> capsuleColliderCompList = lastSelectedEntity->getComponents<CapsuleCollider>();
 		int capsuleColliderCompIndex = 0;
 		for (auto& comp : capsuleColliderCompList)
 			EditorGUI::showCapsuleColliderComponent(comp, index++, capsuleColliderCompIndex++);
 
-		std::vector<MeshCollider*> meshColliderCompList = editor->scene.entities[lastSelectedEntityID].getComponents<MeshCollider>();
+		std::vector<MeshCollider*> meshColliderCompList = lastSelectedEntity->getComponents<MeshCollider>();
 		int meshColliderCompIndex = 0;
 		for (auto& comp : meshColliderCompList)
 			EditorGUI::showMeshColliderComponent(comp, index++, meshColliderCompIndex++);
@@ -658,15 +658,23 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Collider (Box)")) {
 
-			BoxCollider* boxColliderComp = editor->scene.entities[lastSelectedEntityID].addComponent<BoxCollider>();
+			BoxCollider* boxColliderComp = lastSelectedEntity->addComponent<BoxCollider>();
 			boxColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
+			glm::vec3 size = lastSelectedEntity->transform->globalScale * boxColliderComp->size / 2.f;
+			boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat);
+			boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+			glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
+			boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+				rb->body->attachShape(*boxColliderComp->shape);
 		}
 
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Collider (Capsule)")) {
 
-			CapsuleCollider* capsuleColliderComp = editor->scene.entities[lastSelectedEntityID].addComponent<CapsuleCollider>();
+			CapsuleCollider* capsuleColliderComp = lastSelectedEntity->addComponent<CapsuleCollider>();
 			capsuleColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
 		}
 
@@ -674,7 +682,7 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Collider (Mesh)")) {
 
-			MeshCollider* meshColliderComp = editor->scene.entities[lastSelectedEntityID].addComponent<MeshCollider>();
+			MeshCollider* meshColliderComp = lastSelectedEntity->addComponent<MeshCollider>();
 			meshColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
 		}
 
@@ -682,17 +690,24 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Collider (Sphere)")) {
 
-			SphereCollider* sphereColliderComp = editor->scene.entities[lastSelectedEntityID].addComponent<SphereCollider>();
+			SphereCollider* sphereColliderComp = lastSelectedEntity->addComponent<SphereCollider>();
 			sphereColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
+			sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(0.5f), *sphereColliderComp->pmat->pxmat);
+			sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+			glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
+			sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+				rb->body->attachShape(*sphereColliderComp->shape);
 		}
 
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Light")) {
 
-			if (Light* lightComp = editor->scene.entities[lastSelectedEntityID].addComponent<Light>()) {
+			if (Light* lightComp = lastSelectedEntity->addComponent<Light>()) {
 
-				Transform* lighTransform = editor->scene.entities[lastSelectedEntityID].transform;
+				Transform* lighTransform = lastSelectedEntity->transform;
 				editor->scene.pointLightTransforms.push_back(lighTransform);
 				editor->scene.recompileAllMaterials();
 			}
@@ -704,7 +719,7 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Mesh Renderer")) {
 
-			if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].addComponent<MeshRenderer>()) {
+			if (MeshRenderer* meshRendererComp = lastSelectedEntity->addComponent<MeshRenderer>()) {
 
 				meshRendererComp->mesh = &editor->fileSystem.meshes["Null"];
 				meshRendererComp->mat = &editor->fileSystem.materials["Default"];
@@ -716,12 +731,19 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Rigidbody")) {
 
-			if (Rigidbody* rigidbodyComp = editor->scene.entities[lastSelectedEntityID].addComponent<Rigidbody>()) {
+			if (Rigidbody* rigidbodyComp = lastSelectedEntity->addComponent<Rigidbody>()) {
 
-				//if (MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>())
-				//	editor->physics.addConvexMesh(meshRendererComp, editor->scene.entities[lastSelectedEntityID].transform, rigidbodyComp);
-				//else
-				//	statusMessage = "There is no mesh renderer component attached to that entity!";
+				glm::quat myquaternion = glm::quat(lastSelectedEntity->transform->globalRotation);
+				PxTransform tm(PxVec3(lastSelectedEntity->transform->globalPosition.x, lastSelectedEntity->transform->globalPosition.y,
+					lastSelectedEntity->transform->globalPosition.z),
+					PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
+
+				rigidbodyComp->body = editor->physics.gPhysics->createRigidDynamic(tm);
+				rigidbodyComp->body->setMass(1.f);
+				editor->physics.gScene->addActor(*rigidbodyComp->body);
+
+				for (auto& comp : lastSelectedEntity->getComponents<Collider>())
+					rigidbodyComp->body->attachShape(*comp->shape);
 			}
 			else
 				statusMessage = "There is existing component in the same type!";
@@ -770,15 +792,15 @@ void EditorGUI::showEntityName() {
 	//ImGui::Separator();
 
 	char str0[32] = "";
-	strcat(str0, editor->scene.entities[lastSelectedEntityID].name);
+	strcat(str0, lastSelectedEntity->name);
 	ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 	ImVec2 textSize = ImGui::CalcTextSize(str0);
 
 	if (ImGui::InputText("##9", str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 		if (strlen(str0) != 0)
-			editor->scene.renameEntity(editor->scene.entities[lastSelectedEntityID].transform->id, str0);
-		renameEntityID = -1;
+			editor->scene.renameEntity(lastSelectedEntity, str0);
+		renameEntity = NULL;
 	}
 
 	ImGui::Separator();
@@ -824,48 +846,48 @@ void EditorGUI::showTransformComponent(int index) {
 
 		ImGui::Text("Position  X"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##0", &editor->scene.entities[lastSelectedEntityID].transform->localPosition.x, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##0", &lastSelectedEntity->transform->localPosition.x, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##1", &editor->scene.entities[lastSelectedEntityID].transform->localPosition.y, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##1", &lastSelectedEntity->transform->localPosition.y, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##2", &editor->scene.entities[lastSelectedEntityID].transform->localPosition.z, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##2", &lastSelectedEntity->transform->localPosition.z, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::Text("Rotation  X"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##3", &editor->scene.entities[lastSelectedEntityID].transform->localRotation.x, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##3", &lastSelectedEntity->transform->localRotation.x, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##4", &editor->scene.entities[lastSelectedEntityID].transform->localRotation.y, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##4", &lastSelectedEntity->transform->localRotation.y, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##5", &editor->scene.entities[lastSelectedEntityID].transform->localRotation.z, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##5", &lastSelectedEntity->transform->localRotation.z, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::Text("Scale     X"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##6", &editor->scene.entities[lastSelectedEntityID].transform->localScale.x, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##6", &lastSelectedEntity->transform->localScale.x, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##7", &editor->scene.entities[lastSelectedEntityID].transform->localScale.y, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##7", &lastSelectedEntity->transform->localScale.y, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine(); ImGui::PushItemWidth((width - 150) / 3);
 
-		if (ImGui::DragFloat("##8", &editor->scene.entities[lastSelectedEntityID].transform->localScale.z, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].transform->updateSelfAndChild();
+		if (ImGui::DragFloat("##8", &lastSelectedEntity->transform->localScale.z, 0.1f, 0.0f, 0.0f, "%.2f"))
+			lastSelectedEntity->transform->updateSelfAndChild();
 
 		ImGui::TreePop();
 	}
@@ -1039,7 +1061,7 @@ void EditorGUI::showLightComponent(int index) {
 		ImGui::SameLine(95);
 		ImGui::PushItemWidth(80);
 
-		int item = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType == LightType::DirectionalLight ? 0 : 1;
+		int item = lastSelectedEntity->getComponent<Light>()->lightType == LightType::DirectionalLight ? 0 : 1;
 
 		const char* items[] = { "Directional", "Point" };
 
@@ -1048,20 +1070,20 @@ void EditorGUI::showLightComponent(int index) {
 		ImGui::SetNextItemWidth(width - 180);
 		if (ImGui::Combo("##0", &item, items, IM_ARRAYSIZE(items))) {
 
-			if (editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType == LightType::DirectionalLight) {
+			if (lastSelectedEntity->getComponent<Light>()->lightType == LightType::DirectionalLight) {
 
 				if (item == 1) {
 
-					editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType = LightType::PointLight;
+					lastSelectedEntity->getComponent<Light>()->lightType = LightType::PointLight;
 					
 					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
 
-						if ((*it) == editor->scene.entities[lastSelectedEntityID].transform) {
+						if ((*it) == lastSelectedEntity->transform) {
 							editor->scene.dirLightTransforms.erase(it);
 							break;
 						}
 					}
-					editor->scene.pointLightTransforms.push_back(editor->scene.entities[lastSelectedEntityID].transform);
+					editor->scene.pointLightTransforms.push_back(lastSelectedEntity->transform);
 					editor->scene.recompileAllMaterials();
 				}
 			}
@@ -1069,16 +1091,16 @@ void EditorGUI::showLightComponent(int index) {
 
 				if (item == 0) {
 
-					editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType = LightType::DirectionalLight;
+					lastSelectedEntity->getComponent<Light>()->lightType = LightType::DirectionalLight;
 					
 					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
 
-						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+						if (*it == lastSelectedEntity->transform) {
 							editor->scene.pointLightTransforms.erase(it);
 							break;
 						}
 					}
-					editor->scene.dirLightTransforms.push_back(editor->scene.entities[lastSelectedEntityID].transform);
+					editor->scene.dirLightTransforms.push_back(lastSelectedEntity->transform);
 					editor->scene.recompileAllMaterials();
 				}
 			}
@@ -1088,17 +1110,17 @@ void EditorGUI::showLightComponent(int index) {
 		ImGui::Text("Power");
 		ImGui::SameLine(95);
 
-		float power = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->power;
+		float power = lastSelectedEntity->getComponent<Light>()->power;
 		if (ImGui::DragFloat("##1", &power, 0.1f, 0.0f, 0.0f, "%.2f"))
-			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->power = power;
+			lastSelectedEntity->getComponent<Light>()->power = power;
 
 		ImGui::Text("Color");
 		ImGui::SameLine(95);
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 
-		ImVec4 color = ImVec4(editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.x,
-			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.y,
-			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color.z, 1.f);
+		ImVec4 color = ImVec4(lastSelectedEntity->getComponent<Light>()->color.x,
+			lastSelectedEntity->getComponent<Light>()->color.y,
+			lastSelectedEntity->getComponent<Light>()->color.z, 1.f);
 
 		ImGuiColorEditFlags misc_flags = ImGuiColorEditFlags_NoAlpha;
 		static ImVec4 backup_color;
@@ -1111,7 +1133,7 @@ void EditorGUI::showLightComponent(int index) {
 		if (ImGui::BeginPopup("mypicker"))
 		{
 			ImGui::ColorPicker4("##3", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-			editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->color = glm::vec3(color.x, color.y, color.z);
+			lastSelectedEntity->getComponent<Light>()->color = glm::vec3(color.x, color.y, color.z);
 
 			ImGui::EndPopup();
 		}
@@ -1371,33 +1393,71 @@ void EditorGUI::showRigidbodyComponent(int index) {
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
+		Rigidbody* rigidbody = lastSelectedEntity->getComponent<Rigidbody>();
+
 		ImGui::Text("Mass                ");
 		ImGui::SameLine();
-		ImGui::DragFloat("##0", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->mass, 0.1f, 0.0f, 0.0f, "%.2f");
+		float mass = rigidbody->body->getMass();
+		if (ImGui::DragFloat("##0", &mass, 0.1f, 0.0f, 0.0f, "%.2f"))
+			rigidbody->body->setMass(mass);
 
 		ImGui::Text("Use Gravity         ");
 		ImGui::SameLine();
-		ImGui::Checkbox("##1", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->useGravity);
+		bool useGravity = !(rigidbody->body->getActorFlags() & PxActorFlag::eDISABLE_GRAVITY);
+		if (ImGui::Checkbox("##1", &useGravity)) {
+
+			rigidbody->body->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, !useGravity);
+			rigidbody->body->wakeUp();
+		}
 
 		ImGui::Text("Is Kinematic        ");
 		ImGui::SameLine();
-		ImGui::Checkbox("##2", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->isKinematic);
+		bool isKinematic = rigidbody->body->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC;
+		if(ImGui::Checkbox("##2", &isKinematic)) {
 
-		ImGui::Text("Freeze Position    X");
-		ImGui::SameLine();
-		ImGui::Checkbox("##3", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.x);
-		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
-		ImGui::Checkbox("##4", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.y);
-		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
-		ImGui::Checkbox("##5", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezePos.z);
+			rigidbody->body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, isKinematic);
+			rigidbody->body->wakeUp();
+		}
 
-		ImGui::Text("Freeze Rotation    X");
+		ImGui::Text("Lock Position      X");
 		ImGui::SameLine();
-		ImGui::Checkbox("##6", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.x);
+		bool freezePosX = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_X;
+		if (ImGui::Checkbox("##3", &freezePosX)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_X, freezePosX);
+		}
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
-		ImGui::Checkbox("##7", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.y);
+		bool freezePosY = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_Y;
+		if (ImGui::Checkbox("##4", &freezePosY)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Y, freezePosY);
+		}
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
-		ImGui::Checkbox("##8", &editor->scene.entities[lastSelectedEntityID].getComponent<Rigidbody>()->freezeRot.z);
+		bool freezePosZ = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_LINEAR_Z;
+		if (ImGui::Checkbox("##5", &freezePosZ)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_LINEAR_Z, freezePosZ);
+		}
+
+		ImGui::Text("Lock Rotation      X");
+		ImGui::SameLine();
+		bool freezeRotX = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_X;
+		if (ImGui::Checkbox("##6", &freezeRotX)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_X, freezeRotX);
+		}
+		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
+		bool freezeRotY = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y;
+		if (ImGui::Checkbox("##7", &freezeRotY)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y, freezeRotY);
+		}
+		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
+		bool freezeRotZ = rigidbody->body->getRigidDynamicLockFlags() & PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z;
+		if (ImGui::Checkbox("##8", &freezeRotZ)) {
+
+			rigidbody->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, freezeRotZ);
+		}
 
 		ImGui::TreePop();
 	}
@@ -1584,7 +1644,11 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		ImGui::Text("Trigger     "); ImGui::SameLine();
-		ImGui::Checkbox("##0", &meshColliderComp->trigger);
+		bool isTrigger = meshColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
+		if (ImGui::Checkbox("##0", &isTrigger)) {
+			meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		}
 
 		ImGui::Text("Convex      "); ImGui::SameLine();
 		ImGui::Checkbox("##1", &meshColliderComp->convex);
@@ -1640,29 +1704,77 @@ void EditorGUI::showBoxColliderComponent(BoxCollider* boxColliderComp, int index
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		ImGui::Text("Trigger     "); ImGui::SameLine();
-		ImGui::Checkbox("##0", &boxColliderComp->trigger);
+		bool isTrigger = boxColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
+		if (ImGui::Checkbox("##0", &isTrigger)) {
+			boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		}
 
 		EditorGUI::showColliderPhysicMaterial(boxColliderComp, width, 1);
 
 		ImGui::Text("Center     X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##2", &boxColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		if (ImGui::DragFloat("##2", &boxColliderComp->center.x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if(boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
+
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##3", &boxColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		if (ImGui::DragFloat("##3", &boxColliderComp->center.y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
+
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##4", &boxColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		if (ImGui::DragFloat("##4", &boxColliderComp->center.z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
 
 		ImGui::Text("Size       X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##5", &boxColliderComp->size.x, 0.1f, 0.0f, 0.0f, "%.2f");
+
+		if (ImGui::DragFloat("##5", &boxColliderComp->size.x, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
+
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##6", &boxColliderComp->size.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##6", &boxColliderComp->size.y, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
+
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##7", &boxColliderComp->size.z, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##7", &boxColliderComp->size.z, 0.01f, 0.0f, 0.0f, "%.2f")) {
+
+			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
+				boxColliderComp->updatePoseGeometryAndRelease();
+			else
+				boxColliderComp->updatePoseGeometry();
+		}
 
 		ImGui::TreePop();
 	}
@@ -1713,7 +1825,11 @@ void EditorGUI::showSphereColliderComponent(SphereCollider* sphereColliderComp, 
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		ImGui::Text("Trigger     "); ImGui::SameLine();
-		ImGui::Checkbox("##0", &sphereColliderComp->trigger);
+		bool isTrigger = sphereColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
+		if (ImGui::Checkbox("##0", &isTrigger)) {
+			sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		}
 
 		EditorGUI::showColliderPhysicMaterial(sphereColliderComp, width, 1);
 
@@ -1779,7 +1895,11 @@ void EditorGUI::showCapsuleColliderComponent(CapsuleCollider* capsuleColliderCom
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		ImGui::Text("Trigger     "); ImGui::SameLine();
-		ImGui::Checkbox("##0", &capsuleColliderComp->trigger);
+		bool isTrigger = capsuleColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
+		if (ImGui::Checkbox("##0", &isTrigger)) {
+			capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		}
 
 		EditorGUI::showColliderPhysicMaterial(capsuleColliderComp, width, 1);
 
@@ -1917,26 +2037,38 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			}
 			case ComponentType::BoxCollider : {
 
-				BoxCollider* boxColliderComp = editor->scene.entities[lastSelectedEntityID].getComponents<BoxCollider>()[index];
-				editor->scene.entities[lastSelectedEntityID].removeComponent(boxColliderComp);
+				BoxCollider* boxColliderComp = lastSelectedEntity->getComponents<BoxCollider>()[index];
+				PxShape* shape = boxColliderComp->shape;
+				lastSelectedEntity->removeComponent(boxColliderComp);
+
+				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+					rb->body->detachShape(*shape);
+				else
+					shape->release();
+
 				break;
 			}
 			case ComponentType::CapsuleCollider: {
 
-				CapsuleCollider* capsuleColliderComp = editor->scene.entities[lastSelectedEntityID].getComponents<CapsuleCollider>()[index];
-				editor->scene.entities[lastSelectedEntityID].removeComponent(capsuleColliderComp);
+				CapsuleCollider* capsuleColliderComp = lastSelectedEntity->getComponents<CapsuleCollider>()[index];
+				PxShape* shape = capsuleColliderComp->shape;
+				lastSelectedEntity->removeComponent(capsuleColliderComp);
+
+				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+					rb->body->detachShape(*shape);
+
 				break;
 			}
 			case ComponentType::Light: {
 
-				LightType type = editor->scene.entities[lastSelectedEntityID].getComponent<Light>()->lightType;
-				editor->scene.entities[lastSelectedEntityID].removeComponent<Light>();
+				LightType type = lastSelectedEntity->getComponent<Light>()->lightType;
+				lastSelectedEntity->removeComponent<Light>();
 
 				if (type == LightType::PointLight) {
 
 					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
 
-						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+						if (*it == lastSelectedEntity->transform) {
 							editor->scene.pointLightTransforms.erase(it);
 							break;
 						}
@@ -1946,7 +2078,7 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 
 					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
 
-						if (*it == editor->scene.entities[lastSelectedEntityID].transform) {
+						if (*it == lastSelectedEntity->transform) {
 							editor->scene.dirLightTransforms.erase(it);
 							break;
 						}
@@ -1958,12 +2090,17 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			}
 			case ComponentType::MeshCollider: {
 
-				MeshCollider* meshColliderComp = editor->scene.entities[lastSelectedEntityID].getComponents<MeshCollider>()[index];
-				editor->scene.entities[lastSelectedEntityID].removeComponent(meshColliderComp);
+				MeshCollider* meshColliderComp = lastSelectedEntity->getComponents<MeshCollider>()[index];
+				PxShape* shape = meshColliderComp->shape;
+				lastSelectedEntity->removeComponent(meshColliderComp);
+
+				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+					rb->body->detachShape(*shape);
+
 				break;
 			}
 			case ComponentType::MeshRenderer: {
-				editor->scene.entities[lastSelectedEntityID].removeComponent<MeshRenderer>();
+				lastSelectedEntity->removeComponent<MeshRenderer>();
 				break;
 			}
 			case ComponentType::Script: {
@@ -1971,12 +2108,19 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			}
 			case ComponentType::SphereCollider: {
 
-				SphereCollider* sphereColliderComp = editor->scene.entities[lastSelectedEntityID].getComponents<SphereCollider>()[index];
-				editor->scene.entities[lastSelectedEntityID].removeComponent(sphereColliderComp);
+				SphereCollider* sphereColliderComp = lastSelectedEntity->getComponents<SphereCollider>()[index];
+				PxShape* shape = sphereColliderComp->shape;
+				lastSelectedEntity->removeComponent(sphereColliderComp);
+
+				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+					rb->body->detachShape(*shape);
+
 				break;
 			}
 			case ComponentType::Rigidbody: {
-				//editor->scene.entities[lastSelectedEntityID].removeComponent<Rigidbody>();
+				Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>();
+				editor->physics.gScene->removeActor(*rb->body);
+				lastSelectedEntity->removeComponent<Rigidbody>();
 				break;
 			}
 			}
@@ -2057,15 +2201,15 @@ void EditorGUI::createHierarchyPanel() {
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
 			{
-				IM_ASSERT(payload->DataSize == sizeof(int));
-				int payload_n = *(const int*)payload->Data;
-				editor->scene.moveEntity(payload_n, 0);
+				IM_ASSERT(payload->DataSize == sizeof(Entity*));
+				Entity* payload_n = *(Entity**)payload->Data;
+				editor->scene.moveEntity(payload_n, editor->scene.entities[0]);
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::Unindent(15);
-		EditorGUI::createSceneGraphRecursively(editor->scene.entities[0].transform);
+		EditorGUI::createSceneGraphRecursively(editor->scene.entities[0]->transform);
 		ImGui::TreePop();
 	}
 
@@ -2090,13 +2234,13 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 		else
 			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-		if (lastSelectedEntityID != -1 && editor->scene.subEntityCheck(editor->scene.entities[lastSelectedEntityID].transform, transform->children[i])) {
+		if (lastSelectedEntity && editor->scene.subEntityCheck(lastSelectedEntity->transform, transform->children[i])) {
 
 			if (showChildren)
 				ImGui::SetNextItemOpen(true);
 		}
 
-		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i]->id, node_flags, ""); // " %d", transform->children[i]->id
+		bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)transform->children[i], node_flags, ""); // " %d", transform->children[i]->id
 
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 
@@ -2104,24 +2248,24 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 			entityClicked = true;
 
 			if (!ImGui::IsItemToggledOpen())
-				lastSelectedEntityID = transform->children[i]->id;
+				lastSelectedEntity = transform->children[i]->entity;
 			else
 				fileSystemControlVars.toggleClicked = true;
 		}
 
-		ImGui::PushID(transform->children[i]->id);
+		ImGui::PushID(transform->children[i]->entity);
 		ImGui::SetNextWindowSize(ImVec2(210, 95));
 
 		if (ImGui::BeginPopupContextItem("scene_graph_popup"))
 		{
 			entityClicked = true;
-			lastSelectedEntityID = transform->children[i]->id;
+			lastSelectedEntity = transform->children[i]->entity;
 
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
 
 			if (ImGui::Selectable("   Create Empty")) {
 
-				lastSelectedEntityID = editor->scene.newEntity(transform->children[i]->id, "Entity")->id;
+				lastSelectedEntity = editor->scene.newEntity(transform->children[i]->entity, "Entity")->entity;
 				showChildren = true;
 
 				ImGui::PopStyleColor();
@@ -2136,7 +2280,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Rename")) {
 
-				renameEntityID = transform->children[i]->id;
+				renameEntity = transform->children[i]->entity;
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -2146,7 +2290,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Duplicate")) {
 
-				lastSelectedEntityID = editor->scene.duplicateEntity(transform->children[i]->id);
+				lastSelectedEntity = editor->scene.duplicateEntity(transform->children[i]->entity);
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -2156,8 +2300,8 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Delete")) {
 
-				editor->scene.deleteEntityCompletely(lastSelectedEntityID);
-				lastSelectedEntityID = -1;
+				editor->scene.deleteEntityCompletely(lastSelectedEntity);
+				lastSelectedEntity = NULL;
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -2172,8 +2316,8 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 		if (ImGui::BeginDragDropSource())
 		{
-			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &transform->children[i]->id, sizeof(int));
-			ImGui::Text(editor->scene.entities[transform->children[i]->id].name);
+			ImGui::SetDragDropPayload("_TREENODE_ENTITY", &transform->children[i]->entity, sizeof(Entity*));
+			ImGui::Text(transform->children[i]->entity->name);
 			ImGui::EndDragDropSource();
 		}
 
@@ -2182,9 +2326,9 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_TREENODE_ENTITY"))
 			{
 				showChildren = true;
-				IM_ASSERT(payload->DataSize == sizeof(int));
-				int payload_n = *(const int*)payload->Data;
-				editor->scene.moveEntity(payload_n, transform->children[i]->id);
+				IM_ASSERT(payload->DataSize == sizeof(Entity*));
+				Entity* payload_n = *(Entity**)payload->Data;
+				editor->scene.moveEntity(payload_n, transform->children[i]->entity);
 				return;
 			}
 			ImGui::EndDragDropTarget();
@@ -2201,18 +2345,18 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 		ImGui::SameLine();
 
-		if (fileSystemControlVars.lastSelectedItemID == transform->children[i]->id)
-			editorColors.textColor = editorColors.textSelectedColor;
-		else
-			editorColors.textColor = editorColors.textUnselectedColor;
+		//if (fileSystemControlVars.lastSelectedItemID == transform->children[i]->id)
+		//	editorColors.textColor = editorColors.textSelectedColor;
+		//else
+		//	editorColors.textColor = editorColors.textUnselectedColor;
 
 		ImVec2 pos = ImGui::GetCursorPos();
 
-		if (renameEntityID == transform->children[i]->id) {
+		if (renameEntity == transform->children[i]->entity) {
 
 			char temp[3] = { '#','#', '\0' };
 			char str0[32] = "";
-			strcat(str0, editor->scene.entities[transform->children[i]->id].name);
+			strcat(str0, transform->children[i]->entity->name);
 			ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll;
 			ImGui::SetKeyboardFocusHere(0);
 			ImVec2 textSize = ImGui::CalcTextSize(str0);
@@ -2221,16 +2365,16 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 			if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 				if (strlen(str0) != 0)
-					editor->scene.renameEntity(transform->children[i]->id, str0);
-				renameEntityID = -1;
+					editor->scene.renameEntity(transform->children[i]->entity, str0);
+				renameEntity = NULL;
 			}
 		}
 		else {
 
-			if (lastSelectedEntityID == transform->children[i]->id)
-				ImGui::TextColored(editorColors.textSelectedColor, editor->scene.entities[transform->children[i]->id].name);
+			if (lastSelectedEntity == transform->children[i]->entity)
+				ImGui::TextColored(editorColors.textSelectedColor, transform->children[i]->entity->name);
 			else
-				ImGui::Text(editor->scene.entities[transform->children[i]->id].name);
+				ImGui::Text(transform->children[i]->entity->name);
 		}
 
 		if (nodeOpen && hasChildren)
@@ -2253,7 +2397,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Entity")) {
 
-			lastSelectedEntityID = editor->scene.newEntity(0, "Entity")->id;
+			lastSelectedEntity = editor->scene.newEntity(editor->scene.entities[0], "Entity")->entity;
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -2266,7 +2410,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			lastSelectedEntityID = editor->scene.newLight(0, "Sun", LightType::DirectionalLight);
+			lastSelectedEntity = editor->scene.newLight(editor->scene.entities[0], "Sun", LightType::DirectionalLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -2275,7 +2419,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			lastSelectedEntityID = editor->scene.newLight(0, "Point_Light", LightType::PointLight);
+			lastSelectedEntity = editor->scene.newLight(editor->scene.entities[0], "Light", LightType::PointLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
