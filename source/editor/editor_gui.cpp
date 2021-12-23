@@ -659,15 +659,7 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Collider (Box)")) {
 
 			BoxCollider* boxColliderComp = lastSelectedEntity->addComponent<BoxCollider>();
-			boxColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
-			glm::vec3 size = lastSelectedEntity->transform->globalScale * boxColliderComp->size / 2.f;
-			boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat);
-			boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
-			glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
-			boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
-
-			if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
-				rb->body->attachShape(*boxColliderComp->shape);
+			boxColliderComp->init(editor);
 		}
 
 		ImGui::Separator();
@@ -675,15 +667,33 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Collider (Capsule)")) {
 
 			CapsuleCollider* capsuleColliderComp = lastSelectedEntity->addComponent<CapsuleCollider>();
-			capsuleColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
+			capsuleColliderComp->init(editor);
+			//capsuleColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
+
+			//float max = lastSelectedEntity->transform->globalScale.x > lastSelectedEntity->transform->globalScale.y ?
+			//	lastSelectedEntity->transform->globalScale.x : lastSelectedEntity->transform->globalScale.y;
+			//max = max > lastSelectedEntity->transform->globalScale.z ? max : lastSelectedEntity->transform->globalScale.z;
+
+			//float halfHeight = lastSelectedEntity->transform->globalScale * capsuleColliderComp->height / 2.f;
+			//capsuleColliderComp->shape = editor->physics.gPhysics->createShape(PxCapsuleGeometry(halfHeight, ), *sphereColliderComp->pmat->pxmat);
+			//sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+			//glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
+			//sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			//if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
+			//	rb->body->attachShape(*sphereColliderComp->shape);
 		}
 
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Collider (Mesh)")) {
 
-			MeshCollider* meshColliderComp = lastSelectedEntity->addComponent<MeshCollider>();
-			meshColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
+			if (MeshRenderer* mr = lastSelectedEntity->getComponent<MeshRenderer>()) {
+
+				MeshCollider* meshColliderComp = lastSelectedEntity->addComponent<MeshCollider>();
+				Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>();
+				meshColliderComp->init(editor, rb, mr, true);
+			}
 		}
 
 		ImGui::Separator();
@@ -691,14 +701,7 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Collider (Sphere)")) {
 
 			SphereCollider* sphereColliderComp = lastSelectedEntity->addComponent<SphereCollider>();
-			sphereColliderComp->pmat = &editor->fileSystem.physicmaterials["Default"];
-			sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(0.5f), *sphereColliderComp->pmat->pxmat);
-			sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
-			glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
-			sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
-
-			if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
-				rb->body->attachShape(*sphereColliderComp->shape);
+			sphereColliderComp->init(editor);
 		}
 
 		ImGui::Separator();
@@ -1410,9 +1413,20 @@ void EditorGUI::showRigidbodyComponent(int index) {
 			rigidbody->body->wakeUp();
 		}
 
-		ImGui::Text("Is Kinematic        ");
+		bool triangleMesh = false;
+		for (auto& col : rigidbody->transform->entity->getComponents<MeshCollider>()) {
+			triangleMesh = col->shape->getGeometryType() == PxGeometryType::eTRIANGLEMESH;
+			break;
+		}
+
+		if(triangleMesh)
+			ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Is Kinematic        ");
+		else
+			ImGui::Text("Is Kinematic        ");
+
 		ImGui::SameLine();
 		bool isKinematic = rigidbody->body->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC;
+
 		if(ImGui::Checkbox("##2", &isKinematic)) {
 
 			rigidbody->body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, isKinematic);
@@ -1493,7 +1507,10 @@ void EditorGUI::showPhysicMaterialProperties(PhysicMaterialFile& mat) {
 
 		ImGui::Text("Dynamic Friction    "); ImGui::SameLine();
 		float dynamicFriction = mat.pxmat->getDynamicFriction(); ImGui::PushItemWidth(width - 180);
-		if (ImGui::DragFloat("##0", &dynamicFriction, 0.1f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##0", &dynamicFriction, 0.01f, 0.0f, 1.0f, "%.2f")) {
+
+			dynamicFriction = dynamicFriction < 0.f ? 0.f : dynamicFriction;
+			dynamicFriction = dynamicFriction > 1.f ? 1.f : dynamicFriction;
 
 			physicMaterialChanged = true;
 			mat.pxmat->setDynamicFriction(dynamicFriction);
@@ -1501,7 +1518,10 @@ void EditorGUI::showPhysicMaterialProperties(PhysicMaterialFile& mat) {
 
 		ImGui::Text("Static Friction     "); ImGui::SameLine();
 		float staticFriction = mat.pxmat->getStaticFriction(); ImGui::PushItemWidth(width - 180);
-		if (ImGui::DragFloat("##1", &staticFriction, 0.1f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##1", &staticFriction, 0.01f, 0.0f, 1.0f, "%.2f")) {
+
+			staticFriction = staticFriction < 0.f ? 0.f : staticFriction;
+			staticFriction = staticFriction > 1.f ? 1.f : staticFriction;
 
 			physicMaterialChanged = true;
 			mat.pxmat->setStaticFriction(staticFriction);
@@ -1509,8 +1529,11 @@ void EditorGUI::showPhysicMaterialProperties(PhysicMaterialFile& mat) {
 
 		ImGui::Text("Restitution         "); ImGui::SameLine();
 		float restitution = mat.pxmat->getRestitution(); ImGui::PushItemWidth(width - 180);
-		if (ImGui::DragFloat("##2", &restitution, 0.1f, 0.0f, 0.0f, "%.2f")) {
+		if (ImGui::DragFloat("##2", &restitution, 0.01f, 0.0f, 1.0f, "%.2f")) {
 			
+			restitution = restitution < 0.f ? 0.f : restitution;
+			restitution = restitution > 1.f ? 1.f : restitution;
+
 			physicMaterialChanged = true;
 			mat.pxmat->setRestitution(restitution);
 		}
@@ -1643,18 +1666,96 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		ImGui::Text("Trigger     "); ImGui::SameLine();
+		Rigidbody* rb = meshColliderComp->transform->entity->getComponent<Rigidbody>();
+
+		bool isKinematic = rb ? rb->body->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC : false;
 		bool isTrigger = meshColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
+		bool convex = meshColliderComp->shape->getGeometryType() == PxGeometryType::eCONVEXMESH;
+
+		if(convex)
+			ImGui::Text("Trigger     "); 
+		else
+			ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Trigger     ");
+		
+		ImGui::SameLine();
 		if (ImGui::Checkbox("##0", &isTrigger)) {
-			meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-			meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+
+			if (convex) {
+
+				if (isTrigger) {
+
+					meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+					meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+				}
+				else {
+					meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+					meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+				}
+			}
 		}
 
-		ImGui::Text("Convex      "); ImGui::SameLine();
-		ImGui::Checkbox("##1", &meshColliderComp->convex);
+		if(isKinematic || !rb)
+			ImGui::Text("Convex      ");
+		else
+			ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.f), "Convex      ");
+		
+		ImGui::SameLine();
+		if (ImGui::Checkbox("##1", &convex)) {
+
+			convex = !convex;
+
+			if (rb) {
+
+				if (convex) {
+				
+					if (isKinematic) {
+
+						rb->body->detachShape(*meshColliderComp->shape);
+						PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),//should we delete afterwards??
+							editor->physics.gPhysics, editor->physics.gCooking);
+						meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+							PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
+							*meshColliderComp->pmat->pxmat, true);
+						rb->body->attachShape(*meshColliderComp->shape);
+						meshColliderComp->shape->release();
+					}
+				}
+				else {
+
+					rb->body->detachShape(*meshColliderComp->shape);
+					PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
+						editor->physics.gPhysics, editor->physics.gCooking);
+					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
+						*meshColliderComp->pmat->pxmat, true);
+					rb->body->attachShape(*meshColliderComp->shape);
+					meshColliderComp->shape->release();
+				}
+			}
+			else {
+
+				if (convex) {
+				
+					meshColliderComp->shape->release();
+					PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
+						editor->physics.gPhysics, editor->physics.gCooking);
+					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
+						*meshColliderComp->pmat->pxmat, true);
+				}
+				else {
+
+					meshColliderComp->shape->release();
+					PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
+						editor->physics.gPhysics, editor->physics.gCooking);
+					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
+						*meshColliderComp->pmat->pxmat, true);
+				}
+			}
+		}
 
 		EditorGUI::showColliderPhysicMaterial(meshColliderComp, width, 2);
-
 		ImGui::TreePop();
 	}
 
@@ -1706,8 +1807,16 @@ void EditorGUI::showBoxColliderComponent(BoxCollider* boxColliderComp, int index
 		ImGui::Text("Trigger     "); ImGui::SameLine();
 		bool isTrigger = boxColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
 		if (ImGui::Checkbox("##0", &isTrigger)) {
-			boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-			boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+
+			if (isTrigger) {
+
+				boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+				boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+			}
+			else {
+				boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+				boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			}
 		}
 
 		EditorGUI::showColliderPhysicMaterial(boxColliderComp, width, 1);
@@ -1715,66 +1824,36 @@ void EditorGUI::showBoxColliderComponent(BoxCollider* boxColliderComp, int index
 		ImGui::Text("Center     X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
 
-		if (ImGui::DragFloat("##2", &boxColliderComp->center.x, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if(boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##2", &boxColliderComp->center.x, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
 
-		if (ImGui::DragFloat("##3", &boxColliderComp->center.y, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##3", &boxColliderComp->center.y, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
 
-		if (ImGui::DragFloat("##4", &boxColliderComp->center.z, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##4", &boxColliderComp->center.z, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::Text("Size       X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
 
-		if (ImGui::DragFloat("##5", &boxColliderComp->size.x, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##5", &boxColliderComp->size.x, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		if (ImGui::DragFloat("##6", &boxColliderComp->size.y, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##6", &boxColliderComp->size.y, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		if (ImGui::DragFloat("##7", &boxColliderComp->size.z, 0.01f, 0.0f, 0.0f, "%.2f")) {
-
-			if (boxColliderComp->transform->entity->getComponent<Rigidbody>())
-				boxColliderComp->updatePoseGeometryAndRelease();
-			else
-				boxColliderComp->updatePoseGeometry();
-		}
+		if (ImGui::DragFloat("##7", &boxColliderComp->size.z, 0.01f, 0.0f, 0.0f, "%.2f"))
+			boxColliderComp->updatePoseGeometry();
 
 		ImGui::TreePop();
 	}
@@ -1827,24 +1906,38 @@ void EditorGUI::showSphereColliderComponent(SphereCollider* sphereColliderComp, 
 		ImGui::Text("Trigger     "); ImGui::SameLine();
 		bool isTrigger = sphereColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
 		if (ImGui::Checkbox("##0", &isTrigger)) {
-			sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-			sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+
+			if (isTrigger) {
+
+				sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+				sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+			}
+			else {
+				sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+				sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			}
 		}
 
 		EditorGUI::showColliderPhysicMaterial(sphereColliderComp, width, 1);
 
 		ImGui::Text("Center     X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##2", &sphereColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##2", &sphereColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f"))
+			sphereColliderComp->updatePoseGeometry();
+
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##3", &sphereColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		if(ImGui::DragFloat("##3", &sphereColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f"))
+			sphereColliderComp->updatePoseGeometry();
+
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##4", &sphereColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+		if(ImGui::DragFloat("##4", &sphereColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f"))
+			sphereColliderComp->updatePoseGeometry();
 
 		ImGui::Text("Radius     X"); ImGui::SameLine();
-		ImGui::DragFloat("##5", &sphereColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f");
+		if(ImGui::DragFloat("##5", &sphereColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f"))
+			sphereColliderComp->updatePoseGeometry();
 
 		ImGui::TreePop();
 	}
@@ -1897,26 +1990,42 @@ void EditorGUI::showCapsuleColliderComponent(CapsuleCollider* capsuleColliderCom
 		ImGui::Text("Trigger     "); ImGui::SameLine();
 		bool isTrigger = capsuleColliderComp->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
 		if (ImGui::Checkbox("##0", &isTrigger)) {
-			capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-			capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+
+			if (isTrigger) {
+
+				capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+				capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+			}
+			else {
+				capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+				capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+			}
 		}
 
 		EditorGUI::showColliderPhysicMaterial(capsuleColliderComp, width, 1);
 
 		ImGui::Text("Center     X"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##2", &capsuleColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##2", &capsuleColliderComp->center.x, 0.1f, 0.0f, 0.0f, "%.2f"))
+			capsuleColliderComp->updatePoseGeometry();
+
 		ImGui::SameLine(); ImGui::Text("Y"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##3", &capsuleColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##3", &capsuleColliderComp->center.y, 0.1f, 0.0f, 0.0f, "%.2f"))
+			capsuleColliderComp->updatePoseGeometry();
+
 		ImGui::SameLine(); ImGui::Text("Z"); ImGui::SameLine();
 		ImGui::PushItemWidth((width - 155) / 3);
-		ImGui::DragFloat("##4", &capsuleColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##4", &capsuleColliderComp->center.z, 0.1f, 0.0f, 0.0f, "%.2f"))
+			capsuleColliderComp->updatePoseGeometry();
 
 		ImGui::Text("Radius     X"); ImGui::SameLine();
-		ImGui::DragFloat("##5", &capsuleColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##5", &capsuleColliderComp->radius, 0.1f, 0.0f, 0.0f, "%.2f"))
+			capsuleColliderComp->updatePoseGeometry();
+
 		ImGui::Text("Height     X"); ImGui::SameLine();
-		ImGui::DragFloat("##6", &capsuleColliderComp->height, 0.1f, 0.0f, 0.0f, "%.2f");
+		if (ImGui::DragFloat("##6", &capsuleColliderComp->height, 0.1f, 0.0f, 0.0f, "%.2f"))
+			capsuleColliderComp->updatePoseGeometry();
 
 		const char** axisNames = new const char* [3];
 		axisNames[0] = "X Axis\0";
@@ -1927,8 +2036,10 @@ void EditorGUI::showCapsuleColliderComponent(CapsuleCollider* capsuleColliderCom
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 		ImGui::SameLine(); ImGui::SetNextItemWidth(width - 115);
-		if (ImGui::Combo("##7", &capsuleColliderComp->axis, axisNames, 3)) {
-
+		int axis = capsuleColliderComp->getAxis();
+		if (ImGui::Combo("##7", &axis, axisNames, 3)) {
+			capsuleColliderComp->setAxis(axis);
+			capsuleColliderComp->updatePoseGeometry();
 		}
 		ImGui::PopStyleColor();
 		delete[] axisNames;
@@ -2038,6 +2149,7 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			case ComponentType::BoxCollider : {
 
 				BoxCollider* boxColliderComp = lastSelectedEntity->getComponents<BoxCollider>()[index];
+				boxColliderComp->pmat->removeReference(boxColliderComp);
 				PxShape* shape = boxColliderComp->shape;
 				lastSelectedEntity->removeComponent(boxColliderComp);
 
@@ -2045,17 +2157,22 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 					rb->body->detachShape(*shape);
 				else
 					shape->release();
+					// I think it should be released, because it is probably not shared.
 
 				break;
 			}
 			case ComponentType::CapsuleCollider: {
 
 				CapsuleCollider* capsuleColliderComp = lastSelectedEntity->getComponents<CapsuleCollider>()[index];
+				capsuleColliderComp->pmat->removeReference(capsuleColliderComp);
 				PxShape* shape = capsuleColliderComp->shape;
 				lastSelectedEntity->removeComponent(capsuleColliderComp);
 
 				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
 					rb->body->detachShape(*shape);
+				else
+					shape->release();
+					// I think it should be released, because it is probably not shared.
 
 				break;
 			}
@@ -2091,16 +2208,26 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			case ComponentType::MeshCollider: {
 
 				MeshCollider* meshColliderComp = lastSelectedEntity->getComponents<MeshCollider>()[index];
+				meshColliderComp->pmat->removeReference(meshColliderComp);
 				PxShape* shape = meshColliderComp->shape;
 				lastSelectedEntity->removeComponent(meshColliderComp);
 
 				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
 					rb->body->detachShape(*shape);
+				else
+					shape->release();
+					// I think it should be released, because it is probably not shared.
 
 				break;
 			}
 			case ComponentType::MeshRenderer: {
-				lastSelectedEntity->removeComponent<MeshRenderer>();
+
+				if (!lastSelectedEntity->getComponent<MeshCollider>()) {
+
+					MeshRenderer* meshRenderer = lastSelectedEntity->getComponent<MeshRenderer>();
+					meshRenderer->mat->removeReference(meshRenderer);
+					lastSelectedEntity->removeComponent<MeshRenderer>();
+				}
 				break;
 			}
 			case ComponentType::Script: {
@@ -2109,16 +2236,24 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 			case ComponentType::SphereCollider: {
 
 				SphereCollider* sphereColliderComp = lastSelectedEntity->getComponents<SphereCollider>()[index];
+				sphereColliderComp->pmat->removeReference(sphereColliderComp);
 				PxShape* shape = sphereColliderComp->shape;
 				lastSelectedEntity->removeComponent(sphereColliderComp);
 
 				if (Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>())
 					rb->body->detachShape(*shape);
+				else
+					shape->release();
+				// I think it should be released, because it is probably not shared.
 
 				break;
 			}
 			case ComponentType::Rigidbody: {
 				Rigidbody* rb = lastSelectedEntity->getComponent<Rigidbody>();
+
+				//for (auto& col : lastSelectedEntity->getComponents<Collider>()) WTF
+					//rb->body->detachShape(*col->shape);
+
 				editor->physics.gScene->removeActor(*rb->body);
 				lastSelectedEntity->removeComponent<Rigidbody>();
 				break;

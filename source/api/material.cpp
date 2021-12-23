@@ -1,6 +1,7 @@
 #include "material.hpp"
 #include "filesystem.hpp"
 #include "meshrenderer.hpp"
+#include "collider.hpp"
 
 Material::MaterialFile::MaterialFile() {}
 
@@ -118,6 +119,12 @@ void Material::MaterialFile::compileShaders(const char* vertex_file_path, const 
 	programID = ProgramID;
 }
 
+void Material::MaterialFile::removeReference(MeshRenderer* renderer) {
+
+	meshRendererCompAddrs.erase(std::remove(meshRendererCompAddrs.begin(),
+		meshRendererCompAddrs.end(), renderer), meshRendererCompAddrs.end());
+}
+
 void Material::MaterialFile::deleteProgram() {
 
 	glDeleteProgram(programID);
@@ -140,6 +147,12 @@ PhysicMaterialFile::PhysicMaterialFile(File* file, PxPhysics* gPhysics) {
 
 	this->fileAddr = file;
 	pxmat = gPhysics->createMaterial(0.0f, 0.0f, 0.0f);
+}
+
+void PhysicMaterialFile::removeReference(Collider* collider) {
+
+	colliderCompAddrs.erase(std::remove(colliderCompAddrs.begin(),
+		colliderCompAddrs.end(), collider), colliderCompAddrs.end());
 }
 
 void Material::PhysicMaterialFile::destroy() {

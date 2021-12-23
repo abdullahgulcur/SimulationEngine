@@ -6,6 +6,9 @@
 #include "component.hpp"
 #include "material.hpp"
 #include "shader.hpp"
+#include "debugrenderer.hpp"
+#include "rigidbody.hpp"
+#include "meshrenderer.hpp"
 
 using namespace physx;
 using namespace Material;
@@ -19,6 +22,8 @@ public:
 
 	Collider();
 
+	virtual void init(Editor* editor);
+
 	virtual void updatePoseGeometry();
 
 	virtual void updatePoseGeometryAndRelease();
@@ -28,9 +33,17 @@ class MeshCollider : public Collider {
 
 public:
 
-	bool convex = false;
-
 	MeshCollider();
+
+	void init(Editor* editor, Rigidbody* rb, MeshRenderer* mr, bool convex);
+
+	void updatePoseGeometry();
+
+	void updatePoseGeometryAndRelease();
+
+	PxTriangleMesh* createTriangleMesh(MeshRenderer* mRenderer, PxPhysics* gPhysics, PxCooking* gCooking);
+
+	PxConvexMesh* createConvexMesh(MeshRenderer* mRenderer, PxPhysics* gPhysics, PxCooking* gCooking);
 };
 
 class BoxCollider : public Collider {
@@ -41,6 +54,8 @@ public:
 	glm::vec3 size;
 
 	BoxCollider();
+
+	void init(Editor* editor);
 
 	void updatePoseGeometry();
 
@@ -56,6 +71,8 @@ public:
 
 	SphereCollider();
 
+	void init(Editor* editor);
+
 	void updatePoseGeometry();
 
 	void updatePoseGeometryAndRelease();
@@ -67,13 +84,20 @@ public:
 
 	glm::vec3 center;
 	float radius = 0.5f;
-	float height = 1.f;
-	int axis = 0;
+	float height = 2.f;
+	glm::ivec3 axis;
 
 	CapsuleCollider();
+
+	void init(Editor* editor);
 
 	void updatePoseGeometry();
 
 	void updatePoseGeometryAndRelease();
 
+	int getAxis();
+
+	void setAxis(int axis);
+
+	glm::ivec3 getRotationVector(int axis);
 };

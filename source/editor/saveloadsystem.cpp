@@ -372,8 +372,10 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 
 	editor->physics.gScene->addActor(*rigidbodyComp->body);
 
-	for (auto& comp : ent->getComponents<Collider>())
+	for (auto& comp : ent->getComponents<Collider>()) {
 		rigidbodyComp->body->attachShape(*comp->shape);
+		comp->shape->release();
+	}
 
 	return true;
 }
@@ -381,7 +383,8 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider) {
 
 	rapidxml::xml_node<>* meshColliderNode = doc.allocate_node(rapidxml::node_element, "MeshCollider");
-	meshColliderNode->append_attribute(doc.allocate_attribute("Convex", doc.allocate_string(std::to_string(meshCollider->convex ? 1 : 0).c_str())));
+	meshColliderNode->append_attribute(doc.allocate_attribute("Convex", doc.allocate_string(
+		std::to_string(meshCollider->shape->getGeometryType() == PxGeometryType::eCONVEXMESH ? 1 : 0).c_str())));
 
 	int trigger = meshCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
 	meshColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
@@ -398,17 +401,15 @@ bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_doc
 
 bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
 
+	bool b = (5 & 1);
+	std::cout << "test et " << (5 & 5) << std::endl;
+
 	for (rapidxml::xml_node<>* meshColliderNode = entNode->first_node("MeshCollider"); meshColliderNode; meshColliderNode = meshColliderNode->next_sibling()) {
 
 		if (strcmp(meshColliderNode->name(), "MeshCollider") != 0)
 			continue;
 
 		MeshCollider* meshColliderComp = ent->addComponent<MeshCollider>();
-		meshColliderComp->convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1 ? true : false;
-
-		bool isTrigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
-		meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-		meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 
 		const char* pmatFilePath = meshColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
 		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
@@ -418,6 +419,27 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 
 		meshColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
 		meshColliderComp->pmat->colliderCompAddrs.push_back(meshColliderComp);
+
+		bool convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1;
+
+		if (convex) {
+
+			PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(ent->getComponent<MeshRenderer>(),
+				editor->physics.gPhysics, editor->physics.gCooking);
+			meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+				PxVec3(ent->transform->globalScale.x, ent->transform->globalScale.y, ent->transform->globalScale.z)), *meshColliderComp->pmat->pxmat, true);
+		}
+		else {
+
+			PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(ent->getComponent<MeshRenderer>(),
+				editor->physics.gPhysics, editor->physics.gCooking);
+			meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+				PxVec3(ent->transform->globalScale.x, ent->transform->globalScale.y, ent->transform->globalScale.z)), *meshColliderComp->pmat->pxmat, true);
+		}
+
+		bool isTrigger = atoi(meshColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+		meshColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		meshColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 	}
 
 
@@ -481,7 +503,7 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 		boxColliderComp->size.z = atof(boxColliderNode->first_node("Size")->first_attribute("Z")->value());
 
 		glm::vec3 size = ent->transform->globalScale * boxColliderComp->size / 2.f;
-		boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat);
+		boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
 		boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
 		boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 		glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
@@ -542,7 +564,7 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 		float max = ent->transform->globalScale.x > ent->transform->globalScale.y ? ent->transform->globalScale.x : ent->transform->globalScale.y;
 		max = max > ent->transform->globalScale.z ? max : ent->transform->globalScale.z;
 
-		sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius * max), *sphereColliderComp->pmat->pxmat);
+		sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius * max), *sphereColliderComp->pmat->pxmat, true);
 		sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
 		sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 		glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
@@ -559,7 +581,7 @@ bool SaveLoadSystem::saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Radius", doc.allocate_string(std::to_string(capsuleCollider->radius).c_str())));
 	capsuleColliderNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(capsuleCollider->height).c_str())));
-	capsuleColliderNode->append_attribute(doc.allocate_attribute("Axis", doc.allocate_string(std::to_string(capsuleCollider->axis).c_str())));
+	capsuleColliderNode->append_attribute(doc.allocate_attribute("Axis", doc.allocate_string(std::to_string(capsuleCollider->getAxis()).c_str())));
 
 	rapidxml::xml_node<>* centerNode = doc.allocate_node(rapidxml::node_element, "Center");
 	centerNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(capsuleCollider->center.x).c_str())));
@@ -585,18 +607,6 @@ bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, 
 
 		CapsuleCollider* capsuleColliderComp = ent->addComponent<CapsuleCollider>();
 
-		bool isTrigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
-		capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
-		capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
-
-		capsuleColliderComp->radius = atof(capsuleColliderNode->first_attribute("Radius")->value());
-		capsuleColliderComp->height = atof(capsuleColliderNode->first_attribute("Height")->value());
-		capsuleColliderComp->axis = atoi(capsuleColliderNode->first_attribute("Axis")->value());
-
-		capsuleColliderComp->center.x = atof(capsuleColliderNode->first_node("Center")->first_attribute("X")->value());
-		capsuleColliderComp->center.y = atof(capsuleColliderNode->first_node("Center")->first_attribute("Y")->value());
-		capsuleColliderComp->center.z = atof(capsuleColliderNode->first_node("Center")->first_attribute("Z")->value());
-
 		const char* pmatFilePath = capsuleColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
 		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
 
@@ -605,6 +615,25 @@ bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, 
 
 		capsuleColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
 		capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
+
+		bool isTrigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
+
+		capsuleColliderComp->radius = atof(capsuleColliderNode->first_attribute("Radius")->value());
+		capsuleColliderComp->height = atof(capsuleColliderNode->first_attribute("Height")->value());
+		capsuleColliderComp->setAxis(atoi(capsuleColliderNode->first_attribute("Axis")->value()));
+
+		capsuleColliderComp->center.x = atof(capsuleColliderNode->first_node("Center")->first_attribute("X")->value());
+		capsuleColliderComp->center.y = atof(capsuleColliderNode->first_node("Center")->first_attribute("Y")->value());
+		capsuleColliderComp->center.z = atof(capsuleColliderNode->first_node("Center")->first_attribute("Z")->value());
+
+		capsuleColliderComp->shape = editor->physics.gPhysics->createShape(PxCapsuleGeometry(capsuleColliderComp->radius,
+			capsuleColliderComp->height / 2), *capsuleColliderComp->pmat->pxmat, true);
+		capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
+		capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
+		glm::ivec3 rotVec = capsuleColliderComp->getRotationVector(capsuleColliderComp->getAxis());
+		PxVec3 axis(rotVec.x, rotVec.y, rotVec.z);
+		PxTransform relativePose(PxVec3(capsuleColliderComp->center.x, capsuleColliderComp->center.y, capsuleColliderComp->center.z), PxQuat(PxHalfPi, axis));
+		capsuleColliderComp->shape->setLocalPose(relativePose);
 	}
 
 	return true;

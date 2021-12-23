@@ -44,6 +44,8 @@ namespace Material {
 
 		void compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
 
+		void removeReference(MeshRenderer* renderer);
+
 		void deleteProgram();
 	};
 
@@ -60,6 +62,8 @@ namespace Material {
 		PhysicMaterialFile(PxPhysics* gPhysics);
 
 		PhysicMaterialFile(File* file, PxPhysics* gPhysics);
+
+		void removeReference(Collider* collider);
 
 		void destroy();
 	};

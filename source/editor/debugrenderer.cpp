@@ -73,17 +73,37 @@ SphereColliderRenderer::SphereColliderRenderer() {
 	shaderProgramID = ShaderNS::loadShaders("source/shader/Circle.vert", "source/shader/Circle.frag");
 
 	float vertices[] = {
-		// positions           // texture coords
-		 0.5f,  0.5f, 0.0f,    1.0f, 1.0f, // top right
-		 0.5f, -0.5f, 0.0f,    1.0f, 0.0f, // bottom right
-		-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, // bottom left
-		-0.5f,  0.5f, 0.0f,    0.0f, 1.0f  // top left 
+		// positions             // texture coords
+		 0.5f,  0.5f,  0.0f,     1.0f, 1.0f, // top right
+		 0.5f, -0.5f,  0.0f,     1.0f, 0.0f, // bottom right
+		-0.5f, -0.5f,  0.0f,     0.0f, 0.0f, // bottom left
+		-0.5f,  0.5f,  0.0f,     0.0f, 1.0f,  // top left 
+							  
+		 0.5f,  0.0f, -0.5f,     1.0f, 1.0f, // top right
+		 0.5f,  0.0f,  0.5f,     1.0f, 0.0f, // bottom right
+		-0.5f,  0.0f,  0.5f,     0.0f, 0.0f, // bottom left
+		-0.5f,  0.0f, -0.5f,     0.0f, 1.0f,  // top left 
+							  
+		 0.0f,  0.5f, -0.5f,     1.0f, 1.0f, // top right
+		 0.0f, -0.5f, -0.5f,     1.0f, 0.0f, // bottom right
+		 0.0f, -0.5f,  0.5f,     0.0f, 0.0f, // bottom left
+		 0.0f,  0.5f,  0.5f,     0.0f, 1.0f  // top left 
 	};
 	unsigned int indices[] = {
-		0, 1, 3, // first triangle
-		1, 2, 3,  // second triangle
-		3, 1, 0, // first triangle
-		3, 2, 1  // second triangle
+		0, 1, 3, 
+		1, 2, 3,  
+		3, 1, 0, 
+		3, 2, 1,  
+
+		0 + 4, 1 + 4, 3 + 4,
+		1 + 4, 2 + 4, 3 + 4,
+		3 + 4, 1 + 4, 0 + 4,
+		3 + 4, 2 + 4, 1 + 4,
+
+		0 + 8, 1 + 8, 3 + 8,
+		1 + 8, 2 + 8, 3 + 8,
+		3 + 8, 1 + 8, 0 + 8,
+		3 + 8, 2 + 8, 1 + 8
 	};
 	count = sizeof(indices);
 
@@ -117,5 +137,45 @@ void SphereColliderRenderer::drawCollider(glm::mat4 MVP) {
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)0);
+	glBindVertexArray(0);
+}
+
+MeshColliderRenderer::MeshColliderRenderer(MeshFile* mesh) {
+
+	count = mesh->indices.size();
+
+	shaderProgramID = ShaderNS::loadShaders("source/shader/Line.vert", "source/shader/Line.frag");
+
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	unsigned int VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * sizeof(Vertex), &mesh->vertices[0], GL_STATIC_DRAW);
+
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), &mesh->vertices[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void MeshColliderRenderer::drawCollider(glm::mat4 MVP) {
+
+	glUseProgram(shaderProgramID);
+	glUniformMatrix4fv(glGetUniformLocation(shaderProgramID, "MVP"), 1, GL_FALSE, &MVP[0][0]);
+	glUniform3fv(glGetUniformLocation(shaderProgramID, "color"), 1, &color[0]);
+
+	glBindVertexArray(VAO);
+	glDrawElements(GL_LINES, count, GL_UNSIGNED_INT, (void*)0);
 	glBindVertexArray(0);
 }

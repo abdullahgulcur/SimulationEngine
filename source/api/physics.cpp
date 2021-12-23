@@ -11,11 +11,30 @@ void Physics::init() {
 
 void Physics::addConvexMesh(MeshRenderer* mRenderer, Transform* transform, Rigidbody* rb) {
 
-	//PxTriangleMeshDesc meshDesc;
-	//meshDesc.points.count = mRenderer->mesh->vertices.size();
-	//meshDesc.points.stride = sizeof(PxVec3);
-	//PxVec3* convexVerts = new PxVec3[mRenderer->mesh->vertices.size()];
+	//int vert_size = mRenderer->mesh->vertices.size();
+	//int tri_size = mRenderer->mesh->indices.size();
+	//float* verts = new float[vert_size * 3];
+	//float* triangles = new float[tri_size];
 
+	//for (int i = 0; i < vert_size; i++) {
+	//	verts[i * 3 + 0] = mRenderer->mesh->vertices[i].position.x;
+	//	verts[i * 3 + 1] = mRenderer->mesh->vertices[i].position.y;
+	//	verts[i * 3 + 2] = mRenderer->mesh->vertices[i].position.z;
+	//}
+
+	//for (int i = 0; i < tri_size; i++)
+	//	triangles[i] = mRenderer->mesh->indices[i];
+
+	//PxTriangleMeshDesc meshDesc;
+	//meshDesc.points.count = vert_size * 3;
+	//meshDesc.points.stride = sizeof(float) * 3;
+	//meshDesc.triangles.count = tri_size / 3;
+	//meshDesc.points.stride = sizeof(float) * 3;
+	//meshDesc.points.data = verts;
+	//meshDesc.triangles.data = triangles;
+
+	//PxTriangleMesh* aTriangleMesh = gCooking->createTriangleMesh(meshDesc, gPhysics->getPhysicsInsertionCallback());
+	// 
 	//int counter = 0;
 	//for (auto& it : mRenderer->mesh->vertices) {
 
@@ -107,12 +126,12 @@ void Physics::initPhysics()
 	gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
 
 	
-	//PxTolerancesScale scale;
-	//PxCookingParams params(scale);
-	//params.meshWeldTolerance = 0.001f;
-	//params.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eWELD_VERTICES);
-	//params.buildGPUData = true; //Enable GRB data being produced in cooking.
-	//gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
+	PxTolerancesScale scale;
+	PxCookingParams params(scale);
+	params.meshWeldTolerance = 0.001f;
+	params.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eWELD_VERTICES);
+	params.buildGPUData = true; //Enable GRB data being produced in cooking.
+	gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 
 	//PxRigidStatic* groundPlane = PxCreatePlane(*gPhysics, PxPlane(0, 1, 0, 0), *gMaterial);
 	//gScene->addActor(*groundPlane);

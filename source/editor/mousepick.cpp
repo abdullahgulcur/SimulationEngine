@@ -61,7 +61,7 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		data[1] * 256 +
 		data[2] * 256 * 256;
 
-	if (pickedID == 0x00ffffff)
+	if (pickedID == 0x00ffffff || pickedID >= editor->scene.entities.size())
 		editor->editorGUI.lastSelectedEntity = NULL;
 	else
 		editor->editorGUI.lastSelectedEntity = editor->scene.entities[pickedID];

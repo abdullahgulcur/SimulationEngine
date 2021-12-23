@@ -127,6 +127,7 @@ void Transform::updatePhysics() {
 	if (rb)
 		rb->updateGlobalPose();
 
+	// temporary
 	for (auto& comp : entity->getComponents<Collider>()) {
 
 		if (rb)

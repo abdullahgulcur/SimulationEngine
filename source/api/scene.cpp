@@ -179,23 +179,43 @@ void Scene::simulateInEditor(float dt) {
 			model = glm::scale(model, glm::vec3(comp->radius * 2 * 1.01f));
 			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
 			editor->scr->drawCollider(mvp);
-			model = glm::rotate(model, glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
-			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
-			model = glm::rotate(model, glm::radians(90.f), glm::vec3(1.0f, 0.0f, 0.0f));
-			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
 		}
 
 		std::vector<CapsuleCollider*> capsuleColliderCompList = ent->getComponents<CapsuleCollider>();
 		for (auto& comp : capsuleColliderCompList) {
 
+			glm::mat4 localModel(1.f);
+			localModel = glm::scale(localModel, glm::vec3(comp->radius * 2 * 1.01f));
+
+			const glm::mat4 transformX = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.x,
+				glm::vec3(1.0f, 0.0f, 0.0f));
+			const glm::mat4 transformY = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.y,
+				glm::vec3(0.0f, 1.0f, 0.0f));
+			const glm::mat4 transformZ = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.z,
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+			const glm::mat4 roationMatrix = transformZ * transformY * transformX;
+
+			glm::mat4 objectModel(1.f);
+			objectModel = glm::translate(objectModel, ent->transform->globalPosition) * roationMatrix;
+			objectModel = glm::translate(objectModel, comp->center + glm::vec3(comp->axis) * (comp->height / 2));
+			glm::mat4 model = objectModel * localModel;
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+			objectModel = glm::translate(objectModel, glm::vec3(comp->axis) * (-comp->height));
+			model = objectModel * localModel;
+			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
 		}
 
-		std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
-		for (auto& comp : meshColliderCompList) {
+		//std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
+		//for (auto& comp : meshColliderCompList) {
 
-		}
+		//	glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * ent->transform->model;
+		//}
 
 		if (editor->gameStarted) {
 
