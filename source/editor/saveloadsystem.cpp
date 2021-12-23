@@ -13,11 +13,11 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	doc.append_node(entitiesNode);
 
 	rapidxml::xml_node<>* entity = doc.allocate_node(rapidxml::node_element, "Entity");
-	entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(editor->scene.entities[0]->name)));
-	saveTransformComponent(doc, entity, editor->scene.entities[0]->transform);
+	entity->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(editor->scene->entities[0]->name)));
+	saveTransformComponent(doc, entity, editor->scene->entities[0]->transform);
 	entitiesNode->append_node(entity);
 
-	SaveLoadSystem::saveEntitiesRecursively(editor, editor->scene.entities[0]->transform, doc, entity);
+	SaveLoadSystem::saveEntitiesRecursively(editor, editor->scene->entities[0]->transform, doc, entity);
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
@@ -71,8 +71,7 @@ void SaveLoadSystem::loadEntities(Editor* editor) {
 
 	if (file.fail()) {
 
-		Entity* ent = new Entity("Root");
-		editor->scene.entities.push_back(ent);
+		Entity* ent = new Entity("Root", editor->scene);
 		SaveLoadSystem::saveEntities(editor);
 		return;
 	}
@@ -87,8 +86,7 @@ void SaveLoadSystem::loadEntities(Editor* editor) {
 
 	root_node = doc.first_node("Entities");
 
-	Entity* ent = new Entity("Root");
-	editor->scene.entities.push_back(ent);
+	Entity* ent = new Entity("Root", editor->scene);
 	ent->transform->updateSelfAndChild();
 
 	SaveLoadSystem::loadEntitiesRecursively(editor, root_node->first_node("Entity"), ent);
@@ -100,8 +98,7 @@ void SaveLoadSystem::loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<
 
 	for (rapidxml::xml_node<>* entityNode = parentNode->first_node("Entity"); entityNode; entityNode = entityNode->next_sibling()) {
 
-		Entity* ent = new Entity(entityNode->first_attribute("Name")->value(), parent->transform);
-		editor->scene.entities.push_back(ent);
+		Entity* ent = new Entity(entityNode->first_attribute("Name")->value(), parent->transform, editor->scene);
 
 		SaveLoadSystem::loadTransformComponent(ent, entityNode);
 		SaveLoadSystem::loadLightComponent(editor, ent, entityNode);
@@ -227,7 +224,7 @@ bool SaveLoadSystem::loadTransformComponent(Entity* ent, rapidxml::xml_node<>* e
 bool SaveLoadSystem::saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light) {
 
 	rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
-	lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(editor->scene.getLightType(light->lightType).c_str())));
+	lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(editor->scene->getLightType(light->lightType).c_str())));
 	lightNode->append_attribute(doc.allocate_attribute("Power", doc.allocate_string(std::to_string(light->power).c_str())));
 
 	rapidxml::xml_node<>* colorNode = doc.allocate_node(rapidxml::node_element, "Color");

@@ -16,10 +16,10 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(pickingProgramID);
 
-	for (int i = 0; i < editor->scene.entities.size(); i++) {
+	for (int i = 0; i < editor->scene->entities.size(); i++) {
 	
-		MeshRenderer* meshRendererComp = editor->scene.entities[i]->getComponent<MeshRenderer>();
-		Transform* transform = editor->scene.entities[i]->transform;
+		MeshRenderer* meshRendererComp = editor->scene->entities[i]->getComponent<MeshRenderer>();
+		Transform* transform = editor->scene->entities[i]->transform;
 
 		if (meshRendererComp != nullptr) {
 
@@ -61,8 +61,8 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		data[1] * 256 +
 		data[2] * 256 * 256;
 
-	if (pickedID == 0x00ffffff || pickedID >= editor->scene.entities.size())
+	if (pickedID == 0x00ffffff || pickedID >= editor->scene->entities.size())
 		editor->editorGUI.lastSelectedEntity = NULL;
 	else
-		editor->editorGUI.lastSelectedEntity = editor->scene.entities[pickedID];
+		editor->editorGUI.lastSelectedEntity = editor->scene->entities[pickedID];
 }

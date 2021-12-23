@@ -12,7 +12,21 @@ class Entity {
 
 private:
 
-	void deepCopyComponents(std::vector<Component*> components, Scene& scene);
+	void deepCopyComponents(std::vector<Component*> components, Scene* scene);
+
+	void addMeshRendererComponent();
+
+	void addBoxColliderComponent();
+
+	void addCapsuleColliderComponent();
+
+	void addSphereColliderComponent();
+
+	void addMeshColliderComponent();
+
+	void addRigidbodyComponent();
+
+	void addLightComponent();
 
 public:
 
@@ -20,11 +34,11 @@ public:
 	Transform* transform;
 	std::vector<Component*> components;
 
-	Entity(const char* name);
+	Entity(const char* name, Scene* scene);
 
-	Entity(Entity* ent, Transform* parent, Scene& scene);
+	Entity(Entity* ent, Transform* parent, Scene* scene);
 
-	Entity(const char* name, Transform* parent);
+	Entity(const char* name, Transform* parent, Scene* scene);
 
 	~Entity();
 

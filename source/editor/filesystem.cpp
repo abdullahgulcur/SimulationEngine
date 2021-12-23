@@ -379,7 +379,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 		for (auto& mesh_it : addrs)
 			mesh_it->mesh = &meshes[newPath];
 
-		editor->scene.saveEditorProperties();
+		editor->scene->saveEditorProperties();
 
 		break;
 	}
@@ -395,7 +395,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 		for (auto& mat_it : addrs)
 			mat_it->mat = &materials[newPath];
 
-		editor->scene.saveEditorProperties();
+		editor->scene->saveEditorProperties();
 
 		break;
 	}
@@ -411,7 +411,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 		for (auto& pmat_it : addrs)
 			pmat_it->pmat = &physicmaterials[newPath];
 
-		editor->scene.saveEditorProperties();
+		editor->scene->saveEditorProperties();
 
 		break;
 	}
@@ -484,7 +484,7 @@ void FileSystem::deleteFileCompletely(int id) {
 			for (auto& it : addrs)
 				it->mesh = &meshes["Null"];
 
-			editor->scene.saveEditorProperties();
+			editor->scene->saveEditorProperties();
 
 			break;
 		}
@@ -496,7 +496,7 @@ void FileSystem::deleteFileCompletely(int id) {
 			for (auto& it : addrs)
 				it->mat = &materials["Default"];
 
-			editor->scene.saveEditorProperties();
+			editor->scene->saveEditorProperties();
 
 			break;
 		}
@@ -508,7 +508,7 @@ void FileSystem::deleteFileCompletely(int id) {
 			for (auto& it : addrs)
 				it->pmat = &physicmaterials["Default"];
 
-			editor->scene.saveEditorProperties();
+			editor->scene->saveEditorProperties();
 
 			break;
 		}
@@ -544,7 +544,7 @@ void FileSystem::deleteFileCompletely(int id) {
 					mat_iter.second.deleteProgram();
 					mat_iter.second.compileShaders("source/shader/Default.vert",
 						FileSystem::getFragShaderPath(mat_iter.second.fragShaderFileAddr),
-						editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 			}
 
@@ -566,7 +566,7 @@ void FileSystem::deleteFileCompletely(int id) {
 					mat_iter.second.deleteProgram();
 					mat_iter.second.compileShaders(FileSystem::getVertShaderPath(mat_iter.second.vertShaderFileAddr),
 						"source/shader/Default.frag",
-						editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 			}
 
@@ -659,7 +659,7 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	}
 
 	MaterialFile mat(subFile, NULL, NULL, "source/shader/Default.vert", "source/shader/Default.frag",
-		editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+		editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 	materials.insert({ files[subFile->id].path, mat });
 	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
 	files[subFile->id].textureID = editorTextures.materialTextureID;
@@ -728,7 +728,7 @@ void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 		fileMayCorrupted = true;
 	}
 
-	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 
 	if (fragFileAddr != NULL) {
 

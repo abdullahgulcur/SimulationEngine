@@ -6,18 +6,18 @@ Editor::Editor() {
 void Editor::startEditorScreen() {
 
 	physics.init();
-
 	window.init();
 	render.init();
+
+	scene = new Scene();
 	fileSystem.init(this);
+	scene->init(this);
+
 	SaveLoadSystem::loadSceneCamera(this);
-	scene.init(this);
 	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
 	bcr = new BoxColliderRenderer();
 	scr = new SphereColliderRenderer();
-
-	scene.start();
 }
 
 void Editor::run() {
@@ -34,7 +34,7 @@ void Editor::run() {
 
 	editorGUI.newFrameImGui();
 
-	scene.update(dt);
+	scene->update(dt);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

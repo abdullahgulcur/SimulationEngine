@@ -41,7 +41,9 @@ Transform::Transform(Entity* ent, Transform* parent, Transform* base) {
 	globalScale = base->globalScale;
 
 	this->parent = parent;
-	(this->parent->children).push_back(this);
+
+	if(this->parent)
+		(this->parent->children).push_back(this);
 }
 
 glm::mat4 Transform::getLocalModelMatrix()

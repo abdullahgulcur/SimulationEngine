@@ -3,36 +3,44 @@
 #include "editor.hpp"
 
 // first load
-Entity::Entity(const char* name) {
+Entity::Entity(const char* name, Scene* scene) {
 
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
 	std::cout << name << std::endl;
 	transform = new Transform(this);
+	scene->entities.push_back(this);
 }
 
 // clone
-Entity::Entity(Entity* ent, Transform* parent, Scene& scene) {
+Entity::Entity(Entity* ent, Transform* parent, Scene* scene) {
 
 	transform = new Transform(this, parent, ent->transform);
 
-	char* name = new char[strlen(ent->name) + 5];
+	/*char* name = new char[strlen(ent->name) + 5];
 	strcpy(name, ent->name);
 	strcat(name, "_cpy\0");
 	this->name = name;
-
 	Entity::deepCopyComponents(ent->components, scene);
+	scene->entities.push_back(this);*/
+
+	char* name = new char[strlen(ent->name) + 1];
+	strcpy(name, ent->name);
+	name[strlen(ent->name)] = '\0';
+	this->name = name;
+	Entity::deepCopyComponents(ent->components, scene);
+	scene->entities.push_back(this);
 }
 
 //create empty from parent
-Entity::Entity(const char* name, Transform* parent) {
+Entity::Entity(const char* name, Transform* parent, Scene* scene) {
 
 	transform = new Transform(this, parent);
-
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
+	scene->entities.push_back(this);
 }
 
 Entity::~Entity() {
@@ -41,12 +49,12 @@ Entity::~Entity() {
 
 Entity* Entity::copy(Scene* scene) {
 
-	Entity* ent = new Entity(this, transform->parent, *scene);
+	Entity* ent = new Entity(this, transform->parent, scene);
 	return ent;
 }
 
 // internal usage only
-void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene) {
+void Entity::deepCopyComponents(std::vector<Component*> components, Scene* scene) {
 
 	for (auto& it : components) {
 
@@ -61,12 +69,12 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 		else if (Rigidbody* comp = dynamic_cast<Rigidbody*>(it))
 		{
 			Rigidbody* rbComp = addComponent<Rigidbody>();
-			rbComp->body = scene.editor->physics.gPhysics->createRigidDynamic(comp->body->getGlobalPose());
+			rbComp->body = scene->editor->physics.gPhysics->createRigidDynamic(comp->body->getGlobalPose());
 			rbComp->body->setMass(comp->body->getMass());
 			rbComp->body->setActorFlags(comp->body->getActorFlags());
 			rbComp->body->setRigidBodyFlags(comp->body->getRigidBodyFlags());
 			rbComp->body->setRigidDynamicLockFlags(comp->body->getRigidDynamicLockFlags());
-			scene.editor->physics.gScene->addActor(*rbComp->body);
+			scene->editor->physics.gScene->addActor(*rbComp->body);
 
 			for (auto& collider : getComponents<Collider>()) {
 				rbComp->body->attachShape(*collider->shape);
@@ -82,7 +90,7 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			boxColliderComp->pmat = comp->pmat;
 			boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
 			glm::vec3 size = transform->globalScale * boxColliderComp->size / 2.f;
-			boxColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
+			boxColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
 			boxColliderComp->shape->setFlags(comp->shape->getFlags());
 			glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
 			boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
@@ -100,7 +108,7 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			sphereColliderComp->radius = comp->radius;
 			sphereColliderComp->pmat = comp->pmat;
 			sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
-			sphereColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius), *sphereColliderComp->pmat->pxmat, true);
+			sphereColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius), *sphereColliderComp->pmat->pxmat, true);
 			glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
 			sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
 
@@ -118,7 +126,7 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			capsuleColliderComp->radius = comp->radius;
 			capsuleColliderComp->pmat = comp->pmat;
 			capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
-			capsuleColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxCapsuleGeometry(comp->radius, comp->height / 2), *capsuleColliderComp->pmat->pxmat, true);
+			capsuleColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxCapsuleGeometry(comp->radius, comp->height / 2), *capsuleColliderComp->pmat->pxmat, true);
 			capsuleColliderComp->shape->setLocalPose(PxTransform(capsuleColliderComp->center.x, capsuleColliderComp->center.y, capsuleColliderComp->center.z));
 
 			if (Rigidbody* rb = getComponent<Rigidbody>()) {
@@ -137,16 +145,16 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			if (convex) {
 
 				PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(comp->transform->entity->getComponent<MeshRenderer>(),
-					scene.editor->physics.gPhysics, scene.editor->physics.gCooking);
-				meshColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+					scene->editor->physics.gPhysics, scene->editor->physics.gCooking);
+				meshColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
 					PxVec3(comp->transform->globalScale.x, comp->transform->globalScale.y, comp->transform->globalScale.z)),
 					*meshColliderComp->pmat->pxmat, true);
 			}
 			else {
 
 				PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(comp->transform->entity->getComponent<MeshRenderer>(),
-					scene.editor->physics.gPhysics, scene.editor->physics.gCooking);
-				meshColliderComp->shape = scene.editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+					scene->editor->physics.gPhysics, scene->editor->physics.gCooking);
+				meshColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
 					PxVec3(comp->transform->globalScale.x, comp->transform->globalScale.y, comp->transform->globalScale.z)),
 					*meshColliderComp->pmat->pxmat, true);
 			}
@@ -166,11 +174,11 @@ void Entity::deepCopyComponents(std::vector<Component*> components, Scene& scene
 			lightComp->power = comp->power;
 
 			if (lightComp->lightType == LightType::DirectionalLight)
-				scene.dirLightTransforms.push_back(transform);
+				scene->dirLightTransforms.push_back(transform);
 			else
-				scene.pointLightTransforms.push_back(transform);
+				scene->pointLightTransforms.push_back(transform);
 
-			scene.recompileAllMaterials();
+			scene->recompileAllMaterials();
 		}
 	}
 }
@@ -223,4 +231,32 @@ bool Entity::destroy(Scene* scene) {
 	delete this;
 
 	return true;
+}
+
+void Entity::addMeshRendererComponent() {
+
+}
+
+void Entity::addBoxColliderComponent() {
+
+}
+
+void Entity::addCapsuleColliderComponent() {
+
+}
+
+void Entity::addSphereColliderComponent() {
+
+}
+
+void Entity::addMeshColliderComponent() {
+
+}
+
+void Entity::addRigidbodyComponent() {
+
+}
+
+void Entity::addLightComponent() {
+
 }

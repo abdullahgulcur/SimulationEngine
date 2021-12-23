@@ -37,8 +37,6 @@ public:
 	std::string name;
 
 	std::vector<Entity*> entities;
-	std::vector<Transform*> tempTransforms;
-
 	std::vector<Transform*> pointLightTransforms;
 	std::vector<Transform*> dirLightTransforms;
 
@@ -60,11 +58,13 @@ public:
 
 	void simulateInEditor(float dt);
 
-	//void simulateInGame(float dt);
+	void simulateInGame(float dt);
 
 	void setTransformsOfComponents();
 
 	bool subEntityCheck(Transform* child, Transform* parent);
+
+	void deleteScene();
 
 	void recompileAllMaterials();
 

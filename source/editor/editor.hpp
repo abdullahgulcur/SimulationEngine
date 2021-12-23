@@ -26,7 +26,8 @@ public:
 	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
-	Scene scene;
+	Scene* scene = NULL;
+	Scene* sceneTemp = NULL;
 	Physics physics;
 	BoxColliderRenderer* bcr = NULL;
 	SphereColliderRenderer* scr = NULL;

@@ -203,7 +203,7 @@ void EditorGUI::handleInputs() {
 				meshRendererComp->mat->deleteProgram();
 				meshRendererComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
 					editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
-					editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+					editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 			}
 			else {
 				
@@ -212,7 +212,7 @@ void EditorGUI::handleInputs() {
 
 				mat.deleteProgram();
 				mat.compileShaders(editor->fileSystem.getVertShaderPath(mat.vertShaderFileAddr), editor->fileSystem.getFragShaderPath(mat.fragShaderFileAddr),
-					editor->scene.dirLightTransforms.size(), editor->scene.pointLightTransforms.size());
+					editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 			}
 
 			materialChanged = false;
@@ -222,7 +222,7 @@ void EditorGUI::handleInputs() {
 
 			if (lastSelectedEntity) {
 
-				//MeshRenderer* meshRendererComp = editor->scene.entities[lastSelectedEntityID].getComponent<MeshRenderer>();
+				//MeshRenderer* meshRendererComp = editor->scene->entities[lastSelectedEntityID].getComponent<MeshRenderer>();
 				//editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat);
 			}
 			else {
@@ -284,7 +284,7 @@ void EditorGUI::handleInputs() {
 			mY = (mY / sceneRegion.y) * 1080;
 
 			if(mX != 0 && mY != 0)
-				editor->scene.mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
+				editor->scene->mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
 		}
 	}
 
@@ -293,7 +293,7 @@ void EditorGUI::handleInputs() {
 		if (ImGui::IsKeyPressed('D')) {
 
 			if (lastSelectedEntity)
-				lastSelectedEntity = editor->scene.duplicateEntity(lastSelectedEntity);
+				lastSelectedEntity = editor->scene->duplicateEntity(lastSelectedEntity);
 
 			if (fileSystemControlVars.lastSelectedItemID != -1)
 				fileSystemControlVars.lastSelectedItemID = editor->fileSystem.duplicateFile(fileSystemControlVars.lastSelectedItemID);
@@ -301,7 +301,7 @@ void EditorGUI::handleInputs() {
 
 		if (ImGui::IsKeyPressed('S')) {
 
-			editor->scene.saveEditorProperties();
+			editor->scene->saveEditorProperties();
 		}
 	}
 
@@ -309,7 +309,7 @@ void EditorGUI::handleInputs() {
 
 		if (lastSelectedEntity) {
 
-			editor->scene.deleteEntityCompletely(lastSelectedEntity);
+			editor->scene->deleteEntityCompletely(lastSelectedEntity);
 			lastSelectedEntity = NULL;
 		}
 
@@ -402,13 +402,23 @@ void EditorGUI::secondaryMenuBar()
 
 			if (!editor->gameStarted) {
 
-				if (ImGui::ImageButton((ImTextureID)editorIcons.startTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+				if (ImGui::ImageButton((ImTextureID)editorIcons.startTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+					//editor->sceneTemp = new Scene();
+					//editor->scene->copyScene(editor->sceneTemp);
 					editor->gameStarted = true;
+				}
 			}
 			else {
 
-				if (ImGui::ImageButton((ImTextureID)editorIcons.stopTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+				if (ImGui::ImageButton((ImTextureID)editorIcons.stopTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+					editor->scene->deleteScene();
+					editor->scene->initSceneGraph();
+					//editor->scene = editor->sceneTemp;
+					//editor->sceneTemp = NULL;
 					editor->gameStarted = false;
+				}
 			}
 			ImGui::SameLine();
 
@@ -711,8 +721,8 @@ void EditorGUI::addComponentButton() {
 			if (Light* lightComp = lastSelectedEntity->addComponent<Light>()) {
 
 				Transform* lighTransform = lastSelectedEntity->transform;
-				editor->scene.pointLightTransforms.push_back(lighTransform);
-				editor->scene.recompileAllMaterials();
+				editor->scene->pointLightTransforms.push_back(lighTransform);
+				editor->scene->recompileAllMaterials();
 			}
 			else
 				statusMessage = "There is existing component in the same type!";
@@ -778,9 +788,9 @@ void EditorGUI::showEntityName() {
 	//ImGui::Checkbox("##8", &active);
 	//ImGui::SameLine();
 
-	//int len = strlen(editor->scene.entities[lastSelectedEntityID].name);
+	//int len = strlen(editor->scene->entities[lastSelectedEntityID].name);
 	//char* str0 = new char[len + 1];
-	//strcpy(str0, editor->scene.entities[lastSelectedEntityID].name);
+	//strcpy(str0, editor->scene->entities[lastSelectedEntityID].name);
 	//str0[len] = '\0';
 	//ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 	//ImVec2 textSize = ImGui::CalcTextSize(str0);
@@ -788,7 +798,7 @@ void EditorGUI::showEntityName() {
 	//if (ImGui::InputText("##9", str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 	//	if (strlen(str0) != 0)
-	//		editor->scene.renameEntity(editor->scene.entities[lastSelectedEntityID].transform->id, str0);
+	//		editor->scene->renameEntity(editor->scene->entities[lastSelectedEntityID].transform->id, str0);
 	//	renameEntityID = -1;
 	//}
 	//delete[] str0;
@@ -802,7 +812,7 @@ void EditorGUI::showEntityName() {
 	if (ImGui::InputText("##9", str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 		if (strlen(str0) != 0)
-			editor->scene.renameEntity(lastSelectedEntity, str0);
+			editor->scene->renameEntity(lastSelectedEntity, str0);
 		renameEntity = NULL;
 	}
 
@@ -1079,15 +1089,15 @@ void EditorGUI::showLightComponent(int index) {
 
 					lastSelectedEntity->getComponent<Light>()->lightType = LightType::PointLight;
 					
-					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
+					for (auto it = editor->scene->dirLightTransforms.begin(); it < editor->scene->dirLightTransforms.end(); it++) {
 
 						if ((*it) == lastSelectedEntity->transform) {
-							editor->scene.dirLightTransforms.erase(it);
+							editor->scene->dirLightTransforms.erase(it);
 							break;
 						}
 					}
-					editor->scene.pointLightTransforms.push_back(lastSelectedEntity->transform);
-					editor->scene.recompileAllMaterials();
+					editor->scene->pointLightTransforms.push_back(lastSelectedEntity->transform);
+					editor->scene->recompileAllMaterials();
 				}
 			}
 			else {
@@ -1096,15 +1106,15 @@ void EditorGUI::showLightComponent(int index) {
 
 					lastSelectedEntity->getComponent<Light>()->lightType = LightType::DirectionalLight;
 					
-					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
+					for (auto it = editor->scene->pointLightTransforms.begin(); it < editor->scene->pointLightTransforms.end(); it++) {
 
 						if (*it == lastSelectedEntity->transform) {
-							editor->scene.pointLightTransforms.erase(it);
+							editor->scene->pointLightTransforms.erase(it);
 							break;
 						}
 					}
-					editor->scene.dirLightTransforms.push_back(lastSelectedEntity->transform);
-					editor->scene.recompileAllMaterials();
+					editor->scene->dirLightTransforms.push_back(lastSelectedEntity->transform);
+					editor->scene->recompileAllMaterials();
 				}
 			}
 		}
@@ -2183,25 +2193,25 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 
 				if (type == LightType::PointLight) {
 
-					for (auto it = editor->scene.pointLightTransforms.begin(); it < editor->scene.pointLightTransforms.end(); it++) {
+					for (auto it = editor->scene->pointLightTransforms.begin(); it < editor->scene->pointLightTransforms.end(); it++) {
 
 						if (*it == lastSelectedEntity->transform) {
-							editor->scene.pointLightTransforms.erase(it);
+							editor->scene->pointLightTransforms.erase(it);
 							break;
 						}
 					}
 				}
 				else {
 
-					for (auto it = editor->scene.dirLightTransforms.begin(); it < editor->scene.dirLightTransforms.end(); it++) {
+					for (auto it = editor->scene->dirLightTransforms.begin(); it < editor->scene->dirLightTransforms.end(); it++) {
 
 						if (*it == lastSelectedEntity->transform) {
-							editor->scene.dirLightTransforms.erase(it);
+							editor->scene->dirLightTransforms.erase(it);
 							break;
 						}
 					}
 				}
-				editor->scene.recompileAllMaterials();
+				editor->scene->recompileAllMaterials();
 
 				break;
 			}
@@ -2328,7 +2338,7 @@ void EditorGUI::createHierarchyPanel() {
 	ImGui::SameLine(20);
 	ImGui::Image((ImTextureID)editorIcons.eyeTextureID, imgsize, uv0, uv1, tint_col, border_col);
 	ImGui::SameLine();
-	ImGui::Text(editor->scene.name.c_str());
+	ImGui::Text(editor->scene->name.c_str());
 
 	if (treeNodeOpen)
 	{
@@ -2338,13 +2348,16 @@ void EditorGUI::createHierarchyPanel() {
 			{
 				IM_ASSERT(payload->DataSize == sizeof(Entity*));
 				Entity* payload_n = *(Entity**)payload->Data;
-				editor->scene.moveEntity(payload_n, editor->scene.entities[0]);
+				editor->scene->moveEntity(payload_n, editor->scene->entities[0]);
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImGui::Unindent(15);
-		EditorGUI::createSceneGraphRecursively(editor->scene.entities[0]->transform);
+
+		if(editor->scene->entities.size() != 0)
+			EditorGUI::createSceneGraphRecursively(editor->scene->entities[0]->transform);
+
 		ImGui::TreePop();
 	}
 
@@ -2369,7 +2382,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 		else
 			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-		if (lastSelectedEntity && editor->scene.subEntityCheck(lastSelectedEntity->transform, transform->children[i])) {
+		if (lastSelectedEntity && editor->scene->subEntityCheck(lastSelectedEntity->transform, transform->children[i])) {
 
 			if (showChildren)
 				ImGui::SetNextItemOpen(true);
@@ -2400,7 +2413,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Create Empty")) {
 
-				lastSelectedEntity = editor->scene.newEntity(transform->children[i]->entity, "Entity")->entity;
+				lastSelectedEntity = editor->scene->newEntity(transform->children[i]->entity, "Entity")->entity;
 				showChildren = true;
 
 				ImGui::PopStyleColor();
@@ -2425,7 +2438,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Duplicate")) {
 
-				lastSelectedEntity = editor->scene.duplicateEntity(transform->children[i]->entity);
+				lastSelectedEntity = editor->scene->duplicateEntity(transform->children[i]->entity);
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -2435,7 +2448,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 
 			if (ImGui::Selectable("   Delete")) {
 
-				editor->scene.deleteEntityCompletely(lastSelectedEntity);
+				editor->scene->deleteEntityCompletely(lastSelectedEntity);
 				lastSelectedEntity = NULL;
 
 				ImGui::PopStyleColor();
@@ -2463,7 +2476,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 				showChildren = true;
 				IM_ASSERT(payload->DataSize == sizeof(Entity*));
 				Entity* payload_n = *(Entity**)payload->Data;
-				editor->scene.moveEntity(payload_n, transform->children[i]->entity);
+				editor->scene->moveEntity(payload_n, transform->children[i]->entity);
 				return;
 			}
 			ImGui::EndDragDropTarget();
@@ -2500,7 +2513,7 @@ void EditorGUI::createSceneGraphRecursively(Transform* transform) {
 			if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 				if (strlen(str0) != 0)
-					editor->scene.renameEntity(transform->children[i]->entity, str0);
+					editor->scene->renameEntity(transform->children[i]->entity, str0);
 				renameEntity = NULL;
 			}
 		}
@@ -2532,7 +2545,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Entity")) {
 
-			lastSelectedEntity = editor->scene.newEntity(editor->scene.entities[0], "Entity")->entity;
+			lastSelectedEntity = editor->scene->newEntity(editor->scene->entities[0], "Entity")->entity;
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -2545,7 +2558,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Sun")) {
 
-			lastSelectedEntity = editor->scene.newLight(editor->scene.entities[0], "Sun", LightType::DirectionalLight);
+			lastSelectedEntity = editor->scene->newLight(editor->scene->entities[0], "Sun", LightType::DirectionalLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
@@ -2554,7 +2567,7 @@ void EditorGUI::hiearchyCreateButton() {
 
 		if (ImGui::Selectable("   Point Light")) {
 
-			lastSelectedEntity = editor->scene.newLight(editor->scene.entities[0], "Light", LightType::PointLight);
+			lastSelectedEntity = editor->scene->newLight(editor->scene->entities[0], "Light", LightType::PointLight);
 			// include all the necessary end codes...
 			ImGui::PopStyleColor();
 			ImGui::EndPopup();
