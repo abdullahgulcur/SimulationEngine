@@ -651,7 +651,7 @@ void EditorGUI::addComponentButton() {
 	}
 	ImGui::Unindent((width - 120) / 2);
 
-	ImGui::SetNextWindowSize(ImVec2(180, 180));
+	ImGui::SetNextWindowSize(ImVec2(180, 230));
 
 	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 	if (ImGui::BeginPopupContextItem("add_component_popup"))
@@ -659,11 +659,11 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Animation")) {
 
 		}
-		ImGui::Separator();
+		//ImGui::Separator();
 
-		if (ImGui::Selectable("   Animator")) {
+		//if (ImGui::Selectable("   Animator")) {
 
-		}
+		//}
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Collider (Box)")) {
@@ -764,9 +764,13 @@ void EditorGUI::addComponentButton() {
 		}
 		ImGui::Separator();
 
-		if (ImGui::Selectable("   Script")) {
+		if (ImGui::Selectable("   Terrain")) {
 
 		}
+
+		//if (ImGui::Selectable("   Script")) {
+
+		//}
 
 		ImGui::EndPopup();
 	}

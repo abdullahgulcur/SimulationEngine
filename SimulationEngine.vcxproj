@@ -169,6 +169,7 @@
     <ClCompile Include="source\api\physics.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
     <ClCompile Include="source\api\shader.cpp" />
+    <ClCompile Include="source\component\terrain.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
     <ClCompile Include="source\api\utility.cpp" />
@@ -215,6 +216,7 @@
     <ClInclude Include="source\api\physics.hpp" />
     <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\shader.hpp" />
+    <ClInclude Include="source\component\terrain.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
     <ClInclude Include="source\api\utility.hpp" />

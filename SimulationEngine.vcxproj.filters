@@ -144,6 +144,9 @@
     <ClCompile Include="source\editor\debugrenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\component\terrain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -2166,6 +2169,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\editor\debugrenderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\component\terrain.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
