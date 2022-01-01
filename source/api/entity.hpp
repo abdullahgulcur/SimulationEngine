@@ -5,6 +5,7 @@
 #include "transform.hpp"
 #include "component.hpp"
 #include "collider.hpp"
+#include "terrain.hpp"
 
 class Scene;
 

@@ -2,7 +2,7 @@
 
 #include "transform.hpp"
 
-enum class ComponentType { Light, MeshRenderer, Rigidbody, MeshCollider, BoxCollider, SphereCollider, CapsuleCollider, Transform, Script, Animation, Animator };
+enum class ComponentType { Light, MeshRenderer, Rigidbody, MeshCollider, BoxCollider, SphereCollider, CapsuleCollider, Transform, Script, Animation, Animator, Terrain };
 
 class Component {
 

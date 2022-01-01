@@ -178,6 +178,11 @@ public:
 
 	void showMeshRendererComponent(MeshRenderer* meshRendererComp, int index);
 
+	void showTerrainComponent(Terrain* terrainComp, int index);
+
+	template <typename T>
+	T dragUnitValueAssign(T min, T max, T value);
+
 	void showLightComponent(int index);
 
 	void showRigidbodyComponent(int index);

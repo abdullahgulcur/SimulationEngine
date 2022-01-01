@@ -463,6 +463,7 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 	}
 }
 
+// delete vao
 void FileSystem::deleteFileCompletely(int id) {
 
 	std::vector<int> indices;

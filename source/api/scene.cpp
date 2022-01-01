@@ -149,6 +149,9 @@ void Scene::simulateInEditor(float dt) {
 
 		}
 
+		if (Terrain* terrain = ent->getComponent<Terrain>())
+			terrain->draw(&editor->editorCamera, pointLightTransforms, dirLightTransforms);
+
 		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
 		for (auto& comp : boxColliderCompList) {
 

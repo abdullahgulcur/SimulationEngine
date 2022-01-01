@@ -197,13 +197,24 @@ void EditorGUI::handleInputs() {
 
 			if (lastSelectedEntity) {
 				
-				MeshRenderer* meshRendererComp = lastSelectedEntity->getComponent<MeshRenderer>();
-				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
+				if (MeshRenderer* meshRendererComp = lastSelectedEntity->getComponent<MeshRenderer>()) {
 
-				meshRendererComp->mat->deleteProgram();
-				meshRendererComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
-					editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
-					editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
+					editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
+
+					meshRendererComp->mat->deleteProgram();
+					meshRendererComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
+						editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
+				}
+				else if (Terrain* terrainComp = lastSelectedEntity->getComponent<Terrain>()) {
+
+					editor->fileSystem.writeMaterialFile(editor->fileSystem.files[terrainComp->mat->fileAddr->id].path, *terrainComp->mat); //
+
+					terrainComp->mat->deleteProgram();
+					terrainComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(terrainComp->mat->vertShaderFileAddr),
+						editor->fileSystem.getFragShaderPath(terrainComp->mat->fragShaderFileAddr),
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
+				}
 			}
 			else {
 				
@@ -589,6 +600,13 @@ void EditorGUI::createInspectorPanel() {
 			EditorGUI::showMaterialProperties(material, index++);
 		}
 
+		if (Terrain* terrainComp = lastSelectedEntity->getComponent<Terrain>()) {
+
+			MaterialFile& material = *terrainComp->mat;
+			EditorGUI::showTerrainComponent(terrainComp, index++);
+			EditorGUI::showMaterialProperties(material, index++);
+		}
+
 		if (Light* lightComp = lastSelectedEntity->getComponent<Light>())
 			EditorGUI::showLightComponent(index++);
 
@@ -766,6 +784,8 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Terrain")) {
 
+			if (Terrain* terrainComp = lastSelectedEntity->addComponent<Terrain>())
+				terrainComp->init(&editor->fileSystem.materials["Default"]);
 		}
 
 		//if (ImGui::Selectable("   Script")) {
@@ -1031,6 +1051,181 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 	}
 
 	ImGui::Separator();
+}
+
+void EditorGUI::showTerrainComponent(Terrain* terrainComp, int index) {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	char str[4] = { '#', '#', '0', '\0' };
+	char indexChar = '0' + index;
+	str[2] = indexChar;
+	bool treeNodeOpen = ImGui::TreeNode(str);
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)editorIcons.meshrendererTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Terrain");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)editorIcons.contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::Terrain, 0)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		ImVec2 pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		//int size_meshes = editor->fileSystem.meshes.size();
+		int size_mats = editor->fileSystem.materials.size();
+		//const char** meshNames = new const char* [size_meshes];
+		//const char** meshPaths = new const char* [size_meshes];
+		const char** matPaths = new const char* [size_mats];
+		const char** matNames = new const char* [size_mats];
+
+		//int meshIndex = 0;
+		int matIndex = 0;
+
+		//meshNames[0] = "Null";
+		//meshPaths[0] = "Null";
+
+		matPaths[0] = "Default";
+		matNames[0] = "Default";
+
+		int i = 1;
+		//for (auto& it : editor->fileSystem.meshes) {
+
+		//	if (it.second.fileAddr == NULL)
+		//		continue;
+
+		//	meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+		//	meshPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+
+		//	if (meshRendererComp->mesh->fileAddr == it.second.fileAddr)
+		//		meshIndex = i;
+		//	i++;
+		//}
+
+		//ImGui::Text("Mesh        ");
+		//ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+		//ImGui::SetNextItemWidth(width - 115);
+
+		//if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
+		//	meshRendererComp->mesh->meshRendererCompAddrs.erase(std::remove(meshRendererComp->mesh->meshRendererCompAddrs.begin(),
+		//		meshRendererComp->mesh->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mesh->meshRendererCompAddrs.end());
+		//	meshRendererComp->mesh = &editor->fileSystem.meshes[meshPaths[meshIndex]];
+		//	meshRendererComp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
+		//}
+
+		i = 1;
+		for (auto& it : editor->fileSystem.materials) {
+
+			if (it.second.fileAddr == NULL)
+				continue;
+
+			matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+			matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+
+			if (terrainComp->mat->fileAddr == it.second.fileAddr)
+				matIndex = i;
+			i++;
+		}
+
+		ImGui::Text("Material    ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 115);
+
+		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
+			//terrainComp->mat->meshRendererCompAddrs.erase(std::remove(terrainComp->mat->meshRendererCompAddrs.begin(),
+			//	meshRendererComp->mat->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mat->meshRendererCompAddrs.end());
+			terrainComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
+			//terrainComp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
+		}
+
+		//delete[] meshNames;
+		//delete[] meshPaths;
+		delete[] matPaths;
+		delete[] matNames;
+
+		ImGui::Text("Viewport Level X    "); ImGui::SameLine();
+		int levelX = terrainComp->viewportLevel_X;
+		if (ImGui::DragInt("##2", &levelX, 1.f, 0, 256, "%d")) {
+			terrainComp->viewportLevel_X = EditorGUI::dragUnitValueAssign(0, 256, levelX);
+			terrainComp->recreateHeightField();
+		}
+
+		ImGui::Text("Viewport Level Z    "); ImGui::SameLine();
+		int levelZ = terrainComp->viewportLevel_Z;
+		if (ImGui::DragInt("##3", &levelZ, 1.f, 0, 256, "%d")) {
+			terrainComp->viewportLevel_Z = EditorGUI::dragUnitValueAssign(0, 256, levelZ);
+			terrainComp->recreateHeightField();
+		}
+
+		ImGui::Text("Size X    "); ImGui::SameLine();
+		if(ImGui::DragFloat("##4", &terrainComp->size_X, 0.1f, 0, 0, "%.2f"))
+			terrainComp->recreateHeightField();
+
+		ImGui::Text("Size Z    "); ImGui::SameLine();
+		if(ImGui::DragFloat("##5", &terrainComp->size_Z, 0.1f, 0, 0, "%.2f"))
+			terrainComp->recreateHeightField();
+
+		ImGui::Text("Seed    "); ImGui::SameLine();
+		int seed = terrainComp->seed;
+		if (ImGui::DragInt("##6", &seed, 1.f, 0, 2147483647, "%d")) {
+			terrainComp->seed = EditorGUI::dragUnitValueAssign(0, 2147483647, seed);
+			terrainComp->recreateHeightField();
+		}
+
+		ImGui::Text("Height    "); ImGui::SameLine();
+		float height = terrainComp->height;
+		if (ImGui::DragFloat("##7", &height, 0.01f, 0.f, 100.f, "%.2f")) {
+			terrainComp->height = EditorGUI::dragUnitValueAssign(0.f, 100.f, height);
+			terrainComp->recreateHeightField();
+		}
+
+		ImGui::Text("Scale    "); ImGui::SameLine();
+		float scale = terrainComp->scale;
+		if (ImGui::DragFloat("##8", &scale, 0.01f, 0.f, 10.f, "%.2f")) {
+			terrainComp->scale = EditorGUI::dragUnitValueAssign(0.f, 10.f, scale);
+			terrainComp->recreateHeightField();
+		}
+
+		ImGui::PopStyleColor();
+		ImGui::TreePop();
+	}
+
+	ImGui::Separator();
+}
+
+template <typename T>
+T EditorGUI::dragUnitValueAssign(T min, T max, T value) {
+
+	if (value > max)
+		return max;
+	else if (value < min)
+		return min;
+
+	return value;
 }
 
 void EditorGUI::showLightComponent(int index) {
@@ -2270,6 +2465,10 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 
 				editor->physics.gScene->removeActor(*rb->body);
 				lastSelectedEntity->removeComponent<Rigidbody>();
+				break;
+			}
+			case ComponentType::Terrain: {
+
 				break;
 			}
 			}
