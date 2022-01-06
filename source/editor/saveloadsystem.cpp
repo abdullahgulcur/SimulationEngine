@@ -44,6 +44,9 @@ void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, 
 		if (MeshRenderer* meshRendererComp = child->entity->getComponent<MeshRenderer>())
 			saveMeshRendererComponent(editor, doc, entity, meshRendererComp);
 
+		if (TerrainGenerator* terrainComp = child->entity->getComponent<TerrainGenerator>())
+			saveTerrainGeneratorComponent(editor, doc, entity, terrainComp);
+
 		if (Rigidbody* rigidbodyComp = child->entity->getComponent<Rigidbody>())
 			saveRigidbodyComponent(doc, entity, rigidbodyComp);
 
@@ -103,6 +106,7 @@ void SaveLoadSystem::loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<
 		SaveLoadSystem::loadTransformComponent(ent, entityNode);
 		SaveLoadSystem::loadLightComponent(editor, ent, entityNode);
 		SaveLoadSystem::loadMeshRendererComponent(editor, ent, entityNode);
+		SaveLoadSystem::loadTerrainGeneratorComponent(editor, ent, entityNode);
 		SaveLoadSystem::loadBoxColliderComponents(editor, ent, entityNode);
 		SaveLoadSystem::loadSphereColliderComponents(editor, ent, entityNode);
 		SaveLoadSystem::loadCapsuleColliderComponents(editor, ent, entityNode);
@@ -273,6 +277,58 @@ bool SaveLoadSystem::saveMeshRendererComponent(Editor* editor, rapidxml::xml_doc
 		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string("Default")));
 	else
 		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[meshRenderer->mat->fileAddr->id].path.c_str())));
+
+	entNode->append_node(meshRendererNode);
+
+	return true;
+}
+
+bool SaveLoadSystem::loadTerrainGeneratorComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+
+	rapidxml::xml_node<>* terrainNode = entNode->first_node("Terrain");
+
+	if (terrainNode == NULL)
+		return false;
+
+	TerrainGenerator* terrainComp = ent->addComponent<TerrainGenerator>();
+
+	auto matFound = editor->fileSystem.materials.find(terrainNode->first_attribute("MaterialPath")->value());
+	if (matFound != editor->fileSystem.materials.end())
+		terrainComp->mat = &matFound->second;
+	else
+		terrainComp->mat = &editor->fileSystem.materials["Default"];
+
+	//terrainComp->mat->meshRendererCompAddrs.push_back(terrainComp);
+
+	terrainComp->seed = atoi(terrainNode->first_attribute("Seed")->value());
+	terrainComp->viewportLevel_X = atoi(terrainNode->first_attribute("Viewport_X")->value());
+	terrainComp->viewportLevel_Z = atoi(terrainNode->first_attribute("Viewport_Z")->value());
+	terrainComp->size_X = atof(terrainNode->first_attribute("Size_X")->value());
+	terrainComp->size_Z = atof(terrainNode->first_attribute("Size_Z")->value());
+	terrainComp->height = atof(terrainNode->first_attribute("Height")->value());
+	terrainComp->scale = atof(terrainNode->first_attribute("Scale")->value());
+
+	terrainComp->init();
+
+	return true;
+}
+
+bool SaveLoadSystem::saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain) {
+
+	rapidxml::xml_node<>* meshRendererNode = doc.allocate_node(rapidxml::node_element, "Terrain");
+
+	if (terrain->mat->fileAddr == NULL)
+		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string("Default")));
+	else
+		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[terrain->mat->fileAddr->id].path.c_str())));
+
+	meshRendererNode->append_attribute(doc.allocate_attribute("Seed", doc.allocate_string(std::to_string(terrain->seed).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_X", doc.allocate_string(std::to_string(terrain->viewportLevel_X).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_Z", doc.allocate_string(std::to_string(terrain->viewportLevel_Z).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Size_X", doc.allocate_string(std::to_string(terrain->size_X).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Size_Z", doc.allocate_string(std::to_string(terrain->size_Z).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(terrain->height).c_str())));
+	meshRendererNode->append_attribute(doc.allocate_attribute("Scale", doc.allocate_string(std::to_string(terrain->scale).c_str())));
 
 	entNode->append_node(meshRendererNode);
 

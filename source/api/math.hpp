@@ -8,4 +8,5 @@ namespace Math {
 
 	bool decompose(glm::mat4& ModelMatrix, glm::vec3& Translation, glm::vec3& Scale);
 
+	float getFOV_X(float fovY, float aspectRatio);
 }

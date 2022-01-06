@@ -206,7 +206,7 @@ void EditorGUI::handleInputs() {
 						editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
 						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
-				else if (Terrain* terrainComp = lastSelectedEntity->getComponent<Terrain>()) {
+				else if (TerrainGenerator* terrainComp = lastSelectedEntity->getComponent<TerrainGenerator>()) {
 
 					editor->fileSystem.writeMaterialFile(editor->fileSystem.files[terrainComp->mat->fileAddr->id].path, *terrainComp->mat); //
 
@@ -508,6 +508,11 @@ void EditorGUI::createScenePanel() {
 	scenePos = ImGui::GetCursorScreenPos();
 	sceneRegion = ImGui::GetContentRegionAvail();
 
+	// TODO: Only change these values when resized
+	editor->editorCamera.aspectRatio = sceneRegion.x / sceneRegion.y;
+	editor->editorCamera.fovX = Math::getFOV_X(editor->editorCamera.fovY, editor->editorCamera.aspectRatio);
+	std::cout << "FOV X: " << editor->editorCamera.fovX << std::endl;
+
 	ImGui::Image((ImTextureID)editor->window.textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
 
 	if (lastSelectedEntity) {
@@ -600,10 +605,10 @@ void EditorGUI::createInspectorPanel() {
 			EditorGUI::showMaterialProperties(material, index++);
 		}
 
-		if (Terrain* terrainComp = lastSelectedEntity->getComponent<Terrain>()) {
+		if (TerrainGenerator* terrainComp = lastSelectedEntity->getComponent<TerrainGenerator>()) {
 
 			MaterialFile& material = *terrainComp->mat;
-			EditorGUI::showTerrainComponent(terrainComp, index++);
+			EditorGUI::showTerrainGeneratorComponent(terrainComp, index++);
 			EditorGUI::showMaterialProperties(material, index++);
 		}
 
@@ -784,7 +789,7 @@ void EditorGUI::addComponentButton() {
 
 		if (ImGui::Selectable("   Terrain")) {
 
-			if (Terrain* terrainComp = lastSelectedEntity->addComponent<Terrain>())
+			if (TerrainGenerator* terrainComp = lastSelectedEntity->addComponent<TerrainGenerator>())
 				terrainComp->init(&editor->fileSystem.materials["Default"]);
 		}
 
@@ -1053,7 +1058,7 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 	ImGui::Separator();
 }
 
-void EditorGUI::showTerrainComponent(Terrain* terrainComp, int index) {
+void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int index) {
 
 	float width = ImGui::GetContentRegionAvail().x;
 
@@ -1075,7 +1080,7 @@ void EditorGUI::showTerrainComponent(Terrain* terrainComp, int index) {
 	ImGui::SameLine(25);
 	ImGui::Image((ImTextureID)editorIcons.meshrendererTextureID, size, uv0, uv1, tint_col, border_col);
 	ImGui::SameLine();
-	ImGui::Text("  Terrain");
+	ImGui::Text("  Terrain Generator");
 
 	ImGui::SameLine();
 	ImVec2 pos = ImGui::GetCursorPos();

@@ -19,6 +19,7 @@
 #include "meshrenderer.hpp"
 #include "rigidbody.hpp"
 #include "collider.hpp"
+#include "terrain.hpp"
 
 using namespace Mesh;
 using namespace Material;
@@ -48,6 +49,10 @@ namespace SaveLoadSystem {
 	bool loadLightComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 
 	bool saveMeshRendererComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer);
+
+	bool loadTerrainGeneratorComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+
+	bool saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain);
 
 	bool loadMeshRendererComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
 

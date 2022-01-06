@@ -1,132 +1,274 @@
 #include "terrain.hpp"
 #include "camera.hpp"
 
-Terrain::Terrain() {
+TerrainGenerator::TerrainGenerator() {
 
 }
 
-void Terrain::init(MaterialFile* mat) {
+void TerrainGenerator::init() {
 
-    this->mat = mat;
-    std::vector<TerrainVertex> vertices;
-    std::vector<unsigned short> indices;
-    Terrain::createTerrainMesh(indices, vertices);
-	Terrain::recalculateNormals(indices, vertices);
-    Terrain::createHeightField(indices, vertices);
-    indiceCount = indices.size();
+	std::vector<TerrainChunk> chunks;
+	std::vector<std::vector<unsigned short>> indices;
+	TerrainGenerator::createTerrainMesh(chunks, indices);
+	TerrainGenerator::recalculateNormals(chunks, indices);
+
+	// Debug Purpose Only
+	TerrainGenerator::initDebugNormalLines(chunks, indices);
+
+	TerrainGenerator::createHeightField(chunks, indices);
 }
 
-void Terrain::recreateHeightField() {
+void TerrainGenerator::init(MaterialFile* mat) {
 
-    glDeleteVertexArrays(1, &VAO);
-    std::vector<TerrainVertex> vertices;
-    std::vector<unsigned short> indices;
-    Terrain::createTerrainMesh(indices, vertices);
-	Terrain::recalculateNormals(indices, vertices);
-    Terrain::createHeightField(indices, vertices);
-    indiceCount = indices.size();
+	this->mat = mat;
+	std::vector<TerrainChunk> chunks;
+	std::vector<std::vector<unsigned short>> indices;
+	TerrainGenerator::createTerrainMesh(chunks, indices);
+	TerrainGenerator::recalculateNormals(chunks, indices);
+
+	// Debug Purpose Only
+	TerrainGenerator::initDebugNormalLines(chunks, indices);
+
+	TerrainGenerator::createHeightField(chunks, indices);
 }
 
-void Terrain::createTerrainMesh(std::vector<unsigned short>& indices, std::vector<TerrainVertex>& vertices) {
+void TerrainGenerator::recreateHeightField() {
 
-    const siv::PerlinNoise perlin{ seed };
+	for (auto& VAOList : VAOs)
+		for (auto& VAO : VAOList)
+			glDeleteVertexArrays(1, &VAO);
+	VAOs.clear();
 
-    glm::vec3 normal(0.f, 1.f, 0.f);
+	std::vector<TerrainChunk> chunks;
+	std::vector<std::vector<unsigned short>> indices;
+	TerrainGenerator::createTerrainMesh(chunks, indices);
+	TerrainGenerator::recalculateNormals(chunks, indices);
 
-	for (int i = 0; i < viewportLevel_Z; i++) {
+	// Debug Purpose Only
+	TerrainGenerator::initDebugNormalLines(chunks, indices);
 
-		for (int j = 0; j < viewportLevel_X; j++) {
+	TerrainGenerator::createHeightField(chunks, indices);
+}
 
-            glm::vec3 pos(j * (size_X / viewportLevel_X),
-                perlin.noise2D_01((double)j * scale, (double)i * scale) * height, i * (size_Z / viewportLevel_Z));
-            glm::vec2 uv((float)j / (viewportLevel_X - 1), (float)i / (viewportLevel_Z - 1));
-            glm::vec4 col(1.f, 0.f, 0.f, 0.f);
-            vertices.push_back(TerrainVertex(pos, normal, uv, col));
+// dim 0: clipmaps 1: lods 2: vertices -- lod levels 240, 120, 60, 30, 15
+void TerrainGenerator::createTerrainMesh(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices) {
 
-            if (i != viewportLevel_Z - 1 && j != viewportLevel_X - 1) {
+	const int lodMaxLevel = 4;
+	const siv::PerlinNoise perlin{ seed };
 
-                indices.push_back(viewportLevel_X * i + j);
-                indices.push_back(viewportLevel_X * (i + 1) + j);
-                indices.push_back(viewportLevel_X * i + j + 1);
-                indices.push_back(viewportLevel_X * i + j + 1);
-                indices.push_back(viewportLevel_X * (i + 1) + j);
-                indices.push_back(viewportLevel_X * (i + 1) + j + 1);
-            }
+	glm::vec3 normal(0.f, 0.f, 0.f);
+	glm::vec4 col(1.f, 0.f, 0.f, 0.f);
+
+	float maxSize = pow(2, lodMaxLevel) * 15;
+	float distBetweenVertices = 0.25f;
+
+	for (int i = 0; i < clipmaps; i++) {
+
+		for (int j = 0; j < clipmaps; j++) {
+
+			TerrainChunk chunk;
+			for (int m = 0; m <= lodMaxLevel; m++) {
+
+				std::vector<TerrainVertex> vertices;
+				int level = pow(2, lodMaxLevel - m) * 15;
+				for (int z = 0; z <= level; z++) {
+
+					for (int x = 0; x <= level; x++) {
+
+						float xPos = (x * pow(2, m) + j * maxSize) * distBetweenVertices;
+						float zPos = (z * pow(2, m) + i * maxSize) * distBetweenVertices;
+						glm::vec3 pos(xPos, perlin.octave2D((double)xPos * scale, (double)zPos * scale, 5, 0.5f) * height, zPos);
+						glm::vec2 uv((float)x / level, (float)z / level);
+						vertices.push_back(TerrainVertex(pos, normal, uv, col));
+					}
+				}
+				chunk.lods.push_back(vertices);
+			}
+			chunks.push_back(chunk);
 		}
+	}
+
+	for (int m = 0; m <= lodMaxLevel; m++) {
+
+		std::vector<unsigned short> indiceList;
+		int level = 15 * pow(2, lodMaxLevel - m);
+		for (int i = 0; i < level; i++) {
+
+			for (int j = 0; j < level; j++) {
+
+				indiceList.push_back((level + 1) * i + j);
+				indiceList.push_back((level + 1) * (i + 1) + j);
+				indiceList.push_back((level + 1) * i + j + 1);
+				indiceList.push_back((level + 1) * i + j + 1);
+				indiceList.push_back((level + 1) * (i + 1) + j);
+				indiceList.push_back((level + 1) * (i + 1) + j + 1);
+			}
+		}
+		indices.push_back(indiceList);
 	}
 }
 
-glm::vec4 Terrain::evaluateColor(float& slope) {
+glm::vec4 TerrainGenerator::evaluateColor(float& slope) {
 
-    float angle0 = glm::radians(5.f);
+	//float angle0 = glm::radians(8.f);
 
-    if (slope <= angle0)
-        return glm::vec4(1.f, 0.f, 0.f, 0.f);
-    else
-        return glm::vec4(0.f, 1.f, 0.f, 0.f);
+	if (slope <= 15.f)
+		return glm::vec4(1.f, 0.f, 0.f, 0.f);
+	else
+		return glm::vec4(0.f, 1.f, 0.f, 0.f);
 }
 
-float Terrain::angleBetweenTwoVectors(glm::vec3 v0, glm::vec3 v1) {
+float TerrainGenerator::angleBetweenTwoVectors(glm::vec3 v0, glm::vec3 v1) {
 
-	return glm::acos(glm::dot(v0, v1) / (glm::length(v0) * glm::length(v1)));
+	return glm::degrees(glm::acos(glm::dot(v0, v1)));
 }
 
 // For smooth shading
 // ref: https://mrl.cs.nyu.edu/~perlin/courses/fall2002ugrad/meshnormals.html
-void Terrain::recalculateNormals(std::vector<unsigned short>& indices, std::vector<TerrainVertex>& vertices) {
+void TerrainGenerator::recalculateNormals(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices) {
 
-    for (int i = 0; i < indices.size(); i += 3) {
+	// ? draw normals
+	// fix chunk edges
 
-        glm::vec3 v0(vertices[indices[i]].position);
-        glm::vec3 v1(vertices[indices[i + 1]].position);
-        glm::vec3 v2(vertices[indices[i + 2]].position);
+	for (auto& chunk : chunks) {
 
-        vertices[indices[i]].normal += glm::cross((v1 - v0), (v2 - v0));
-        vertices[indices[i + 1]].normal += glm::cross((v2 - v1), (v0 - v1));
-        vertices[indices[i + 2]].normal += glm::cross((v0 - v2), (v1 - v2));
-    }
+		for (int i = 0; i < indices.size(); i++) {
 
-	for (auto& vert : vertices) {
+			auto& indiceList = indices[i];
+			for (int k = 0; k < indiceList.size(); k += 3) {
 
-		vert.normal = glm::normalize(vert.normal);
-		float slopeAngle = angleBetweenTwoVectors(glm::vec3(0, 1, 0), vert.normal);
-		vert.color = evaluateColor(slopeAngle);
+				glm::vec3 v0(chunk.lods[i][indiceList[k]].position);
+				glm::vec3 v1(chunk.lods[i][indiceList[k + 1]].position);
+				glm::vec3 v2(chunk.lods[i][indiceList[k + 2]].position);
+
+				chunk.lods[i][indiceList[k]].normal += glm::cross((v1 - v0), (v2 - v0));
+				chunk.lods[i][indiceList[k + 1]].normal += glm::cross((v2 - v1), (v0 - v1));
+				chunk.lods[i][indiceList[k + 2]].normal += glm::cross((v0 - v2), (v1 - v2));
+			}
+		}
+
+		for (auto& lod : chunk.lods) {
+
+			for (auto& vert : lod) {
+
+				vert.normal = glm::normalize(vert.normal);
+				float slopeAngle = angleBetweenTwoVectors(glm::vec3(0, 1, 0), vert.normal);
+				vert.color = evaluateColor(slopeAngle);
+			}
+		}
 	}
 }
 
-void Terrain::createHeightField(std::vector<unsigned short>& indices, std::vector<TerrainVertex>& vertices) {
+void TerrainGenerator::initDebugNormalLines(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices) {
 
-    glGenVertexArrays(1, &VAO);
+	std::vector<std::vector<std::vector<glm::vec3>>> normals;
 
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-    unsigned int EBO;
-    glGenBuffers(1, &EBO);
+	for (auto& chunk : chunks) {
 
-    glBindVertexArray(VAO);
+		std::vector<std::vector<glm::vec3>> lodListForChunk;
+		for (auto& lod : chunk.lods) {
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(TerrainVertex), &vertices[0], GL_STATIC_DRAW);
+			std::vector<glm::vec3> normalListforLOD;
+			for (auto& vert : lod) {
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+				normalListforLOD.push_back(vert.position);
+				normalListforLOD.push_back(vert.position + vert.normal);
+			}
+			lodListForChunk.push_back(normalListforLOD);
+		}
+		normals.push_back(lodListForChunk);
+	}
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)0);
+	for (int i = 0; i < chunks.size(); i++) {
 
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, normal));
+		std::vector<unsigned int> vaoList;
+		for (int j = 0; j < chunks[i].lods.size(); j++) {
+		
+			unsigned int VAO;
+			glGenVertexArrays(1, &VAO);
+			vaoList.push_back(VAO);
 
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, texCoord));
+			unsigned int VBO;
+			glGenBuffers(1, &VBO);
+			glBindVertexArray(VAO);
 
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, color));
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, normals[i][j].size() * sizeof(glm::vec3), &normals[i][j][0], GL_STATIC_DRAW);
 
-    glBindVertexArray(0);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
+		DebugNormalVAOs.push_back(vaoList);
+	}
+
+	debugNormalProgramID = ShaderNS::loadShaders("source/shader/Line.vert", "source/shader/Line.frag");
 }
 
-void Terrain::draw(Camera* camera, std::vector<Transform*>& pointLightTransforms, std::vector<Transform*>& dirLightTransforms) {
+int TerrainGenerator::getLODLevel(glm::vec3 camPos, int chunkIndex) {
+
+	int x = chunkIndex % clipmaps;
+	int z = chunkIndex / clipmaps;
+	glm::vec3 chunkCenter(x * 60.f + 30.f, 0.f, z * 60.f + 30.f);
+	float dist = glm::distance(chunkCenter, camPos);
+
+	if (dist <= 30.f)
+		return 0;
+	else if (dist > 30.f && dist <= 60.f)
+		return 1;
+	else if (dist > 60.f && dist <= 120.f)
+		return 2;
+	else if (dist > 120.f && dist <= 240.f)
+		return 3;
+
+	return 4;
+}
+
+void TerrainGenerator::createHeightField(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices) {
+
+	for (auto& chunk : chunks) {
+
+		std::vector<unsigned int> vaoList;
+		for (int i = 0; i < chunk.lods.size(); i++) {
+
+			unsigned int VAO;
+			glGenVertexArrays(1, &VAO);
+			vaoList.push_back(VAO);
+
+			unsigned int VBO;
+			glGenBuffers(1, &VBO);
+			unsigned int EBO;
+			glGenBuffers(1, &EBO);
+
+			glBindVertexArray(VAO);
+
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, chunk.lods[i].size() * sizeof(TerrainVertex), &chunk.lods[i][0], GL_STATIC_DRAW);
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices[i].size() * sizeof(unsigned short), &indices[i][0], GL_STATIC_DRAW);
+
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)0);
+
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, normal));
+
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, texCoord));
+
+			glEnableVertexAttribArray(3);
+			glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertex), (void*)offsetof(TerrainVertex, color));
+
+			glBindVertexArray(0);
+		}
+		VAOs.push_back(vaoList);
+	}
+}
+
+void TerrainGenerator::draw(Camera* camera, std::vector<Transform*>& pointLightTransforms, std::vector<Transform*>& dirLightTransforms) {
 
 	glUseProgram(mat->programID);
 	glUniformMatrix4fv(glGetUniformLocation(mat->programID, "M"), 1, GL_FALSE, &transform->model[0][0]);
@@ -215,10 +357,34 @@ void Terrain::draw(Camera* camera, std::vector<Transform*>& pointLightTransforms
 
 		char str[16];
 		sprintf(str, "float%d\0", i);
-		glUniform1f(glGetUniformLocation(mat->programID, str),mat->floatUnits[i]);
+		glUniform1f(glGetUniformLocation(mat->programID, str), mat->floatUnits[i]);
 	}
 
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, indiceCount, GL_UNSIGNED_SHORT, (void*)0);
-	glBindVertexArray(0);
+	unsigned int indiceCounts[5] = { 345600, 86400, 21600, 5400, 1350 };
+	unsigned int indiceCountsDebugNormals[5] = { 116162, 29282, 7442, 1922, 578 };
+
+	for (int i = 0; i < VAOs.size(); i++) {
+
+		int lodLevel = TerrainGenerator::getLODLevel(camera->position, i);
+		glBindVertexArray(VAOs[i][lodLevel]);
+		glDrawElements(GL_TRIANGLES, indiceCounts[lodLevel], GL_UNSIGNED_SHORT, (void*)0);
+		glBindVertexArray(0);
+	}
+
+
+	// DEBUG
+
+	//glUseProgram(debugNormalProgramID);
+	//glm::mat4 MVP = camera->ProjectionMatrix * camera->ViewMatrix;
+	//glUniformMatrix4fv(glGetUniformLocation(debugNormalProgramID, "MVP"), 1, GL_FALSE, &MVP[0][0]);
+	//glUniform3fv(glGetUniformLocation(debugNormalProgramID, "color"), 1, &glm::vec3(1.f, 0.0f, 0.1f)[0]);
+
+	//for (int i = 0; i < DebugNormalVAOs.size(); i++) {
+
+	//	int lodLevel = TerrainGenerator::getLODLevel(camera->position, i);
+	//	glBindVertexArray(DebugNormalVAOs[i][lodLevel]);
+	//	glDrawArrays(GL_LINES, 0, indiceCountsDebugNormals[lodLevel]);
+	//	glBindVertexArray(0);
+	//}
+
 }

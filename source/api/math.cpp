@@ -135,5 +135,10 @@ namespace Math {
 
 		return true;
 	}
+
+	float getFOV_X(float fovY, float aspectRatio) {
+
+		return glm::degrees(glm::atan(glm::tan(fovY / 2) * aspectRatio) * 2);
+	}
 }
 

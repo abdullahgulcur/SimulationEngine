@@ -8,6 +8,8 @@ Camera::Camera()
 	horizontalTranslationSpeed *= generalSpeed;
 	verticalTranslationSpeed *= generalSpeed;
 	scrollSpeed *= generalSpeed;
+
+	fovY = glm::radians(60.f);
 }
 
 void Camera::computeMatricesFromInputs(Editor* editor) {
@@ -36,7 +38,6 @@ void Camera::computeMatricesFromInputs(Editor* editor) {
 	float& scenePosY = editor->editorGUI.scenePos.y;
 	float& sceneRegionX = editor->editorGUI.sceneRegion.x;
 	float& sceneRegionY = editor->editorGUI.sceneRegion.y;
-	float aspectRatio = editor->editorGUI.sceneRegion.x / editor->editorGUI.sceneRegion.y;
 
 	mouseTeleport = false;
 
@@ -83,7 +84,8 @@ void Camera::computeMatricesFromInputs(Editor* editor) {
 			allow = false;
 	}
 
-	ProjectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	// These parameters are same as Unity engine
+	ProjectionMatrix = glm::perspective(fovY, aspectRatio, 0.1f, 10000.0f);
 	ViewMatrix = glm::lookAt(position, position + direction, up);
 
 	lastX = mousePos.x;

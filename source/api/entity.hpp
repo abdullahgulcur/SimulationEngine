@@ -35,6 +35,8 @@ public:
 	Transform* transform;
 	std::vector<Component*> components;
 
+	Entity();
+
 	Entity(const char* name, Scene* scene);
 
 	Entity(Entity* ent, Transform* parent, Scene* scene);

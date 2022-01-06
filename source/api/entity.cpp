@@ -2,6 +2,8 @@
 #include "scene.hpp"
 #include "editor.hpp"
 
+Entity::Entity() { }
+
 // first load
 Entity::Entity(const char* name, Scene* scene) {
 

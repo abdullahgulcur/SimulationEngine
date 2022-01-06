@@ -13,4 +13,6 @@ int Render::init() {
 		getchar();
 		return - 1;
 	}
+
+	glLineWidth(2.f);
 }
