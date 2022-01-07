@@ -204,6 +204,8 @@ public:
 
 	void textureMenuPopup(MaterialFile& material, int index, bool& flag);
 
+	//void heightMapPopup(TerrainGenerator* terrainComp);
+
 	bool contextMenuPopup(ComponentType type, int index);
 
 	void createAppPanel();

@@ -1071,6 +1071,7 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 	int frame_padding = 1;
 	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 size64 = ImVec2(64.0f, 64.0f);
 	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
 	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
 	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1100,47 +1101,23 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		//int size_meshes = editor->fileSystem.meshes.size();
 		int size_mats = editor->fileSystem.materials.size();
-		//const char** meshNames = new const char* [size_meshes];
-		//const char** meshPaths = new const char* [size_meshes];
 		const char** matPaths = new const char* [size_mats];
 		const char** matNames = new const char* [size_mats];
-
-		//int meshIndex = 0;
 		int matIndex = 0;
-
-		//meshNames[0] = "Null";
-		//meshPaths[0] = "Null";
-
 		matPaths[0] = "Default";
 		matNames[0] = "Default";
 
+		int size_textures = editor->fileSystem.textures.size();
+		const char** texPaths = new const char* [size_textures];
+		const char** texNames = new const char* [size_textures];
+		int texIndex = 0;
+		texPaths[0] = "NULL";
+		texNames[0] = "NULL";
+
 		int i = 1;
-		//for (auto& it : editor->fileSystem.meshes) {
 
-		//	if (it.second.fileAddr == NULL)
-		//		continue;
-
-		//	meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
-		//	meshPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-
-		//	if (meshRendererComp->mesh->fileAddr == it.second.fileAddr)
-		//		meshIndex = i;
-		//	i++;
-		//}
-
-		//ImGui::Text("Mesh        ");
-		//ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
-		//ImGui::SetNextItemWidth(width - 115);
-
-		//if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
-		//	meshRendererComp->mesh->meshRendererCompAddrs.erase(std::remove(meshRendererComp->mesh->meshRendererCompAddrs.begin(),
-		//		meshRendererComp->mesh->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mesh->meshRendererCompAddrs.end());
-		//	meshRendererComp->mesh = &editor->fileSystem.meshes[meshPaths[meshIndex]];
-		//	meshRendererComp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
-		//}
 
 		i = 1;
 		for (auto& it : editor->fileSystem.materials) {
@@ -1156,21 +1133,55 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			i++;
 		}
 
+		i = 1;
+		for (auto& it : editor->fileSystem.textures) {
+
+			if (it.second.fileAddr == NULL)
+				continue;
+
+			texPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+			texNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+
+			if (terrainComp->heightmap == it.second.fileAddr)
+				texIndex = i;
+			i++;
+		}
+
 		ImGui::Text("Material    ");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(width - 115);
 
-		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
-			//terrainComp->mat->meshRendererCompAddrs.erase(std::remove(terrainComp->mat->meshRendererCompAddrs.begin(),
-			//	meshRendererComp->mat->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mat->meshRendererCompAddrs.end());
+		if (ImGui::Combo("##1", &matIndex, matNames, size_mats))
 			terrainComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
-			//terrainComp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
-		}
 
-		//delete[] meshNames;
-		//delete[] meshPaths;
 		delete[] matPaths;
 		delete[] matNames;
+
+		ImGui::Text("Material    ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 115);
+
+		if (ImGui::Combo("##9", &texIndex, texNames, size_textures)) {
+			terrainComp->heightmap = editor->fileSystem.textures[texPaths[texIndex]].fileAddr;
+
+		}
+
+		delete[] texPaths;
+		delete[] texNames;
+
+		//ImGui::PushID(0);
+		//static bool popupFlag = true;
+		//if (ImGui::ImageButton((ImTextureID)terrainComp->heighmapTextureID, size64, uv0, uv1, frame_padding, bg_col, tint_col)) {
+		//	ImGui::OpenPopup("texture_menu_popup");
+		//	popupFlag = true;
+		//}
+
+		//EditorGUI::heightMapPopup(terrainComp);
+
+		ImGui::PopID();
+		ImGui::SameLine();
+		pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		ImGui::Text(editor->fileSystem.files[terrainComp->heightmap->id].name.c_str());
 
 		ImGui::Text("Viewport Level X    "); ImGui::SameLine();
 		int levelX = terrainComp->viewportLevel_X;
@@ -2326,6 +2337,63 @@ void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) 
 		ImGui::EndPopup();
 	}
 }
+
+//void EditorGUI::heightMapPopup(TerrainGenerator* terrainComp) {
+//
+//	int frame_padding = 2;
+//	ImVec2 size = ImVec2(128.0f, 128.0f);
+//	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+//	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+//	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+//	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+//	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+//
+//	ImGui::SetNextWindowSize(ImVec2(300, 635));
+//
+//	if (ImGui::BeginPopup("heightmap_popup"))
+//	{
+//		unsigned int iterateIndex = 0;
+//		for (auto& it : editor->fileSystem.textures) {
+//
+//			ImGui::BeginGroup();
+//			{
+//				ImGui::PushID(iterateIndex);
+//
+//				if (ImGui::ImageButton((ImTextureID)it.second.textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+//
+//					terrainComp->heighmapTextureID = it.second.textureID;
+//					terrainComp->heightmap = it.second.fileAddr;
+//
+//					ImGui::PopID();
+//					ImGui::EndGroup();
+//					ImGui::EndPopup();
+//					return;
+//				}
+//
+//				char name[32];
+//				if (it.second.fileAddr != NULL)
+//					strcpy(name, editor->fileSystem.files[it.second.fileAddr->id].name.c_str());
+//				else
+//					strcpy(name, "White\0");
+//
+//				ImVec2 pos = ImGui::GetCursorPos();
+//				ImVec2 textSize = ImGui::CalcTextSize(name);
+//				ImGui::SetCursorPos(ImVec2(pos.x + (128.f - textSize.x) / 2, pos.y));
+//
+//				ImGui::Text(name);
+//
+//				ImGui::PopID();
+//			}
+//			ImGui::EndGroup();
+//
+//			if ((iterateIndex + 1) % 2 != 0)
+//				ImGui::SameLine();
+//
+//			iterateIndex++;
+//		}
+//		ImGui::EndPopup();
+//	}
+//}
 
 bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 

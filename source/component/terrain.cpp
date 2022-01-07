@@ -53,6 +53,14 @@ void TerrainGenerator::recreateHeightField() {
 // dim 0: clipmaps 1: lods 2: vertices -- lod levels 240, 120, 60, 30, 15
 void TerrainGenerator::createTerrainMesh(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices) {
 
+	// temp
+	unsigned width;
+	unsigned height;
+	std::vector<unsigned char> elevations;
+	unsigned error = lodepng::decode(elevations, width, height, "resource/heightmaps/height.png", LodePNGColorType::LCT_GREY, 16);
+	//---
+
+
 	const int lodMaxLevel = 4;
 	const siv::PerlinNoise perlin{ seed };
 
@@ -75,9 +83,25 @@ void TerrainGenerator::createTerrainMesh(std::vector<TerrainChunk>& chunks, std:
 
 					for (int x = 0; x <= level; x++) {
 
-						float xPos = (x * pow(2, m) + j * maxSize) * distBetweenVertices;
+						/*float xPos = (x * pow(2, m) + j * maxSize) * distBetweenVertices;
 						float zPos = (z * pow(2, m) + i * maxSize) * distBetweenVertices;
-						glm::vec3 pos(xPos, perlin.octave2D((double)xPos * scale, (double)zPos * scale, 5, 0.5f) * height, zPos);
+						glm::vec3 pos(xPos, perlin.octave2D((double)xPos * scale, (double)zPos * scale, 5, 0.5f) * height, zPos);*/
+
+						float xPos = x * pow(2, m) + j * maxSize;
+						float zPos = z * pow(2, m) + i * maxSize;
+
+						//int updatedX = xPos * ((width - 1) / (maxSize * clipmaps));
+						//int updatedZ = zPos * ((width - 1) / (maxSize * clipmaps));
+
+						//float elevation;
+						//uint32_t flt_init = Convert::FLTSet(elevations[(updatedZ * width + updatedX) * 4],
+						//	elevations[(updatedZ * width + updatedX) * 4 + 1], elevations[(updatedZ * width + updatedX) * 4 + 2], 
+						//	elevations[(updatedZ * width + updatedX) * 4 + 3], &elevation);
+
+						float elevation = (elevations[(zPos * width + xPos) * 2] * 256 + elevations[(zPos * width + xPos) * 2 + 1]) / 150.f;
+
+						glm::vec3 pos(xPos, elevation, zPos);
+
 						glm::vec2 uv((float)x / level, (float)z / level);
 						vertices.push_back(TerrainVertex(pos, normal, uv, col));
 					}
@@ -112,7 +136,7 @@ glm::vec4 TerrainGenerator::evaluateColor(float& slope) {
 
 	//float angle0 = glm::radians(8.f);
 
-	if (slope <= 15.f)
+	if (slope <= 25.f)
 		return glm::vec4(1.f, 0.f, 0.f, 0.f);
 	else
 		return glm::vec4(0.f, 1.f, 0.f, 0.f);
@@ -207,20 +231,20 @@ void TerrainGenerator::initDebugNormalLines(std::vector<TerrainChunk>& chunks, s
 	debugNormalProgramID = ShaderNS::loadShaders("source/shader/Line.vert", "source/shader/Line.frag");
 }
 
-int TerrainGenerator::getLODLevel(glm::vec3 camPos, int chunkIndex) {
+int TerrainGenerator::getLODLevel(glm::vec2 camPos, int chunkIndex) {
 
 	int x = chunkIndex % clipmaps;
 	int z = chunkIndex / clipmaps;
-	glm::vec3 chunkCenter(x * 60.f + 30.f, 0.f, z * 60.f + 30.f);
+	glm::vec2 chunkCenter(x * 240.f + 120.f, z * 240.f + 120.f);
 	float dist = glm::distance(chunkCenter, camPos);
 
-	if (dist <= 30.f)
+	if (dist <= 250.f)
 		return 0;
-	else if (dist > 30.f && dist <= 60.f)
+	else if (dist > 250.f && dist <= 500.f)
 		return 1;
-	else if (dist > 60.f && dist <= 120.f)
+	else if (dist > 500.f && dist <= 750.f)
 		return 2;
-	else if (dist > 120.f && dist <= 240.f)
+	else if (dist > 750.f && dist <= 1000.f)
 		return 3;
 
 	return 4;
@@ -366,13 +390,13 @@ void TerrainGenerator::draw(Camera* camera, std::vector<Transform*>& pointLightT
 	for (int i = 0; i < VAOs.size(); i++) {
 
 		int lodLevel = TerrainGenerator::getLODLevel(camera->position, i);
-		glBindVertexArray(VAOs[i][lodLevel]);
-		glDrawElements(GL_TRIANGLES, indiceCounts[lodLevel], GL_UNSIGNED_SHORT, (void*)0);
+		glBindVertexArray(VAOs[i][0]);
+		glDrawElements(GL_TRIANGLES, indiceCounts[0], GL_UNSIGNED_SHORT, (void*)0);
 		glBindVertexArray(0);
 	}
 
 
-	// DEBUG
+	 //DEBUG
 
 	//glUseProgram(debugNormalProgramID);
 	//glm::mat4 MVP = camera->ProjectionMatrix * camera->ViewMatrix;
