@@ -7,40 +7,48 @@
 
 #include <math.hpp>
 
+class Entity;
+class Editor;
+
 class Transform {
 
 private:
 
+	void updatePhysics();
+
 
 public:
 
-	unsigned int id;
 	Transform* parent;
+	Entity* entity;
 	std::vector<Transform*> children;
-
-	//glm::vec3 position;
-	//glm::vec3 rotation;
-	//glm::vec3 scale;
 
 	glm::vec3 localPosition;
 	glm::vec3 localRotation;
 	glm::vec3 localScale;
 
+	glm::vec3 globalPosition;
+	glm::vec3 globalRotation;
+	glm::vec3 globalScale;
+
 	glm::mat4 model;
 
-	Transform();
+	Transform(Entity* ent);
 
-	Transform(Transform* parent, unsigned int id);
+	Transform(Entity* ent, Transform* parent);
 
-	Transform(Transform* parent, Transform* base, unsigned int id);
+	Transform(Entity* ent, Transform* parent, Transform* base);
 
 	glm::mat4 getLocalModelMatrix();
 
-	void updateSelfAndChildTransforms(int type);
+	void updateSelfAndChildTransforms();
 
 	void updateSelfAndChild();
 
 	void updateSelfAndChildRecursively();
 
-	glm::vec3 getWorldPosition();
+	void setLocalTransformation();
+
+	void setGlobalTransformation();
+
 };

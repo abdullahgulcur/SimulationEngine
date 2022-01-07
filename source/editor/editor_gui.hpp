@@ -16,40 +16,46 @@
 
 #include <imguizmo/imguizmo.h>
 
-using namespace MaterialNS;
+using namespace Material;
 
 class Editor;
 
-class EditorGUI {
+struct EditorIcons {
 
-private:
+	unsigned int openFolderTextureID;
+	unsigned int closedFolderTextureID;
+	unsigned int plusTextureID;
+	unsigned int greaterTextureID;
+	unsigned int gameObjectTextureID;
+	unsigned int transformTextureID;
+	unsigned int meshrendererTextureID;
+	unsigned int lightTextureID;
+	unsigned int contextMenuTextureID;
+	unsigned int eyeTextureID;
+	unsigned int materialTextureID;
+	unsigned int materialSmallTextureID;
+	unsigned int rigidbodyTextureID;
+	unsigned int colliderTextureID;
+	unsigned int startTextureID;
+	unsigned int stopTextureID;
+	unsigned int pauseTextureID;
+	unsigned int pmatSmallTextureID;
+};
 
-	Editor* editor;
-	std::vector<FileNode>* files;
+struct EditorColors {
 
-	/*
-	* INDEX VARIABLES
-	*/
+	ImVec4 textColor;
+	ImVec4 textSelectedColor;
+	ImVec4 textUnselectedColor;
+};
 
-	// File System
+struct FileSystemControlVars {
+
 	int lastSelectedItemID = -1;
 	int temp_lastClickedItemID = 1;
 	int lastRightClickedItemID = -1;
 	int renameItemID = -1;
 
-	// Scene Graph
-	int renameEntityID = -1;
-
-	ImVec2 cursorPosWhenFirstClickedItem;
-	ImVec4 textColor;
-	ImVec4 textSelectedColor;
-	ImVec4 textUnselectedColor;
-
-	/*
-	* FLAG VARIABLES
-	*/
-
-	// File System
 	bool folderLineClicked = false;
 	bool mouseLeftPressed = false;
 	bool toggleClicked = false;
@@ -58,6 +64,35 @@ private:
 	bool panelRightItemTab = false; // tiklar tiklamaz
 	bool subfolderCheckFlag = false;
 	bool fileTreeClicked = false;
+};
+
+class EditorGUI {
+
+private:
+
+	Editor* editor;
+
+	EditorIcons editorIcons;
+	EditorColors editorColors;
+	FileSystemControlVars fileSystemControlVars;
+	/*
+	* INDEX VARIABLES
+	*/
+
+	// File System
+	
+
+	// Scene Graph
+	Entity* renameEntity = NULL;
+
+	ImVec2 cursorPosWhenFirstClickedItem;
+
+	/*
+	* FLAG VARIABLES
+	*/
+
+	// File System
+	
 
 	// Scene Graph
 	bool entityClicked = false;
@@ -74,11 +109,14 @@ private:
 
 	bool inspectorHovered = false;
 	bool materialChanged = false;
+	bool physicMaterialChanged = false;
 
 	
 	bool gizmoClicked = false;
 
 public:
+
+	std::string statusMessage = "Ready";
 
 	ImVec2 scenePos;
 	ImVec2 sceneRegion;
@@ -89,7 +127,8 @@ public:
 
 	// File System
 	int lastClickedItemID = 1;
-	int lastSelectedEntityID = -1;
+	//int lastSelectedEntityID = -1;
+	Entity* lastSelectedEntity = NULL;
 
 	/*
 	* TEXTURE IDs
@@ -97,18 +136,7 @@ public:
 
 	ImGuizmo::OPERATION optype = ImGuizmo::OPERATION::TRANSLATE;
 
-	unsigned int openFolderTextureID;
-	unsigned int closedFolderTextureID;
-	unsigned int plusTextureID;
-	unsigned int greaterTextureID;
-	unsigned int gameObjectTextureID;
-	unsigned int transformTextureID;
-	unsigned int meshrendererTextureID;
-	unsigned int lightTextureID;
-	unsigned int contextMenuTextureID;
-	unsigned int eyeTextureID;
-	unsigned int materialTextureID;
-	unsigned int materialSmallTextureID;
+
 
 	EditorGUI();
 
@@ -130,6 +158,8 @@ public:
 
 	void mainMenuBar();
 
+	void secondaryMenuBar();
+
 	void createPanels();
 
 	void createScenePanel();
@@ -144,17 +174,39 @@ public:
 
 	void showEntityName();
 
-	void showTransformComponent();
+	void showTransformComponent(int index);
 
-	void showMeshRendererComponent(MeshRenderer& m_renderer);
+	void showMeshRendererComponent(MeshRenderer* meshRendererComp, int index);
 
-	void showLightComponent();
+	void showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int index);
 
-	void showMaterialProperties(MaterialFile& material);
+	template <typename T>
+	T dragUnitValueAssign(T min, T max, T value);
+
+	void showLightComponent(int index);
+
+	void showRigidbodyComponent(int index);
+
+	template<class T>
+	void showColliderPhysicMaterial(T* colliderComp, float windowWidth, int frameIndex);
+
+	void showMeshColliderComponent(MeshCollider* meshColliderComp, int index, int meshColliderIndex);
+
+	void showBoxColliderComponent(BoxCollider* boxColliderComp, int index, int boxColliderIndex);
+
+	void showCapsuleColliderComponent(CapsuleCollider* capsuleColliderComp, int index, int capsuleColliderIndex);
+
+	void showSphereColliderComponent(SphereCollider* sphereColliderComp, int index, int sphereColliderIndex);
+
+	void showMaterialProperties(MaterialFile& material, int index);
+
+	void showPhysicMaterialProperties(PhysicMaterialFile& mat);
 
 	void textureMenuPopup(MaterialFile& material, int index, bool& flag);
 
-	bool contextMenuPopup(ComponentType type);
+	//void heightMapPopup(TerrainGenerator* terrainComp);
+
+	bool contextMenuPopup(ComponentType type, int index);
 
 	void createAppPanel();
 
@@ -175,9 +227,5 @@ public:
 	bool mouseDistanceControl();
 
 	void setEditor(Editor* editor);
-
-	Editor* getEditor();
-
-	void setFiles(std::vector<FileNode>* files);
 
 };

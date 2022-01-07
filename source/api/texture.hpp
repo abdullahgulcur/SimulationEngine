@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -17,10 +18,6 @@ namespace TextureNS {
 #define FOURCC_DXT3 0x33545844
 #define FOURCC_DXT5 0x35545844
 
-	enum class TextureType { albedo, normal, metallic, roughness, ao };
-
-	unsigned int getEmptyTexture();
-
 	unsigned int loadDDS(const char* imagepath);
 
 	unsigned char* loadBMP(const char* imagepath);
@@ -30,8 +27,6 @@ namespace TextureNS {
 	void deleteTexture(unsigned int textureID);
 
 	class TextureFile {
-
-	private:
 
 	public:
 

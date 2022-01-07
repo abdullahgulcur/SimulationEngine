@@ -6,7 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <set>
+#include <unordered_set>
 
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
@@ -18,9 +18,11 @@
 
 #include "meshrenderer.hpp"
 #include "light.hpp"
+#include "rigidbody.hpp"
+#include "collider.hpp"
+#include "component.hpp"
 
 #include <glm/gtx/matrix_decompose.hpp>
-
 
 class Editor;
 
@@ -28,21 +30,15 @@ class Scene {
 
 private:
 
-	Editor* editor;
-
 public:
+
+	Editor* editor;
 
 	std::string name;
 
-	int dirLightCount = 0;
-	int pointLightCount = 0;
-
-	Transform* rootTransform;
-	std::vector<Entity> entities;
-	std::map<int, std::vector<int>> initialSceneGraph;
-
-	std::vector<MeshRenderer> meshRendererComponents;
-	std::vector<Light> lightComponents;
+	std::vector<Entity*> entities;
+	std::vector<Transform*> pointLightTransforms;
+	std::vector<Transform*> dirLightTransforms;
 
 	MousePick mousepick;
 
@@ -52,43 +48,49 @@ public:
 
 	void initSceneGraph();
 
-	void generateSceneGraph();
+	void generateSceneGraphRecursively(int parentIndex, std::map<int, std::vector<int>>& initialSceneGraph);
 
-	void generateSceneGraphRecursively(Transform* transform);
+	void loadLights();
 
 	void start();
 
-	void update();
+	void update(float dt);
+
+	void simulateInEditor(float dt);
+
+	void simulateInGame(float dt);
 
 	void setTransformsOfComponents();
 
 	bool subEntityCheck(Transform* child, Transform* parent);
 
+	void deleteScene();
+
 	void recompileAllMaterials();
 
 	bool subEntityAndItselfCheck(Transform* child, Transform* parent);
 
-	void moveEntity(int toBeMoved, int moveTo);
+	void moveEntity(Entity* toBeMoved, Entity* moveTo);
 
-	void getTreeIndices(Transform* transform, std::set<int, std::greater<int>>& indices);
+	void getAllEntities(Transform* transform, std::unordered_set<Entity*>& ents);
 
-	void deleteEntityFromTree(Transform* parent, int id);
+	void deleteEntityFromTree(Transform* parent, Entity* ent);
 
-	void deleteEntityCompletely(int id);
+	void deleteEntityCompletely(Entity* ent);
 
 	void deleteEntityCompletelyRecursively(Transform* transform);
 
-	int duplicateEntity(int id);
+	Entity* duplicateEntity(Entity* ent);
 
 	void cloneEntityRecursively(Transform* base, Transform* copied);
 
-	void cloneComponents(int base, int entID);
+	Transform* newEntity(Entity* parent, const char* name);
 
-	Transform* newEntity(int parentID, const char* name);
+	int getEntityIndex(Entity* ent);
 
-	int newLight(int parentID, const char* name, LightType type);
+	Entity* newLight(Entity* parent, const char* name, LightType type);
 
-	void renameEntity(int id, char* newName);
+	void renameEntity(Entity* ent, char* newName);
 
 	void saveEditorProperties();
 

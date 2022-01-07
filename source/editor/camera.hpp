@@ -7,6 +7,7 @@
 
 #include "input.hpp"
 #include "saveloadsystem.hpp"
+#include "math.hpp"
 
 class Editor;
 
@@ -26,7 +27,9 @@ public:
 
 	float horizontalAngle = 0.f;
 	float verticalAngle = 0.f;
-
+	float aspectRatio;
+	float fovY;
+	float fovX;
 	glm::mat4 ViewMatrix;
 	glm::mat4 ProjectionMatrix;
 	glm::vec3 position = glm::vec3(0, 0, -5);

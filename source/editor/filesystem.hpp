@@ -9,6 +9,8 @@
 #include <shlobj.h>
 #include <fstream>
 
+#include "PxPhysicsAPI.h"
+
 #include "rapidxml_print.hpp"
 #include "rapidxml.hpp"
 
@@ -19,14 +21,15 @@
 #include "shader.hpp"
 //#include "log.hpp"
 
-using namespace MaterialNS;
+using namespace Material;
 using namespace TextureNS;
 using namespace ShaderNS;
 using namespace Mesh;
+using namespace physx;
 
 class Editor;
 
-enum class FileType {folder, object, material, texture, fragshader, vertshader, audio, script, undefined};
+enum class FileType {folder, object, material, physicmaterial, texture, fragshader, vertshader, audio, script, undefined};
 
 struct EditorTextures {
 
@@ -40,6 +43,7 @@ struct EditorTextures {
 	unsigned int folderBigTextureID;
 	unsigned int plusTextureID;
 	unsigned int materialTextureID;
+	unsigned int physicmaterialTextureID;
 };
 
 struct File {
@@ -69,7 +73,9 @@ private:
 
 	void generateFileStructure(File* file);
 
-	void loadAllFilesToEngine();
+	void loadFilesToEngine();
+
+	void loadFilesToEngine(std::vector<int>& indices);
 
 	unsigned int getSubFileIndex(File* file);
 
@@ -77,25 +83,19 @@ private:
 
 	std::string getAvailableFileName(File* file, const char* name);
 
-	//void loadTextureIDsOfMaterials();
-
 public:
 
 	std::string assetsPathExternal;
 
-	unsigned int nullMeshVAO;
-
 	File* rootFile;
 	std::vector<FileNode> files;
 
-	std::unordered_map<unsigned int, std::string> meshPaths;
-	//std::unordered_map<std::string, unsigned int> meshVAOs;
-
 	std::unordered_map<std::string, MeshFile> meshes;
 	std::unordered_map<std::string, MaterialFile> materials;
+	std::unordered_map<std::string, PhysicMaterialFile> physicmaterials;
 	std::unordered_map<std::string, TextureFile> textures;
-	std::vector<ShaderFile> vertShaderFiles;
-	std::vector<ShaderFile> fragShaderFiles;
+	std::unordered_map<std::string, ShaderFile> vertShaders;
+	std::unordered_map<std::string, ShaderFile> fragShaders;
 
 	EditorTextures editorTextures;
 
@@ -133,9 +133,15 @@ public:
 
 	void newMaterial(int currentDirID, const char* fileName);
 
+	void newPhysicMaterial(int currentDirID, const char* fileName);
+
 	void readMaterialFile(File* filePtr, std::string path);
 
 	void writeMaterialFile(std::string path, MaterialFile& mat);
+
+	void readPhysicMaterialFile(File* filePtr, std::string path);
+
+	void writePhysicMaterialFile(std::string path, PhysicMaterialFile& mat);
 
 	File* getTextureFileAddr(const char* path);
 
@@ -145,9 +151,13 @@ public:
 
 	File* getVertShaderAddr(const char* path);
 
+	File* getPhysicMaterialAddr(const char* path);
+
 	const char* getFragShaderPath(File* fileAddr);
 
 	const char* getVertShaderPath(File* fileAddr);
+
+	const char* getPhysicMaterialPath(File* fileAddr);
 
 	void rename(int id, const char* newName);
 
@@ -159,9 +169,17 @@ public:
 
 	void loadDefaultAssets();
 
-	MaterialFile& getMaterial(int id);
+	MaterialFile& getMaterialFile(int id);
 
-	TextureFile& getTexture(int id);
+	PhysicMaterialFile& getPhysicMaterialFile(int id);
+
+	TextureFile& getTextureFile(int id);
+
+	ShaderFile& getFragShaderFile(int id);
+
+	ShaderFile& getVertShaderFile(int id);
+
+	MeshFile& getMeshFile(int id);
 
 	void setEditor(Editor* editor);
 };

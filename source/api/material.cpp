@@ -1,9 +1,11 @@
 #include "material.hpp"
 #include "filesystem.hpp"
+#include "meshrenderer.hpp"
+#include "collider.hpp"
 
-MaterialNS::MaterialFile::MaterialFile() {}
+Material::MaterialFile::MaterialFile() {}
 
-MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
+Material::MaterialFile::MaterialFile(const char* vertex_file_path, const char* fragment_file_path){
 
 	fileAddr = NULL;
 	this->vertShaderFileAddr = NULL;
@@ -11,7 +13,7 @@ MaterialNS::MaterialFile::MaterialFile(const char* vertex_file_path, const char*
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, 0, 0);
 }
 
-MaterialNS::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path,
+Material::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, File* fragShaderFileAddr, const char* vertex_file_path, const char* fragment_file_path,
 	int dirLightCount, int pointLightCount) {
 
 	fileAddr = file;
@@ -20,7 +22,7 @@ MaterialNS::MaterialFile::MaterialFile(File* file, File* vertShaderFileAddr, Fil
 	MaterialFile::compileShaders(vertex_file_path, fragment_file_path, dirLightCount, pointLightCount);
 }
 
-void MaterialNS::MaterialFile::compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount) {
+void Material::MaterialFile::compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount) {
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -117,7 +119,42 @@ void MaterialNS::MaterialFile::compileShaders(const char* vertex_file_path, cons
 	programID = ProgramID;
 }
 
-void MaterialNS::MaterialFile::deleteProgram() {
+void Material::MaterialFile::removeReference(MeshRenderer* renderer) {
+
+	meshRendererCompAddrs.erase(std::remove(meshRendererCompAddrs.begin(),
+		meshRendererCompAddrs.end(), renderer), meshRendererCompAddrs.end());
+}
+
+void Material::MaterialFile::deleteProgram() {
 
 	glDeleteProgram(programID);
+}
+
+
+//-------- PHYSICS ---------
+
+PhysicMaterialFile::PhysicMaterialFile(){}
+
+PhysicMaterialFile::PhysicMaterialFile(PxPhysics* gPhysics) {
+
+	fileAddr = NULL;
+	pxmat = gPhysics->createMaterial(0.5f, 0.5f, 0.0f);
+	pxmat->setFrictionCombineMode(PxCombineMode::eAVERAGE);
+	pxmat->setRestitutionCombineMode(PxCombineMode::eAVERAGE);
+}
+
+PhysicMaterialFile::PhysicMaterialFile(File* file, PxPhysics* gPhysics) {
+
+	this->fileAddr = file;
+	pxmat = gPhysics->createMaterial(0.0f, 0.0f, 0.0f);
+}
+
+void PhysicMaterialFile::removeReference(Collider* collider) {
+
+	colliderCompAddrs.erase(std::remove(colliderCompAddrs.begin(),
+		colliderCompAddrs.end(), collider), colliderCompAddrs.end());
+}
+
+void Material::PhysicMaterialFile::destroy() {
+
 }

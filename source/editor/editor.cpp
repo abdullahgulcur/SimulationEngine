@@ -5,18 +5,26 @@ Editor::Editor() {
 
 void Editor::startEditorScreen() {
 
+	physics.init();
 	window.init();
 	render.init();
+
+	scene = new Scene();
 	fileSystem.init(this);
+	scene->init(this);
+
 	SaveLoadSystem::loadSceneCamera(this);
-	scene.init(this);
 	editorGUI.init(this);
 	window.frameBufferForSceneViewport();
-
-	scene.start();
+	bcr = new BoxColliderRenderer();
+	scr = new SphereColliderRenderer();
 }
 
 void Editor::run() {
+
+	float currentTime = (float)glfwGetTime();
+	float dt = currentTime - time;
+	time = currentTime;
 
 	window.handleCallBacks(this);
 
@@ -26,7 +34,7 @@ void Editor::run() {
 
 	editorGUI.newFrameImGui();
 
-	scene.update();
+	scene->update(dt);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

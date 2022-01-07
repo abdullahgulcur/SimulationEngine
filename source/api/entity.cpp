@@ -1,98 +1,264 @@
 #include "entity.hpp"
 #include "scene.hpp"
+#include "editor.hpp"
 
-Entity::Entity(const char* name, std::vector<Entity>& entities) {
+Entity::Entity() { }
+
+// first load
+Entity::Entity(const char* name, Scene* scene) {
 
 	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
 	this->name[strlen(name)] = '\0';
 	std::cout << name << std::endl;
-	entities.push_back(*this);
+	transform = new Transform(this);
+	scene->entities.push_back(this);
 }
 
-Entity::Entity(const char* name, Transform* transform, std::vector<Entity>& entities) {
+// clone
+Entity::Entity(Entity* ent, Transform* parent, Scene* scene) {
 
-	this->name = new char[strlen(name)];
+	transform = new Transform(this, parent, ent->transform);
+
+	/*char* name = new char[strlen(ent->name) + 5];
+	strcpy(name, ent->name);
+	strcat(name, "_cpy\0");
+	this->name = name;
+	Entity::deepCopyComponents(ent->components, scene);
+	scene->entities.push_back(this);*/
+
+	char* name = new char[strlen(ent->name) + 1];
+	strcpy(name, ent->name);
+	name[strlen(ent->name)] = '\0';
+	this->name = name;
+	Entity::deepCopyComponents(ent->components, scene);
+	scene->entities.push_back(this);
+}
+
+//create empty from parent
+Entity::Entity(const char* name, Transform* parent, Scene* scene) {
+
+	transform = new Transform(this, parent);
+	this->name = new char[strlen(name) + 1];
 	strcpy(this->name, name);
-	this->transform = transform;
-	entities.push_back(*this);
+	this->name[strlen(name)] = '\0';
+	scene->entities.push_back(this);
 }
 
 Entity::~Entity() {
 
 }
 
-void Entity::addTransformComponent(Transform* transform) {
+Entity* Entity::copy(Scene* scene) {
 
-	this->transform = transform;
+	Entity* ent = new Entity(this, transform->parent, scene);
+	return ent;
 }
 
-void Entity::addMeshRendererComponent(MeshFile* mesh, MaterialFile* mat, std::vector<MeshRenderer>& m_rendererComponents) {
+// internal usage only
+void Entity::deepCopyComponents(std::vector<Component*> components, Scene* scene) {
 
-	if (m_rendererComponentIndex != -1)
-		return;
+	for (auto& it : components) {
 
-	MeshRenderer component;
-	component.entID = transform->id;
-	component.VAO = mesh->VAO;
-	component.indiceSize = mesh->indiceSize;
-	component.mat = mat;
+		if (MeshRenderer* comp = dynamic_cast<MeshRenderer*>(it))
+		{
+			MeshRenderer* meshRendererComp = addComponent<MeshRenderer>();
+			meshRendererComp->mesh = comp->mesh;
+			meshRendererComp->mat = comp->mat;
+			comp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
+			comp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
+		}
+		else if (Rigidbody* comp = dynamic_cast<Rigidbody*>(it))
+		{
+			Rigidbody* rbComp = addComponent<Rigidbody>();
+			rbComp->body = scene->editor->physics.gPhysics->createRigidDynamic(comp->body->getGlobalPose());
+			rbComp->body->setMass(comp->body->getMass());
+			rbComp->body->setActorFlags(comp->body->getActorFlags());
+			rbComp->body->setRigidBodyFlags(comp->body->getRigidBodyFlags());
+			rbComp->body->setRigidDynamicLockFlags(comp->body->getRigidDynamicLockFlags());
+			scene->editor->physics.gScene->addActor(*rbComp->body);
 
-	m_rendererComponents.push_back(component);
-	m_rendererComponentIndex = m_rendererComponents.size() - 1;
+			for (auto& collider : getComponents<Collider>()) {
+				rbComp->body->attachShape(*collider->shape);
+				collider->shape->release();
+			}
+
+		}
+		else if (BoxCollider* comp = dynamic_cast<BoxCollider*>(it))
+		{
+			BoxCollider* boxColliderComp = addComponent<BoxCollider>();
+			boxColliderComp->center = comp->center;
+			boxColliderComp->size = comp->size;
+			boxColliderComp->pmat = comp->pmat;
+			boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
+			glm::vec3 size = transform->globalScale * boxColliderComp->size / 2.f;
+			boxColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
+			boxColliderComp->shape->setFlags(comp->shape->getFlags());
+			glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
+			boxColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = getComponent<Rigidbody>()) {
+				rb->body->attachShape(*boxColliderComp->shape);
+				boxColliderComp->shape->release();
+			}
+
+		}
+		else if (SphereCollider* comp = dynamic_cast<SphereCollider*>(it))
+		{
+			SphereCollider* sphereColliderComp = addComponent<SphereCollider>();
+			sphereColliderComp->center = comp->center;
+			sphereColliderComp->radius = comp->radius;
+			sphereColliderComp->pmat = comp->pmat;
+			sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
+			sphereColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius), *sphereColliderComp->pmat->pxmat, true);
+			glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
+			sphereColliderComp->shape->setLocalPose(PxTransform(center.x, center.y, center.z));
+
+			if (Rigidbody* rb = getComponent<Rigidbody>()) {
+				rb->body->attachShape(*sphereColliderComp->shape);
+				sphereColliderComp->shape->release();
+			}
+		}
+		else if (CapsuleCollider* comp = dynamic_cast<CapsuleCollider*>(it))
+		{
+			CapsuleCollider* capsuleColliderComp = addComponent<CapsuleCollider>();
+			capsuleColliderComp->axis = comp->axis;
+			capsuleColliderComp->height = comp->height;
+			capsuleColliderComp->center = comp->center;
+			capsuleColliderComp->radius = comp->radius;
+			capsuleColliderComp->pmat = comp->pmat;
+			capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
+			capsuleColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxCapsuleGeometry(comp->radius, comp->height / 2), *capsuleColliderComp->pmat->pxmat, true);
+			capsuleColliderComp->shape->setLocalPose(PxTransform(capsuleColliderComp->center.x, capsuleColliderComp->center.y, capsuleColliderComp->center.z));
+
+			if (Rigidbody* rb = getComponent<Rigidbody>()) {
+				rb->body->attachShape(*capsuleColliderComp->shape);
+				capsuleColliderComp->shape->release();
+			}
+		}
+		else if (MeshCollider* comp = dynamic_cast<MeshCollider*>(it))
+		{
+			MeshCollider* meshColliderComp = addComponent<MeshCollider>();
+			meshColliderComp->pmat = comp->pmat;
+			meshColliderComp->pmat->colliderCompAddrs.push_back(meshColliderComp);
+
+			bool convex = comp->shape->getGeometryType() == PxGeometryType::eCONVEXMESH;
+
+			if (convex) {
+
+				PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(comp->transform->entity->getComponent<MeshRenderer>(),
+					scene->editor->physics.gPhysics, scene->editor->physics.gCooking);
+				meshColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+					PxVec3(comp->transform->globalScale.x, comp->transform->globalScale.y, comp->transform->globalScale.z)),
+					*meshColliderComp->pmat->pxmat, true);
+			}
+			else {
+
+				PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(comp->transform->entity->getComponent<MeshRenderer>(),
+					scene->editor->physics.gPhysics, scene->editor->physics.gCooking);
+				meshColliderComp->shape = scene->editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+					PxVec3(comp->transform->globalScale.x, comp->transform->globalScale.y, comp->transform->globalScale.z)),
+					*meshColliderComp->pmat->pxmat, true);
+			}
+			meshColliderComp->shape->setFlags(comp->shape->getFlags());
+
+			if (Rigidbody* rb = getComponent<Rigidbody>()) {
+
+				rb->body->attachShape(*meshColliderComp->shape);
+				meshColliderComp->shape->release();
+			}
+		}
+		else if (Light* comp = dynamic_cast<Light*>(it))
+		{
+			Light* lightComp = addComponent<Light>();
+			lightComp->color = comp->color;
+			lightComp->lightType = comp->lightType;
+			lightComp->power = comp->power;
+
+			if (lightComp->lightType == LightType::DirectionalLight)
+				scene->dirLightTransforms.push_back(transform);
+			else
+				scene->pointLightTransforms.push_back(transform);
+
+			scene->recompileAllMaterials();
+		}
+	}
 }
 
-void Entity::addLightComponent(std::vector<Light>& lightComponents, Scene* scene, LightType type) {
+bool Entity::destroy(Scene* scene) {
 
-	if (lightComponentIndex != -1)
-		return;
-	
-	Light component;
-	component.entID = transform->id;
-	component.type = type;
-	component.power = 40.f;
-	component.color = glm::vec3(1.f, 1.f, 1.f);
+	if (Light* lightComp = getComponent<Light>()) {
 
-	lightComponents.push_back(component);
-	lightComponentIndex = lightComponents.size() - 1;
+		if (lightComp->lightType == LightType::DirectionalLight) {
 
-	if (type == LightType::PointLight)
-		scene->pointLightCount++;
-	else
-		scene->dirLightCount++;
+			for (auto it = scene->dirLightTransforms.begin(); it < scene->dirLightTransforms.end(); it++) {
 
-	scene->recompileAllMaterials();
+				if (*it == transform) {
+					scene->dirLightTransforms.erase(it);
+					scene->recompileAllMaterials();
+					break;
+				}
+			}
+		}
+		else {
+
+			for (auto it = scene->pointLightTransforms.begin(); it < scene->pointLightTransforms.end(); it++) {
+
+				if (*it == transform) {
+					scene->pointLightTransforms.erase(it);
+					scene->recompileAllMaterials();
+					break;
+				}
+			}
+		}
+	}
+
+	if (MeshRenderer* meshRenderer = getComponent<MeshRenderer>())
+		meshRenderer->mat->removeReference(meshRenderer);
+
+	for (auto& comp : getComponents<Collider>()) {
+		comp->pmat->removeReference(comp);
+		comp->shape->release();
+	}
+
+	if (Rigidbody* rb = getComponent<Rigidbody>())
+		scene->editor->physics.gScene->removeActor(*rb->body);
+
+	delete[] name;
+	delete transform;
+
+	for (auto& it : components)
+		delete it;
+
+	delete this;
+
+	return true;
 }
 
-void Entity::removeComponent(ComponentType type, Scene* scene) {
+void Entity::addMeshRendererComponent() {
 
-	switch (type) {
+}
 
-	case ComponentType::Light : {
+void Entity::addBoxColliderComponent() {
 
-		if (scene->lightComponents[lightComponentIndex].type == LightType::DirectionalLight)
-			scene->dirLightCount--;
-		else
-			scene->pointLightCount--;
+}
 
-		for (int i = lightComponentIndex; i < scene->lightComponents.size() - 1; i++)
-			scene->entities[scene->lightComponents[i + 1].entID].lightComponentIndex--;
+void Entity::addCapsuleColliderComponent() {
 
-		scene->lightComponents.erase(scene->lightComponents.begin() + lightComponentIndex);
-		lightComponentIndex = -1;
+}
 
-		scene->recompileAllMaterials();
-		break;
-	}
-	case ComponentType::MeshRenderer : {
+void Entity::addSphereColliderComponent() {
 
-		for (int i = m_rendererComponentIndex; i < scene->meshRendererComponents.size() - 1; i++)
-			scene->entities[scene->meshRendererComponents[i + 1].entID].m_rendererComponentIndex--;
+}
 
-		scene->meshRendererComponents.erase(scene->meshRendererComponents.begin() + m_rendererComponentIndex);
-		m_rendererComponentIndex = -1;
-		break;
-	}
-	}
+void Entity::addMeshColliderComponent() {
+
+}
+
+void Entity::addRigidbodyComponent() {
+
+}
+
+void Entity::addLightComponent() {
 
 }

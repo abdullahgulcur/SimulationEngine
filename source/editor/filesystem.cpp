@@ -32,7 +32,7 @@ void FileSystem::init(Editor* editor) {
 	files.push_back(fileNode);
 
 	FileSystem::generateFileStructure(rootFile);
-	FileSystem::loadAllFilesToEngine();
+	FileSystem::loadFilesToEngine();
 }
 
 void FileSystem::checkProjectFolder() {
@@ -75,6 +75,7 @@ void FileSystem::initEditorTextures() {
 	editorTextures.folderBigTextureID = TextureNS::loadDDS("resource/icons/folder_closed_big.DDS");
 	editorTextures.plusTextureID = TextureNS::loadDDS("resource/icons/plus.DDS");
 	editorTextures.materialTextureID = TextureNS::loadDDS("resource/icons/material.DDS");
+	editorTextures.physicmaterialTextureID = TextureNS::loadDDS("resource/icons/physicmat.DDS");
 }
 
 void FileSystem::generateFileStructure(File* file) {
@@ -95,7 +96,6 @@ void FileSystem::generateFileStructure(File* file) {
 		fileNode.extension = entry.extension().string();
 		fileNode.type = FileSystem::getFileType(entry.extension().string());
 		fileNode.addr = subfile;
-		//loadFileToEngine(fileNode);
 		files.push_back(fileNode);
 
 		(file->subfiles).push_back(subfile);
@@ -105,12 +105,13 @@ void FileSystem::generateFileStructure(File* file) {
 	}
 }
 
-void FileSystem::loadAllFilesToEngine() {
+void FileSystem::loadFilesToEngine() {
 
 	std::vector<int> vertfileIDs;
 	std::vector<int> fragfileIDs;
 	std::vector<int> texturefileIDs;
 	std::vector<int> matfileIDs;
+	std::vector<int> pmatfileIDs;
 	std::vector<int> objfileIDs;
 
 	for (int i = 1; i < files.size(); i++) {
@@ -121,6 +122,9 @@ void FileSystem::loadAllFilesToEngine() {
 			break;
 		case FileType::material:
 			matfileIDs.push_back(i);
+			break;
+		case FileType::physicmaterial:
+			pmatfileIDs.push_back(i);
 			break;
 		case FileType::object:
 			objfileIDs.push_back(i);
@@ -133,6 +137,79 @@ void FileSystem::loadAllFilesToEngine() {
 			break;
 		default:
 			loadFileToEngine(files[i]);
+		}
+	}
+
+	for (int& i : vertfileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : fragfileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : texturefileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : pmatfileIDs)
+		loadFileToEngine(files[i]);
+
+	for (int& i : matfileIDs) {
+		loadFileToEngine(files[i]);
+
+		int count = 0;
+		MaterialFile& mat = materials[files[i].path];
+		for (auto& texFileAddr : mat.textureUnitFileAddrs) {
+
+			auto found = textures.find(FileSystem::getTextureFilePath(texFileAddr));
+
+			if (found != textures.end())
+				mat.textureUnits.push_back(found->second.textureID);
+			else {
+				mat.textureUnits.push_back(textures["whitetexture"].textureID);
+				mat.textureUnitFileAddrs[count] = NULL;
+				FileSystem::writeMaterialFile(files[mat.fileAddr->id].path, mat);
+
+				// ASSERT
+				char logMsg[256];
+				sprintf(logMsg, "File %s is not found. Blank texture is set as default.", files[texFileAddr->id].path.c_str());
+				printf("%s", logMsg);
+				//Log::assertMessage(logMsg, &editor->editorGUI);
+			}
+			count++;
+		}
+	}
+
+	for (int& i : objfileIDs)
+		loadFileToEngine(files[i]);
+}
+
+void FileSystem::loadFilesToEngine(std::vector<int>& indices) {
+
+	std::vector<int> vertfileIDs;
+	std::vector<int> fragfileIDs;
+	std::vector<int> texturefileIDs;
+	std::vector<int> matfileIDs;
+	std::vector<int> objfileIDs;
+
+	for (int i = 0; i < indices.size(); i++) {
+
+		switch (files[indices[i]].type) {
+		case FileType::fragshader:
+			fragfileIDs.push_back(indices[i]);
+			break;
+		case FileType::material:
+			matfileIDs.push_back(indices[i]);
+			break;
+		case FileType::object:
+			objfileIDs.push_back(indices[i]);
+			break;
+		case FileType::texture:
+			texturefileIDs.push_back(indices[i]);
+			break;
+		case FileType::vertshader:
+			vertfileIDs.push_back(indices[i]);
+			break;
+		default:
+			loadFileToEngine(files[indices[i]]);
 		}
 	}
 
@@ -292,69 +369,77 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 
 	case FileType::object: {
 
-		//measure time spent...
-		for (auto& iter : editor->scene.meshRendererComponents) {
-
-			if (meshes[meshPaths[iter.VAO]].fileAddr == NULL)
-				continue;
-
-			if (strcmp(files[meshes[meshPaths[iter.VAO]].fileAddr->id].path.c_str(), newPath.c_str()) == 0)
-				meshPaths[iter.VAO] = newPath;
-		}
-
+		std::vector<MeshRenderer*> addrs = meshes[previousPath].meshRendererCompAddrs;
 		MeshFile mesh = meshes[previousPath];
 		auto it = meshes.extract(previousPath);
 		it.key() = newPath;
 		meshes[it.key()] = mesh;
 		meshes.insert(std::move(it));
 
-		SaveLoadSystem::saveMeshRenderers(editor);
+		for (auto& mesh_it : addrs)
+			mesh_it->mesh = &meshes[newPath];
+
+		editor->scene->saveEditorProperties();
 
 		break;
 	}
 	case FileType::material: {
 
-		//measure time spent...
-		std::vector<int> indices;
-		int count = 0;
-		for (auto& iter : editor->scene.meshRendererComponents) {
-
-			if (iter.mat->fileAddr == files[fileID].addr)
-				indices.push_back(count);
-			
-			count++;
-		}
-
+		std::vector<MeshRenderer*> addrs = materials[previousPath].meshRendererCompAddrs;
 		MaterialFile mat = materials[previousPath];
 		auto it = materials.extract(previousPath);
 		it.key() = newPath;
 		materials[it.key()] = mat;
 		materials.insert(std::move(it));
 
-		for (int& i : indices)
-			editor->scene.meshRendererComponents[i].mat = &materials[newPath];
+		for (auto& mat_it : addrs)
+			mat_it->mat = &materials[newPath];
 
-		SaveLoadSystem::saveMeshRenderers(editor);
+		editor->scene->saveEditorProperties();
+
+		break;
+	}
+	case FileType::physicmaterial: {
+
+		std::vector<Collider*> addrs = physicmaterials[previousPath].colliderCompAddrs;
+		PhysicMaterialFile pmat = physicmaterials[previousPath];
+		auto it = physicmaterials.extract(previousPath);
+		it.key() = newPath;
+		physicmaterials[it.key()] = pmat;
+		physicmaterials.insert(std::move(it));
+
+		for (auto& pmat_it : addrs)
+			pmat_it->pmat = &physicmaterials[newPath];
+
+		editor->scene->saveEditorProperties();
 
 		break;
 	}
 	case FileType::vertshader: {
 
-		for (auto& mat_iter : materials) {
+		for (auto& it : materials) {
 
-			if (mat_iter.second.vertShaderFileAddr == files[fileID].addr)
-				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+			if (it.second.vertShaderFileAddr == files[fileID].addr)
+				FileSystem::writeMaterialFile(files[it.second.fileAddr->id].path, it.second);
 		}
+
+		auto it = vertShaders.extract(previousPath);
+		it.key() = newPath;
+		vertShaders.insert(std::move(it));
 
 		break;
 	}
 	case FileType::fragshader: {
 
-		for (auto& mat_iter : materials) {
+		for (auto& it : materials) {
 
-			if (mat_iter.second.fragShaderFileAddr == files[fileID].addr)
-				FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
+			if (it.second.fragShaderFileAddr == files[fileID].addr)
+				FileSystem::writeMaterialFile(files[it.second.fileAddr->id].path, it.second);
 		}
+
+		auto it = fragShaders.extract(previousPath);
+		it.key() = newPath;
+		fragShaders.insert(std::move(it));
 
 		break;
 	}
@@ -372,11 +457,13 @@ void FileSystem::changeAssetsKeyManually(int fileID, std::string previousPath, s
 		auto it = textures.extract(previousPath);
 		it.key() = newPath;
 		textures.insert(std::move(it));
+
 		break;
 	}
 	}
 }
 
+// delete vao
 void FileSystem::deleteFileCompletely(int id) {
 
 	std::vector<int> indices;
@@ -392,38 +479,37 @@ void FileSystem::deleteFileCompletely(int id) {
 
 		case FileType::object: {
 
-			std::vector<int> ids;
-			for (auto& comp_it : editor->scene.meshRendererComponents) {
+			std::vector<MeshRenderer*> addrs = meshes[files[indices[i]].path].meshRendererCompAddrs;
+			meshes.erase(files[indices[i]].path);
 
-				int count = 0;
-				for (auto& it : meshes) {
+			for (auto& it : addrs)
+				it->mesh = &meshes["Null"];
 
-					if (it.second.VAO == comp_it.VAO) {
-
-						comp_it.indiceSize = meshes["Null"].indiceSize;
-						comp_it.VAO = meshes["Null"].VAO;
-						ids.push_back(indices[i]);
-						SaveLoadSystem::saveMeshRenderers(editor);
-						break;
-					}
-					count++;
-				}
-			}
-			for(int& i: ids)
-				meshes.erase(files[i].path);
+			editor->scene->saveEditorProperties();
 
 			break;
 		}
 		case FileType::material: {
 
-			for (auto& it : editor->scene.meshRendererComponents) {
-
-				if (strcmp(files[it.mat->fileAddr->id].path.c_str(), files[indices[i]].path.c_str()) == 0)
-					it.mat = &materials["Default"];
-			}
-
+			std::vector<MeshRenderer*> addrs = materials[files[indices[i]].path].meshRendererCompAddrs;
 			materials.erase(files[indices[i]].path);
-			SaveLoadSystem::saveMeshRenderers(editor);
+
+			for (auto& it : addrs)
+				it->mat = &materials["Default"];
+
+			editor->scene->saveEditorProperties();
+
+			break;
+		}
+		case FileType::physicmaterial: {
+
+			std::vector<Collider*> addrs = physicmaterials[files[indices[i]].path].colliderCompAddrs;
+			physicmaterials.erase(files[indices[i]].path);
+
+			for (auto& it : addrs)
+				it->pmat = &physicmaterials["Default"];
+
+			editor->scene->saveEditorProperties();
 
 			break;
 		}
@@ -452,27 +538,18 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& mat_iter : materials) {
 
-				if (mat_iter.second.fileAddr == files[indices[i]].addr){
+				if (mat_iter.second.vertShaderFileAddr == files[indices[i]].addr){
 					mat_iter.second.vertShaderFileAddr = NULL;
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 					
 					mat_iter.second.deleteProgram();
-					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
-						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
-						editor->scene.dirLightCount, editor->scene.pointLightCount);
+					mat_iter.second.compileShaders("source/shader/Default.vert",
+						FileSystem::getFragShaderPath(mat_iter.second.fragShaderFileAddr),
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 			}
 
-			int count = 0;
-			for (auto& it : vertShaderFiles) {
-
-				if (files[indices[i]].addr == it.fileAddr) {
-
-					vertShaderFiles.erase(vertShaderFiles.begin() + count);
-					break;
-				}
-				count++;
-			}
+			vertShaders.erase(files[indices[i]].path);
 
 			break;
 		}
@@ -480,7 +557,7 @@ void FileSystem::deleteFileCompletely(int id) {
 
 			for (auto& mat_iter : materials) {
 
-				if (mat_iter.second.fileAddr == files[indices[i]].addr) {
+				if (mat_iter.second.fragShaderFileAddr == files[indices[i]].addr) {
 					mat_iter.second.fragShaderFileAddr = NULL;
 					mat_iter.second.textureUnitFileAddrs.clear();
 					mat_iter.second.textureUnits.clear();
@@ -488,22 +565,13 @@ void FileSystem::deleteFileCompletely(int id) {
 					FileSystem::writeMaterialFile(files[mat_iter.second.fileAddr->id].path, mat_iter.second);
 					
 					mat_iter.second.deleteProgram();
-					mat_iter.second.compileShaders(files[mat_iter.second.vertShaderFileAddr->id].path.c_str(),
-						files[mat_iter.second.fragShaderFileAddr->id].path.c_str(),
-						editor->scene.dirLightCount, editor->scene.pointLightCount);
+					mat_iter.second.compileShaders(FileSystem::getVertShaderPath(mat_iter.second.vertShaderFileAddr),
+						"source/shader/Default.frag",
+						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 			}
 
-			int count = 0;
-			for (auto& it : fragShaderFiles) {
-
-				if (files[indices[i]].addr == it.fileAddr) {
-
-					fragShaderFiles.erase(fragShaderFiles.begin() + count);
-					break;
-				}
-				count++;
-			}
+			fragShaders.erase(files[indices[i]].path);
 
 			break;
 		}
@@ -573,7 +641,6 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	subFile->id = files.size();
 	subFile->parent = files[currentDirID].addr;
 
-	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode;
 	std::string temp = fileName;
 	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".mat";
@@ -593,10 +660,40 @@ void FileSystem::newMaterial(int currentDirID, const char* fileName) {
 	}
 
 	MaterialFile mat(subFile, NULL, NULL, "source/shader/Default.vert", "source/shader/Default.frag",
-		editor->scene.dirLightCount, editor->scene.pointLightCount);
+		editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 	materials.insert({ files[subFile->id].path, mat });
 	FileSystem::writeMaterialFile(files[subFile->id].path, mat);
 	files[subFile->id].textureID = editorTextures.materialTextureID;
+}
+
+void FileSystem::newPhysicMaterial(int currentDirID, const char* fileName) {
+
+	File* subFile = new File;
+	subFile->id = files.size();
+	subFile->parent = files[currentDirID].addr;
+
+	FileNode tempFileNode;
+	std::string temp = fileName;
+	tempFileNode.path = files[currentDirID].path + "\\" + temp + ".pmat";
+	tempFileNode.name = temp;
+	tempFileNode.extension = ".pmat";
+	tempFileNode.type = FileType::physicmaterial;
+	tempFileNode.addr = subFile;
+	files.push_back(tempFileNode);
+
+	if (files[currentDirID].addr->subfiles.size() == 0)
+		(files[currentDirID].addr->subfiles).push_back(subFile);
+	else {
+
+		files[subFile->id].name = FileSystem::getAvailableFileName(subFile, files[subFile->id].name.c_str());
+		files[subFile->id].path = files[subFile->parent->id].path + "\\" + files[subFile->id].name + files[subFile->id].extension;
+		FileSystem::insertFileToParentsSubfolders(subFile);
+	}
+
+	PhysicMaterialFile mat(subFile, editor->physics.gPhysics);
+	physicmaterials.insert({ files[subFile->id].path, mat });
+	FileSystem::writePhysicMaterialFile(files[subFile->id].path, mat);
+	files[subFile->id].textureID = editorTextures.physicmaterialTextureID;
 }
 
 void FileSystem::readMaterialFile(File* filePtr, std::string path) {
@@ -613,26 +710,51 @@ void FileSystem::readMaterialFile(File* filePtr, std::string path) {
 
 	root_node = doc.first_node("Material");
 
+	bool fileMayCorrupted = false;
+
 	const char* vertFilePath = root_node->first_node("Shader")->first_attribute("Vert")->value();
 	const char* fragFilePath = root_node->first_node("Shader")->first_attribute("Frag")->value();
 	File* vertFileAddr = FileSystem::getVertShaderAddr(vertFilePath);
 	File* fragFileAddr = FileSystem::getFragShaderAddr(fragFilePath);
 
-	if (vertFileAddr == NULL)
+	if (vertFileAddr == NULL) {
+
 		vertFilePath = "source/shader/Default.vert";
+		fileMayCorrupted = true;
+	}
 
-	if (fragFileAddr == NULL)
+	if (fragFileAddr == NULL) {
+
 		fragFilePath = "source/shader/Default.frag";
+		fileMayCorrupted = true;
+	}
 
-	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, 0, 0);
+	MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 
-	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling())
-		mat.textureUnitFileAddrs.push_back(FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value()));
+	if (fragFileAddr != NULL) {
 
-	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
-		mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
+		for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling()) {
+
+			File* textFile = FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value());
+			mat.textureUnitFileAddrs.push_back(textFile);
+
+			if (textFile != NULL)
+				mat.textureUnits.push_back(textures[texpath_node->first_attribute("Path")->value()].textureID);
+			else {
+
+				mat.textureUnits.push_back(textures["whitetexture"].textureID);
+				fileMayCorrupted = true;
+			}
+		}
+
+		for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
+			mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
+	}
 
 	materials.insert({ path, mat });
+
+	if (fileMayCorrupted)
+		FileSystem::writeMaterialFile(path, mat);
 }
 
 void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
@@ -679,9 +801,64 @@ void FileSystem::writeMaterialFile(std::string path, MaterialFile& mat) {
 	doc.clear();
 }
 
+void FileSystem::readPhysicMaterialFile(File* filePtr, std::string path) {
+
+	std::ifstream file(path);
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root_node = NULL;
+
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	doc.parse<0>(&buffer[0]);
+
+	root_node = doc.first_node("PhysicMaterial");
+
+	PhysicMaterialFile mat(filePtr, editor->physics.gPhysics);
+
+	mat.pxmat->setDynamicFriction(atof(root_node->first_attribute("DynamicFriction")->value()));
+	mat.pxmat->setStaticFriction(atof(root_node->first_attribute("StaticFriction")->value()));
+	mat.pxmat->setRestitution(atof(root_node->first_attribute("Restitution")->value()));
+	mat.pxmat->setFrictionCombineMode(static_cast<PxCombineMode::Enum>(atoi(root_node->first_attribute("FrictionCombine")->value())));
+	mat.pxmat->setRestitutionCombineMode(static_cast<PxCombineMode::Enum>(atoi(root_node->first_attribute("RestitutionCombine")->value())));
+
+	physicmaterials.insert({ path, mat });
+}
+
+void FileSystem::writePhysicMaterialFile(std::string path, PhysicMaterialFile& mat) {
+
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(decl);
+
+	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
+
+	materialNode->append_attribute(doc.allocate_attribute("DynamicFriction", doc.allocate_string(std::to_string((float)mat.pxmat->getDynamicFriction()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("StaticFriction", doc.allocate_string(std::to_string((float)mat.pxmat->getStaticFriction()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("Restitution", doc.allocate_string(std::to_string((float)mat.pxmat->getRestitution()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("FrictionCombine", doc.allocate_string(std::to_string((int)mat.pxmat->getFrictionCombineMode()).c_str())));
+	materialNode->append_attribute(doc.allocate_attribute("RestitutionCombine", doc.allocate_string(std::to_string((int)mat.pxmat->getRestitutionCombineMode()).c_str())));
+
+	doc.append_node(materialNode);
+
+	std::string xml_as_string;
+	rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+	std::ofstream file_stored(path);
+	file_stored << doc;
+	file_stored.close();
+	doc.clear();
+}
+
 File* FileSystem::getTextureFileAddr(const char* path) {
 
 	if (strcmp(path, "whitetexture") == 0)
+		return NULL;
+
+	if (textures.find(path) == textures.end())
 		return NULL;
 	
 	return textures[path].fileAddr;
@@ -700,13 +877,10 @@ File* FileSystem::getFragShaderAddr(const char* path) {
 	if (strcmp(path, "source/shader/Default.frag") == 0)
 		return NULL;
 
-	for (auto& fs : fragShaderFiles) {
+	if (fragShaders.find(path) == fragShaders.end())
+		return NULL;
 
-		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
-			return fs.fileAddr;
-	}
-
-	return NULL;
+	return fragShaders[path].fileAddr;
 }
 
 File* FileSystem::getVertShaderAddr(const char* path) {
@@ -714,13 +888,21 @@ File* FileSystem::getVertShaderAddr(const char* path) {
 	if (strcmp(path, "source/shader/Default.vert") == 0)
 		return NULL;
 
-	for (auto& fs : vertShaderFiles) {
+	if (vertShaders.find(path) == vertShaders.end())
+		return NULL;
 
-		if (strcmp(files[fs.fileAddr->id].path.c_str(), path) == 0)
-			return fs.fileAddr;
-	}
+	return vertShaders[path].fileAddr;
+}
 
-	return NULL;
+File* FileSystem::getPhysicMaterialAddr(const char* path) {
+
+	if (strcmp(path, "Default") == 0)
+		return NULL;
+
+	if (physicmaterials.find(path) == physicmaterials.end())
+		return NULL;
+
+	return physicmaterials[path].fileAddr;
 }
 
 const char* FileSystem::getFragShaderPath(File* fileAddr) {
@@ -728,10 +910,10 @@ const char* FileSystem::getFragShaderPath(File* fileAddr) {
 	if (fileAddr == NULL)
 		return "source/shader/Default.frag";
 
-	for (auto& fs : fragShaderFiles) {
+	for (auto& fs : fragShaders) {
 
-		if (fs.fileAddr == fileAddr)
-			return files[fs.fileAddr->id].path.c_str();
+		if (fs.second.fileAddr == fileAddr)
+			return files[fs.second.fileAddr->id].path.c_str();
 	}
 }
 
@@ -740,10 +922,22 @@ const char* FileSystem::getVertShaderPath(File* fileAddr) {
 	if (fileAddr == NULL)
 		return "source/shader/Default.vert";
 
-	for (auto& vs : vertShaderFiles) {
+	for (auto& vs : vertShaders) {
 
-		if (vs.fileAddr == fileAddr)
-			return files[vs.fileAddr->id].path.c_str();
+		if (vs.second.fileAddr == fileAddr)
+			return files[vs.second.fileAddr->id].path.c_str();
+	}
+}
+
+const char* FileSystem::getPhysicMaterialPath(File* fileAddr) {
+
+	if (fileAddr == NULL)
+		return "Default";
+
+	for (auto& pm : physicmaterials) {
+
+		if (pm.second.fileAddr == fileAddr)
+			return files[pm.second.fileAddr->id].path.c_str();
 	}
 }
 
@@ -761,9 +955,11 @@ void FileSystem::rename(int id, const char* newName) {
 	FileSystem::updateChildrenPathRecursively(files[id].addr);
 	FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
 
-	if (files[id].type == FileType::material) {
+	if (files[id].type == FileType::material)
 		writeMaterialFile(files[id].path, materials[files[id].path]);
-	}
+	else if (files[id].type == FileType::physicmaterial)
+		writePhysicMaterialFile(files[id].path, physicmaterials[files[id].path]);
+
 }
 
 unsigned int FileSystem::getSubFileIndex(File* file) {
@@ -841,7 +1037,6 @@ int FileSystem::duplicateFile(int id) {
 	subFile->id = files.size();
 	subFile->parent = files[id].addr->parent;
 
-	// called this temp becasuse its properties can be changed afterwards 
 	FileNode tempFileNode = files[id];
 	tempFileNode.addr = subFile;
 	files.push_back(tempFileNode);
@@ -854,10 +1049,17 @@ int FileSystem::duplicateFile(int id) {
 	const auto copyOptions = std::filesystem::copy_options::recursive;
 	std::filesystem::copy(files[id].path, files[subFile->id].path, copyOptions);
 
-	FileSystem::loadFileToEngine(files[subFile->id]);
+	if (files[subFile->id].type == FileType::folder) {
 
-	if (files[subFile->id].type == FileType::folder)
 		generateFileStructure(subFile);
+
+		std::vector<int> indices;
+		FileSystem::getTreeIndices(subFile, indices);
+
+		loadFilesToEngine(indices);
+	}
+	else
+		loadFileToEngine(files[subFile->id]);
 
 	return subFile->id;
 }
@@ -872,6 +1074,8 @@ FileType FileSystem::getFileType(std::string extension) {
 		return FileType::texture;
 	else if (extension == ".mat")
 		return FileType::material; 
+	else if (extension == ".pmat")
+		return FileType::physicmaterial;
 	else if (extension == ".frag")
 		return FileType::fragshader;
 	else if (extension == ".vert")
@@ -918,17 +1122,23 @@ void FileSystem::loadFileToEngine(FileNode& fileNode) {
 		readMaterialFile(fileNode.addr, fileNode.path);
 		break;
 	}
+	case FileType::physicmaterial: {
+
+		fileNode.textureID = editorTextures.physicmaterialTextureID;
+		readPhysicMaterialFile(fileNode.addr, fileNode.path);
+		break;
+	}
 	case FileType::fragshader: {
 
 		ShaderFile shaderFile(fileNode.addr, fileNode.path);
-		fragShaderFiles.push_back(shaderFile);
+		fragShaders[fileNode.path] = shaderFile;
 		fileNode.textureID = editorTextures.undefinedTextureID;
 		break;
 	}
 	case FileType::vertshader: {
 
 		ShaderFile shaderFile(fileNode.addr, fileNode.path);
-		vertShaderFiles.push_back(shaderFile);
+		vertShaders[fileNode.path] = shaderFile;
 		fileNode.textureID = editorTextures.undefinedTextureID;
 		break;
 	}
@@ -983,10 +1193,16 @@ void FileSystem::importFiles(std::vector<std::string> filesToMove, int toDir) {
 
 			std::filesystem::copy(fullPath, files[subFile->id].path, copyOptions);
 		}
-		FileSystem::loadFileToEngine(files[subFile->id]);
 
-		if (files[subFile->id].type == FileType::folder)
+		if (files[subFile->id].type == FileType::folder) {
+
 			generateFileStructure(subFile);
+			std::vector<int> indices;
+			FileSystem::getTreeIndices(subFile, indices);
+			loadFilesToEngine(indices);
+		}
+		else
+			loadFileToEngine(files[subFile->id]);
 	}	
 }
 
@@ -994,30 +1210,54 @@ void FileSystem::loadDefaultAssets() {
 
 	MeshFile mesh;
 	meshes.insert({"Null", mesh });
-	meshPaths.insert({ mesh.VAO, "Null" });
 
 	MaterialFile mat("source/shader/Default.vert", "source/shader/Default.frag");
 	materials.insert({ "Default", mat });
 
+	PhysicMaterialFile pmat(editor->physics.gPhysics);
+	physicmaterials.insert({ "Default", pmat });
+
 	TextureFile textureWhite("resource/textures/empty_texture_map.DDS");
 	textures.insert({ "whitetexture", textureWhite });
 
-	TextureFile textureNormal("resource/textures/empty_normal_map.DDS");
-	textures.insert({ "whitetexture", textureNormal });
+	ShaderFile vertDefault;
+	vertShaders.insert({ "source/shader/Default.vert", vertDefault });
+
+	ShaderFile fragDefault;
+	fragShaders.insert({ "source/shader/Default.frag", fragDefault });
 }
 
-MaterialFile& FileSystem::getMaterial(int id) {
+MaterialFile& FileSystem::getMaterialFile(int id) {
 
-	auto it = materials.find(files[id].path);
-	return it->second;
+	return materials.find(files[id].path)->second;
 }
 
-TextureFile& FileSystem::getTexture(int id) {
+PhysicMaterialFile& FileSystem::getPhysicMaterialFile(int id) {
 
-	std::string relativePath = files[id].path;
-	relativePath.erase(0, assetsPathExternal.length());
-	auto it = textures.find(relativePath);
-	return it->second;
+	return physicmaterials.find(files[id].path)->second;
 }
 
-void FileSystem::setEditor(Editor* editor) { this->editor = editor; }
+TextureFile& FileSystem::getTextureFile(int id) {
+
+	return textures.find(files[id].path)->second;
+}
+
+ShaderFile& FileSystem::getFragShaderFile(int id) {
+
+	return fragShaders.find(files[id].path)->second;
+}
+
+ShaderFile& FileSystem::getVertShaderFile(int id) {
+
+	return vertShaders.find(files[id].path)->second;
+}
+
+MeshFile& FileSystem::getMeshFile(int id) {
+
+	return meshes.find(files[id].path)->second;
+}
+
+void FileSystem::setEditor(Editor* editor) { 
+
+	this->editor = editor; 
+}

@@ -5,12 +5,18 @@
 #include <fstream>
 #include <vector>
 
+#include "PxPhysicsAPI.h"
+
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
 struct File;
+class MeshRenderer;
+class Collider;
 
-namespace MaterialNS {
+using namespace physx;
+
+namespace Material {
 
 	class MaterialFile {
 
@@ -22,6 +28,7 @@ namespace MaterialNS {
 		File* vertShaderFileAddr;
 		File* fragShaderFileAddr;
 
+		std::vector<MeshRenderer*> meshRendererCompAddrs;
 		std::vector<File*> textureUnitFileAddrs;
 		std::vector<unsigned int> textureUnits;
 
@@ -37,7 +44,28 @@ namespace MaterialNS {
 
 		void compileShaders(const char* vertex_file_path, const char* fragment_file_path, int dirLightCount, int pointLightCount);
 
+		void removeReference(MeshRenderer* renderer);
+
 		void deleteProgram();
+	};
+
+	class PhysicMaterialFile {
+
+	public:
+
+		File* fileAddr;
+		PxMaterial* pxmat;
+		std::vector<Collider*> colliderCompAddrs;
+
+		PhysicMaterialFile();
+
+		PhysicMaterialFile(PxPhysics* gPhysics);
+
+		PhysicMaterialFile(File* file, PxPhysics* gPhysics);
+
+		void removeReference(Collider* collider);
+
+		void destroy();
 	};
 }
 

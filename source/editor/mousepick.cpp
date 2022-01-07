@@ -16,21 +16,27 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(pickingProgramID);
 
-	for (int i = 0; i < editor->scene.meshRendererComponents.size(); i++) {
+	for (int i = 0; i < editor->scene->entities.size(); i++) {
+	
+		MeshRenderer* meshRendererComp = editor->scene->entities[i]->getComponent<MeshRenderer>();
+		Transform* transform = editor->scene->entities[i]->transform;
 
-		glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &editor->scene.entities[editor->scene.meshRendererComponents[i].entID].transform->model[0][0]);
-		glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-		glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+		if (meshRendererComp != nullptr) {
 
-		int r = (editor->scene.meshRendererComponents[i].entID & 0x000000FF) >> 0;
-		int g = (editor->scene.meshRendererComponents[i].entID & 0x0000FF00) >> 8;
-		int b = (editor->scene.meshRendererComponents[i].entID & 0x00FF0000) >> 16;
+			glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &transform->model[0][0]);
+			glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+			glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
 
-		glUniform4f(pickingColorID, r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+			int r = (i & 0x000000FF) >> 0;
+			int g = (i & 0x0000FF00) >> 8;
+			int b = (i & 0x00FF0000) >> 16;
 
-		glBindVertexArray(editor->scene.meshRendererComponents[i].VAO);
-		glDrawElements(GL_TRIANGLES, editor->scene.meshRendererComponents[i].indiceSize, GL_UNSIGNED_INT, (void*)0);
-		glBindVertexArray(0);
+			glUniform4f(pickingColorID, r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+
+			glBindVertexArray(meshRendererComp->mesh->VAO);
+			glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
+			glBindVertexArray(0);
+		}
 	}
 
 	// Wait until all the pending drawing commands are really done.
@@ -55,8 +61,8 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		data[1] * 256 +
 		data[2] * 256 * 256;
 
-	if (pickedID == 0x00ffffff)
-		editor->editorGUI.lastSelectedEntityID = -1;
+	if (pickedID == 0x00ffffff || pickedID >= editor->scene->entities.size())
+		editor->editorGUI.lastSelectedEntity = NULL;
 	else
-		editor->editorGUI.lastSelectedEntityID = pickedID;
+		editor->editorGUI.lastSelectedEntity = editor->scene->entities[pickedID];
 }

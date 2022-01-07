@@ -2,18 +2,18 @@
 
 #include "mesh.hpp"
 #include "material.hpp"
+#include "component.hpp"
 
-using namespace MaterialNS;
+using namespace Material;
 
-class MeshRenderer {
+class MeshRenderer: public Component {
 
 public:
 
-	unsigned int entID;
-
-	unsigned int VAO;
-	int indiceSize;
+	Mesh::MeshFile* mesh;
 	MaterialFile* mat;
 
 	MeshRenderer();
+
+	MeshRenderer(Mesh::MeshFile* mesh);
 };

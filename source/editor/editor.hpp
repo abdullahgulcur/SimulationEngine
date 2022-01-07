@@ -11,6 +11,9 @@
 #include "model.hpp"
 #include "texture.hpp"
 #include "input.hpp"
+#include "physics.hpp"
+#include "debugrenderer.hpp"
+
 
 class Editor {
 
@@ -23,7 +26,14 @@ public:
 	Camera editorCamera;
 	FileSystem fileSystem;
 	EditorGUI editorGUI;
-	Scene scene;
+	Scene* scene = NULL;
+	Scene* sceneTemp = NULL;
+	Physics physics;
+	BoxColliderRenderer* bcr = NULL;
+	SphereColliderRenderer* scr = NULL;
+
+	float time = 0;
+	bool gameStarted = false;
 
 	Editor();
 

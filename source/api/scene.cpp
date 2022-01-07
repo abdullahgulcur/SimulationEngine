@@ -9,64 +9,60 @@ Scene::Scene() {
 void Scene::init(Editor* editor) {
 
 	this->editor = editor;
+	mousepick.init();
 	Scene::initSceneGraph();
 }
 
 void Scene::initSceneGraph() {
 
-	mousepick.init();
-	rootTransform = new Transform;
-
-	if (!SaveLoadSystem::loadSceneGraph(editor)) {
-
-		Entity entitity((const char*)"Root", rootTransform, entities);
-		Scene::saveEditorProperties();
-	}
-	else {
-
-		SaveLoadSystem::loadEntities(editor);
-		SaveLoadSystem::loadMeshRenderers(editor);
-		SaveLoadSystem::loadLights(editor);
-		Scene::generateSceneGraph();
-		SaveLoadSystem::loadTransforms(editor);
-	}
+	SaveLoadSystem::loadEntities(editor);
+	Scene::loadLights();
 }
 
-void Scene::generateSceneGraph() {
+void Scene::loadLights() {
 
-	entities[rootTransform->id].addTransformComponent(rootTransform);
-	Scene::generateSceneGraphRecursively(rootTransform);
-}
+	for (auto& ent : entities) {
 
-void Scene::generateSceneGraphRecursively(Transform* parent) {
+		if (Light* lightComp = ent->getComponent<Light>()) {
 
-	for (int i = 0; i < initialSceneGraph[parent->id].size(); i++) {
-
-		Transform* transform = new Transform(parent, initialSceneGraph[parent->id][i]);
-		entities[transform->id].addTransformComponent(transform);
-		Scene::generateSceneGraphRecursively(transform);
+			if (lightComp->lightType == LightType::PointLight)
+				pointLightTransforms.push_back(ent->transform);
+			else
+				dirLightTransforms.push_back(ent->transform);
+		}
 	}
+
+	Scene::recompileAllMaterials();
 }
 
 void Scene::start() {
 
 }
 
-void Scene::update() {
+void Scene::update(float dt) {
 
-	for (auto const& val : meshRendererComponents)
+	if (editor->gameStarted)
+		Scene::simulateInGame(dt);
+	else
+		Scene::simulateInEditor(dt);
+}
+
+void Scene::simulateInEditor(float dt) {
+
+	for (auto& ent : entities)
 	{
-		glUseProgram(val.mat->programID);
-		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "M"), 1, GL_FALSE, &entities[val.entID].transform->model[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(val.mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
-		glUniform3fv(glGetUniformLocation(val.mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
+		if (MeshRenderer* meshRendererComp = ent->getComponent<MeshRenderer>()) {
 
-		int dlightCounter = 0;
-		int plightCounter = 0;
-		for (auto const& l_val : lightComponents) {
+			glUseProgram(meshRendererComp->mat->programID);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &ent->transform->model[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
 
-			if (l_val.type == LightType::PointLight) {
+			int dlightCounter = 0;
+			int plightCounter = 0;
+
+			for (auto const& transform : pointLightTransforms) {
 
 				char lightCounterTxt[4];
 				sprintf(lightCounterTxt, "%d", plightCounter);
@@ -86,9 +82,9 @@ void Scene::update() {
 				strcat(tempLPow, lightCounterTxt);
 				strcat(tempLPow, "]\0");
 
-				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos), 1, &entities[l_val.entID].transform->getWorldPosition()[0]);
-				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol), 1, &l_val.color[0]);
-				glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow), l_val.power);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &transform->globalPosition[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
 
 				delete tempLPos;
 				delete tempLCol;
@@ -96,7 +92,8 @@ void Scene::update() {
 
 				plightCounter++;
 			}
-			else {
+
+			for (auto const& transform : dirLightTransforms) {
 
 				char lightCounterTxt[4];
 				sprintf(lightCounterTxt, "%d", dlightCounter);
@@ -116,9 +113,11 @@ void Scene::update() {
 				strcat(tempLPow, lightCounterTxt);
 				strcat(tempLPow, "]\0");
 
-				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLPos), 1, &entities[l_val.entID].transform->localRotation[0]);
-				glUniform3fv(glGetUniformLocation(val.mat->programID, tempLCol), 1, &l_val.color[0]);
-				glUniform1f(glGetUniformLocation(val.mat->programID, tempLPow), l_val.power);
+				glm::vec3 direction(-cos(transform->localRotation.x / 180.f) * sin(transform->localRotation.y / 180.f), -sin(transform->localRotation.x / 180.f),
+					-cos(transform->localRotation.x / 180.f) * cos(transform->localRotation.y / 180.f));
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &direction[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
 
 				delete tempLPos;
 				delete tempLCol;
@@ -126,36 +125,304 @@ void Scene::update() {
 
 				dlightCounter++;
 			}
+
+			for (int i = 0; i < meshRendererComp->mat->textureUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "texture%d\0", i);
+
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(GL_TEXTURE_2D, meshRendererComp->mat->textureUnits[i]);
+				glUniform1i(glGetUniformLocation(meshRendererComp->mat->programID, str), i);
+			}
+
+			for (int i = 0; i < meshRendererComp->mat->floatUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "float%d\0", i);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, str), meshRendererComp->mat->floatUnits[i]);
+			}
+
+			glBindVertexArray(meshRendererComp->mesh->VAO);
+			glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
+			glBindVertexArray(0);
+
 		}
 
-		for (int i = 0; i < val.mat->textureUnits.size(); i++) {
+		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
+			terrain->draw(&editor->editorCamera, pointLightTransforms, dirLightTransforms);
 
-			char str[16];
-			sprintf(str, "texture%d\0", i);
+		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
+		for (auto& comp : boxColliderCompList) {
 
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, val.mat->textureUnits[i]);
-			glUniform1i(glGetUniformLocation(val.mat->programID, str), i);
+			glm::mat4 model = ent->transform->model;
+			model = glm::translate(model, comp->center);
+			model = glm::scale(model, comp->size);
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+
+			editor->bcr->drawCollider(mvp);
 		}
 
-		for (int i = 0; i < val.mat->floatUnits.size(); i++) {
+		std::vector<SphereCollider*> sphereColliderCompList = ent->getComponents<SphereCollider>();
+		for (auto& comp : sphereColliderCompList) {
 
-			char str[16];
-			sprintf(str, "float%d\0", i);
-			glUniform1f(glGetUniformLocation(val.mat->programID, str), val.mat->floatUnits[i]);
+			glm::mat4 model = ent->transform->model;
+			model = glm::translate(model, comp->center);
+			model = glm::scale(model, glm::vec3(comp->radius * 2 * 1.01f));
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
 		}
 
-		glBindVertexArray(val.VAO);
-		glDrawElements(GL_TRIANGLES, val.indiceSize, GL_UNSIGNED_INT, (void*)0);
-		glBindVertexArray(0);
+		std::vector<CapsuleCollider*> capsuleColliderCompList = ent->getComponents<CapsuleCollider>();
+		for (auto& comp : capsuleColliderCompList) {
+
+			glm::mat4 localModel(1.f);
+			localModel = glm::scale(localModel, glm::vec3(comp->radius * 2 * 1.01f));
+
+			const glm::mat4 transformX = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.x,
+				glm::vec3(1.0f, 0.0f, 0.0f));
+			const glm::mat4 transformY = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.y,
+				glm::vec3(0.0f, 1.0f, 0.0f));
+			const glm::mat4 transformZ = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.z,
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+			const glm::mat4 roationMatrix = transformZ * transformY * transformX;
+
+			glm::mat4 objectModel(1.f);
+			objectModel = glm::translate(objectModel, ent->transform->globalPosition) * roationMatrix;
+			objectModel = glm::translate(objectModel, comp->center + glm::vec3(comp->axis) * (comp->height / 2));
+			glm::mat4 model = objectModel * localModel;
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+			objectModel = glm::translate(objectModel, glm::vec3(comp->axis) * (-comp->height));
+			model = objectModel * localModel;
+			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+		}
+
+		//std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
+		//for (auto& comp : meshColliderCompList) {
+
+		//	glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * ent->transform->model;
+		//}
+
 	}
+}
+
+void Scene::simulateInGame(float dt) {
+
+	for (auto& ent : entities)
+	{
+		if (MeshRenderer* meshRendererComp = ent->getComponent<MeshRenderer>()) {
+
+			glUseProgram(meshRendererComp->mat->programID);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &ent->transform->model[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
+
+			int dlightCounter = 0;
+			int plightCounter = 0;
+
+			for (auto const& transform : pointLightTransforms) {
+
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", plightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "pointLightPositions[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "pointLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "pointLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &transform->globalPosition[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				plightCounter++;
+			}
+
+			for (auto const& transform : dirLightTransforms) {
+
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", dlightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "dirLightDirections[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "dirLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "dirLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glm::vec3 direction(-cos(transform->localRotation.x / 180.f) * sin(transform->localRotation.y / 180.f), -sin(transform->localRotation.x / 180.f),
+					-cos(transform->localRotation.x / 180.f) * cos(transform->localRotation.y / 180.f));
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &direction[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				dlightCounter++;
+			}
+
+			for (int i = 0; i < meshRendererComp->mat->textureUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "texture%d\0", i);
+
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(GL_TEXTURE_2D, meshRendererComp->mat->textureUnits[i]);
+				glUniform1i(glGetUniformLocation(meshRendererComp->mat->programID, str), i);
+			}
+
+			for (int i = 0; i < meshRendererComp->mat->floatUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "float%d\0", i);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, str), meshRendererComp->mat->floatUnits[i]);
+			}
+
+			glBindVertexArray(meshRendererComp->mesh->VAO);
+			glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
+			glBindVertexArray(0);
+
+		}
+
+		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
+		for (auto& comp : boxColliderCompList) {
+
+			glm::mat4 model = ent->transform->model;
+			model = glm::translate(model, comp->center);
+			model = glm::scale(model, comp->size);
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+
+			editor->bcr->drawCollider(mvp);
+		}
+
+		std::vector<SphereCollider*> sphereColliderCompList = ent->getComponents<SphereCollider>();
+		for (auto& comp : sphereColliderCompList) {
+
+			glm::mat4 model = ent->transform->model;
+			model = glm::translate(model, comp->center);
+			model = glm::scale(model, glm::vec3(comp->radius * 2 * 1.01f));
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+		}
+
+		std::vector<CapsuleCollider*> capsuleColliderCompList = ent->getComponents<CapsuleCollider>();
+		for (auto& comp : capsuleColliderCompList) {
+
+			glm::mat4 localModel(1.f);
+			localModel = glm::scale(localModel, glm::vec3(comp->radius * 2 * 1.01f));
+
+			const glm::mat4 transformX = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.x,
+				glm::vec3(1.0f, 0.0f, 0.0f));
+			const glm::mat4 transformY = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.y,
+				glm::vec3(0.0f, 1.0f, 0.0f));
+			const glm::mat4 transformZ = glm::rotate(glm::mat4(1.0f),
+				ent->transform->globalRotation.z,
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+			const glm::mat4 roationMatrix = transformZ * transformY * transformX;
+
+			glm::mat4 objectModel(1.f);
+			objectModel = glm::translate(objectModel, ent->transform->globalPosition) * roationMatrix;
+			objectModel = glm::translate(objectModel, comp->center + glm::vec3(comp->axis) * (comp->height / 2));
+			glm::mat4 model = objectModel * localModel;
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+			objectModel = glm::translate(objectModel, glm::vec3(comp->axis) * (-comp->height));
+			model = objectModel * localModel;
+			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			editor->scr->drawCollider(mvp);
+		}
+
+		std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
+		for (auto& comp : meshColliderCompList) {
+
+			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * ent->transform->model;
+		}
+
+		if (Rigidbody* rigidbodyComp = ent->getComponent<Rigidbody>()) {
+
+			PxMat44 matrix4(rigidbodyComp->body->getGlobalPose());
+
+			float scaleX = length(ent->transform->model[0]);
+			float scaleY = length(ent->transform->model[1]);
+			float scaleZ = length(ent->transform->model[2]);
+			glm::vec3 scale(scaleX, scaleY, scaleZ);
+
+			ent->transform->model[0][0] = matrix4[0][0];
+			ent->transform->model[0][1] = matrix4[0][1];
+			ent->transform->model[0][2] = matrix4[0][2];
+			ent->transform->model[0][3] = matrix4[0][3];
+
+			ent->transform->model[1][0] = matrix4[1][0];
+			ent->transform->model[1][1] = matrix4[1][1];
+			ent->transform->model[1][2] = matrix4[1][2];
+			ent->transform->model[1][3] = matrix4[1][3];
+
+			ent->transform->model[2][0] = matrix4[2][0];
+			ent->transform->model[2][1] = matrix4[2][1];
+			ent->transform->model[2][2] = matrix4[2][2];
+			ent->transform->model[2][3] = matrix4[2][3];
+
+			ent->transform->model[3][0] = matrix4[3][0];
+			ent->transform->model[3][1] = matrix4[3][1];
+			ent->transform->model[3][2] = matrix4[3][2];
+			ent->transform->model[3][3] = matrix4[3][3];
+
+			ent->transform->model = glm::scale(ent->transform->model, scale);
+
+			ent->transform->updateSelfAndChildTransforms();
+		}
+	}
+
+	editor->physics.gScene->simulate(dt);
+	editor->physics.gScene->fetchResults(true);
+}
+
+void Scene::deleteScene() {
+
+	for (auto& ent : entities)
+		ent->destroy(this);
+
+	entities.clear();
 }
 
 void Scene::recompileAllMaterials() {
 
 	for (auto& val : editor->fileSystem.materials)
 		val.second.compileShaders(editor->fileSystem.getVertShaderPath(val.second.vertShaderFileAddr),
-			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileAddr), dirLightCount, pointLightCount);
+			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileAddr), dirLightTransforms.size(), pointLightTransforms.size());
 }
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {
@@ -182,32 +449,32 @@ bool Scene::subEntityAndItselfCheck(Transform* child, Transform* parent) {
 	return false;
 }
 
-void Scene::moveEntity(int toBeMoved, int moveTo) {
+void Scene::moveEntity(Entity* toBeMoved, Entity* moveTo) {
 
-	if (Scene::subEntityCheck(entities[moveTo].transform, entities[toBeMoved].transform))
+	if (Scene::subEntityCheck(moveTo->transform, toBeMoved->transform))
 		return;
 
-	Transform* oldParent = entities[toBeMoved].transform->parent;
-	entities[toBeMoved].transform->parent = entities[moveTo].transform;
-	(entities[moveTo].transform->children).push_back(entities[toBeMoved].transform);
-	entities[toBeMoved].transform->updateSelfAndChildTransforms(3);
+	Transform* oldParent = toBeMoved->transform->parent;
+	toBeMoved->transform->parent = moveTo->transform;
+	(moveTo->transform->children).push_back(toBeMoved->transform);
+	toBeMoved->transform->updateSelfAndChildTransforms();
 
 	Scene::deleteEntityFromTree(oldParent, toBeMoved);
 }
 
-void Scene::getTreeIndices(Transform* transform, std::set<int, std::greater<int>>& indices) {
+void Scene::getAllEntities(Transform* transform, std::unordered_set<Entity*>& ents) {
 
 	for (int i = 0; i < transform->children.size(); i++)
-		getTreeIndices(transform->children[i], indices);
+		getAllEntities(transform->children[i], ents);
 
-	indices.insert(transform->id);
+	ents.insert(transform->entity);
 }
 
-void Scene::deleteEntityFromTree(Transform* parent, int id) {
+void Scene::deleteEntityFromTree(Transform* parent, Entity* ent) {
 
 	for (int i = 0; i < parent->children.size(); i++) {
 
-		if (parent->children[i]->id == id) {
+		if (parent->children[i] == ent->transform) {
 
 			parent->children.erase(parent->children.begin() + i);
 			break;
@@ -215,162 +482,84 @@ void Scene::deleteEntityFromTree(Transform* parent, int id) {
 	}
 }
 
-void Scene::deleteEntityCompletely(int id) {
+void Scene::deleteEntityCompletely(Entity* ent) {
 
-	std::set<int, std::greater<int>> indices;
-	Scene::getTreeIndices(entities[id].transform, indices);
+	std::unordered_set<Entity*> ents;
+	Scene::getAllEntities(ent->transform, ents);
 
-	Transform* parent = entities[id].transform->parent;
-	Scene::deleteEntityFromTree(parent, id);
+	Transform* parent = ent->transform->parent;
+	Scene::deleteEntityFromTree(parent, ent);
 
-	for (auto& iter : indices) {
+	entities.erase(
+		std::remove_if(entities.begin(), entities.end(), [&](Entity* ent) {
 
-		//delete entities[iter].name;
-		//delete entities[iter].transform;
-	}
+			bool b = ents.find(ent) != ents.end();
+			if (b)
+				ent->destroy(this);
 
-	std::vector<Entity> newEntList;
-
-	std::vector<std::pair<int, int>> m_renderer_transform_PairList;
-	std::vector<std::pair<int, int>> light_transform_PairList;
-
-	int counter = 0;
-	for (Entity& ent : entities) {
-
-		if (indices.count(ent.transform->id) == 0) {
-
-			ent.transform->id = counter;
-			newEntList.push_back(ent);
-
-			if (ent.m_rendererComponentIndex != -1) {
-
-				std::pair<int, int> pair;
-				pair.first = ent.m_rendererComponentIndex;
-				pair.second = ent.transform->id;
-				m_renderer_transform_PairList.push_back(pair);
-			}
-
-			if (ent.lightComponentIndex != -1) {
-
-				std::pair<int, int> pair;
-				pair.first = ent.lightComponentIndex;
-				pair.second = ent.transform->id;
-				light_transform_PairList.push_back(pair);
-			}
-			counter++;
-		}
-	}
-
-	entities = newEntList;
-
-	std::vector<MeshRenderer> newMeshRendererComponentList;
-	std::vector<Light> newLightComponentList;
-
-	counter = 0;
-	for (auto& pair : m_renderer_transform_PairList) {
-
-		newMeshRendererComponentList.push_back(meshRendererComponents[pair.first]);
-		newMeshRendererComponentList[counter].entID = pair.second;
-		entities[pair.second].m_rendererComponentIndex = counter;
-		counter++;
-	}
-	meshRendererComponents = newMeshRendererComponentList;
-		
-
-	counter = 0;
-	for (auto& pair : light_transform_PairList) {
-
-		newLightComponentList.push_back(lightComponents[pair.first]);
-		newLightComponentList[counter].entID = pair.second;
-		entities[pair.second].lightComponentIndex = counter;
-		counter++;
-	}
-	lightComponents = newLightComponentList;
-	Scene::recompileAllMaterials();
+			return b; 
+		}), entities.end());
 }
 
-int Scene::duplicateEntity(int id) {
+Entity* Scene::duplicateEntity(Entity* ent) {
 
-	Transform* transform = new Transform(entities[id].transform->parent, entities[id].transform, entities.size());
+	Entity* entity = new Entity(ent, ent->transform->parent, this);
+	cloneEntityRecursively(ent->transform, entity->transform);
+	entity->transform->updateSelfAndChild();
 
-	char* name = new char[strlen(entities[id].name) + 5];
-	strcpy((char*)name, entities[id].name);
-	strcat((char*)name, "_cpy\0");
-	Entity ent(name, transform, entities);
-
-	Scene::cloneComponents(id, transform->id);
-	cloneEntityRecursively(entities[id].transform, transform);
-
-	transform->updateSelfAndChild();
-
-	return transform->id;
+	return entity;
 }
 
 void Scene::cloneEntityRecursively(Transform* base, Transform* copied) {
 
 	for (int i = 0; i < base->children.size(); i++) {
 
-		Transform* transform = new Transform(copied, base->children[i], entities.size());
-		Entity ent(entities[base->children[i]->id].name, transform, entities);
-
-		Scene::cloneComponents(base->children[i]->id, transform->id);
-		Scene::cloneEntityRecursively(base->children[i], transform);
+		Entity* ent = new Entity(base->children[i]->entity, copied, this);
+		Scene::cloneEntityRecursively(base->children[i], ent->transform);
 	}
 }
 
-void Scene::cloneComponents(int base, int entID) {
+Transform* Scene::newEntity(Entity* parent, const char* name){
 
-	if (entities[base].m_rendererComponentIndex != -1) {
-
-		MeshRenderer comp = meshRendererComponents[entities[base].m_rendererComponentIndex];
-		comp.entID = entID;
-		meshRendererComponents.push_back(comp);
-		entities[entID].m_rendererComponentIndex = meshRendererComponents.size() - 1;
-	}
-
-	if (entities[base].lightComponentIndex != -1) {
-
-		if (lightComponents[entities[base].lightComponentIndex].type == LightType::DirectionalLight)
-			dirLightCount++;
-		else
-			pointLightCount++;
-
-		Scene::recompileAllMaterials();
-
-		Light comp = lightComponents[entities[base].lightComponentIndex];
-		comp.entID = entID;
-		lightComponents.push_back(comp);
-		entities[entID].lightComponentIndex = lightComponents.size() - 1;
-	}
+	Entity* ent = new Entity(name, parent->transform, this);
+	return ent->transform;
 }
 
-Transform* Scene::newEntity(int parentID, const char* name){
+int Scene::getEntityIndex(Entity* ent) {
 
-	Transform* transform = new Transform(entities[parentID].transform, entities.size());
-	Entity ent(name, transform, entities);
+	auto it = std::find(entities.begin(), entities.end(), ent);
 
-	return transform;
+	if (it != entities.end())
+		return it - entities.begin();
+
+	return -1;
 }
 
-int Scene::newLight(int parentID, const char* name, LightType type) {
+Entity* Scene::newLight(Entity* parent, const char* name, LightType type) {
 
-	Transform* entity = Scene::newEntity(parentID, name);
-	entities[entity->id].addLightComponent(lightComponents, this, type);
-	return entity->id;
+	Transform* transform = Scene::newEntity(parent, name);
+
+	Light* lightComp = transform->entity->addComponent<Light>();
+	lightComp->lightType = type;
+
+	if (type == LightType::PointLight)
+		pointLightTransforms.push_back(transform);
+	else
+		dirLightTransforms.push_back(transform);
+
+	recompileAllMaterials();
+
+	return transform->entity;
 }
 
-void Scene::renameEntity(int id, char* newName) {
+void Scene::renameEntity(Entity* ent, char* newName) {
 
-	strcpy(entities[id].name, newName);
+	strcpy(ent->name, newName);
 }
 
 void Scene::saveEditorProperties() {
 
-	SaveLoadSystem::saveSceneGraph(editor);
 	SaveLoadSystem::saveEntities(editor);
-	SaveLoadSystem::saveTransforms(editor);
-	SaveLoadSystem::saveMeshRenderers(editor);
-	SaveLoadSystem::saveLights(editor);
 } 
 
 std::string Scene::getLightType(LightType type) {

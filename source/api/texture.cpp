@@ -22,13 +22,6 @@ namespace TextureNS {
 		glDeleteTextures(1, &textureID);
 	}
 
-	unsigned int TextureNS::getEmptyTexture() {
-
-		unsigned int textureID;
-		glGenTextures(1, &textureID);
-		return textureID;
-	}
-
 	unsigned int TextureNS::loadDDS(const char* imagepath) {
 
 		unsigned char header[124];

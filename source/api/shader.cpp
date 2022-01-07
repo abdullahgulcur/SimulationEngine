@@ -1,7 +1,10 @@
 #include "shader.hpp"
 #include "filesystem.hpp"
 
-ShaderNS::ShaderFile::ShaderFile() {}
+ShaderNS::ShaderFile::ShaderFile() {
+
+	fileAddr = NULL;
+}
 
 ShaderNS::ShaderFile::ShaderFile(File* file, std::string path) {
 

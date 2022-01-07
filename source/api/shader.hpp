@@ -11,8 +11,6 @@ struct File;
 
 namespace ShaderNS {
 
-	enum class ShaderType{ Vertex, Fragment};
-
 	class ShaderFile {
 
 	public:
