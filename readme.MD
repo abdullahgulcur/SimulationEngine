@@ -2,5 +2,7 @@
 
 ### General Overview
 
-<img src="images/preparingforwar.png">
-<img src="images/tables.png" width = "960" height = "520">
+<img src="images/tanks.png">
+<img src="images/tables.png">
+<img src="images/terrain.png">
+
