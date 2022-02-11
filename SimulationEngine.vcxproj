@@ -1027,6 +1027,10 @@
     <None Include="source\shader\Circle.vert" />
     <None Include="source\shader\Default.frag" />
     <None Include="source\shader\Default.vert" />
+    <None Include="source\shader\gpuheight.frag" />
+    <None Include="source\shader\gpuheight.tesc" />
+    <None Include="source\shader\gpuheight.tese" />
+    <None Include="source\shader\gpuheight.vert" />
     <None Include="source\shader\Line.frag" />
     <None Include="source\shader\Line.vert" />
     <None Include="source\shader\ObjectPick.frag" />

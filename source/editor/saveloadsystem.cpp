@@ -301,10 +301,10 @@ bool SaveLoadSystem::loadTerrainGeneratorComponent(Editor* editor, Entity* ent, 
 	//terrainComp->mat->meshRendererCompAddrs.push_back(terrainComp);
 
 	terrainComp->seed = atoi(terrainNode->first_attribute("Seed")->value());
-	terrainComp->viewportLevel_X = atoi(terrainNode->first_attribute("Viewport_X")->value());
-	terrainComp->viewportLevel_Z = atoi(terrainNode->first_attribute("Viewport_Z")->value());
-	terrainComp->size_X = atof(terrainNode->first_attribute("Size_X")->value());
-	terrainComp->size_Z = atof(terrainNode->first_attribute("Size_Z")->value());
+	//terrainComp->viewportLevel_X = atoi(terrainNode->first_attribute("Viewport_X")->value());
+	//terrainComp->viewportLevel_Z = atoi(terrainNode->first_attribute("Viewport_Z")->value());
+	//terrainComp->size_X = atof(terrainNode->first_attribute("Size_X")->value());
+	//terrainComp->size_Z = atof(terrainNode->first_attribute("Size_Z")->value());
 	terrainComp->height = atof(terrainNode->first_attribute("Height")->value());
 	terrainComp->scale = atof(terrainNode->first_attribute("Scale")->value());
 
@@ -323,10 +323,10 @@ bool SaveLoadSystem::saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml
 		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[terrain->mat->fileAddr->id].path.c_str())));
 
 	meshRendererNode->append_attribute(doc.allocate_attribute("Seed", doc.allocate_string(std::to_string(terrain->seed).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_X", doc.allocate_string(std::to_string(terrain->viewportLevel_X).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_Z", doc.allocate_string(std::to_string(terrain->viewportLevel_Z).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Size_X", doc.allocate_string(std::to_string(terrain->size_X).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Size_Z", doc.allocate_string(std::to_string(terrain->size_Z).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_X", doc.allocate_string(std::to_string(terrain->viewportLevel_X).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_Z", doc.allocate_string(std::to_string(terrain->viewportLevel_Z).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Size_X", doc.allocate_string(std::to_string(terrain->size_X).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Size_Z", doc.allocate_string(std::to_string(terrain->size_Z).c_str())));
 	meshRendererNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(terrain->height).c_str())));
 	meshRendererNode->append_attribute(doc.allocate_attribute("Scale", doc.allocate_string(std::to_string(terrain->scale).c_str())));
 
@@ -452,6 +452,7 @@ bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_doc
 	return true;
 }
 
+//TODO:: if mesh is null then delete mesh collider and then save it
 bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	bool b = (5 & 1);

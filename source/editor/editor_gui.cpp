@@ -511,7 +511,7 @@ void EditorGUI::createScenePanel() {
 	// TODO: Only change these values when resized
 	editor->editorCamera.aspectRatio = sceneRegion.x / sceneRegion.y;
 	editor->editorCamera.fovX = Math::getFOV_X(editor->editorCamera.fovY, editor->editorCamera.aspectRatio);
-	std::cout << "FOV X: " << editor->editorCamera.fovX << std::endl;
+	//std::cout << "FOV X: " << editor->editorCamera.fovX << std::endl;
 
 	ImGui::Image((ImTextureID)editor->window.textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
 
@@ -1108,12 +1108,12 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		matPaths[0] = "Default";
 		matNames[0] = "Default";
 
-		int size_textures = editor->fileSystem.textures.size();
+		/*int size_textures = editor->fileSystem.textures.size();
 		const char** texPaths = new const char* [size_textures];
 		const char** texNames = new const char* [size_textures];
 		int texIndex = 0;
 		texPaths[0] = "NULL";
-		texNames[0] = "NULL";
+		texNames[0] = "NULL";*/
 
 		int i = 1;
 
@@ -1133,7 +1133,7 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			i++;
 		}
 
-		i = 1;
+		/*i = 1;
 		for (auto& it : editor->fileSystem.textures) {
 
 			if (it.second.fileAddr == NULL)
@@ -1145,7 +1145,7 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			if (terrainComp->heightmap == it.second.fileAddr)
 				texIndex = i;
 			i++;
-		}
+		}*/
 
 		ImGui::Text("Material    ");
 		ImGui::SameLine();
@@ -1157,17 +1157,17 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		delete[] matPaths;
 		delete[] matNames;
 
-		ImGui::Text("Material    ");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(width - 115);
+		//ImGui::Text("Material    ");
+		//ImGui::SameLine();
+		//ImGui::SetNextItemWidth(width - 115);
 
-		if (ImGui::Combo("##9", &texIndex, texNames, size_textures)) {
-			terrainComp->heightmap = editor->fileSystem.textures[texPaths[texIndex]].fileAddr;
+		//if (ImGui::Combo("##9", &texIndex, texNames, size_textures)) {
+		//	terrainComp->heightmap = editor->fileSystem.textures[texPaths[texIndex]].fileAddr;
 
-		}
+		//}
 
-		delete[] texPaths;
-		delete[] texNames;
+		//delete[] texPaths;
+		//delete[] texNames;
 
 		//ImGui::PushID(0);
 		//static bool popupFlag = true;
@@ -1178,12 +1178,12 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 		//EditorGUI::heightMapPopup(terrainComp);
 
-		ImGui::PopID();
-		ImGui::SameLine();
+		//ImGui::PopID();
+		//ImGui::SameLine();
 		pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		ImGui::Text(editor->fileSystem.files[terrainComp->heightmap->id].name.c_str());
+		//ImGui::Text(editor->fileSystem.files[terrainComp->heightmap->id].name.c_str());
 
-		ImGui::Text("Viewport Level X    "); ImGui::SameLine();
+		/*ImGui::Text("Viewport Level X    "); ImGui::SameLine();
 		int levelX = terrainComp->viewportLevel_X;
 		if (ImGui::DragInt("##2", &levelX, 1.f, 0, 256, "%d")) {
 			terrainComp->viewportLevel_X = EditorGUI::dragUnitValueAssign(0, 256, levelX);
@@ -1203,7 +1203,7 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 		ImGui::Text("Size Z    "); ImGui::SameLine();
 		if(ImGui::DragFloat("##5", &terrainComp->size_Z, 0.1f, 0, 0, "%.2f"))
-			terrainComp->recreateHeightField();
+			terrainComp->recreateHeightField();*/
 
 		ImGui::Text("Seed    "); ImGui::SameLine();
 		int seed = terrainComp->seed;
@@ -1223,6 +1223,11 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		float scale = terrainComp->scale;
 		if (ImGui::DragFloat("##8", &scale, 0.01f, 0.f, 10.f, "%.2f")) {
 			terrainComp->scale = EditorGUI::dragUnitValueAssign(0.f, 10.f, scale);
+			terrainComp->recreateHeightField();
+		}
+
+		if (ImGui::Button("Erode", ImVec2(120, 18))) {
+			terrainComp->erode();
 			terrainComp->recreateHeightField();
 		}
 

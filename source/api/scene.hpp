@@ -2,7 +2,6 @@
 
 #include <string>
 #include <map>
-#include <queue>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -95,8 +94,6 @@ public:
 	void saveEditorProperties();
 
 	std::string getLightType(LightType type);
-
-	void writeSceneGraphFileRecursively(std::queue<Transform*> entQueue, std::ostringstream& fileTextStream);
 
 	void setEditor(Editor* editor);
 

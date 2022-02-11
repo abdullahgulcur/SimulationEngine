@@ -19,7 +19,7 @@ private:
 	float verticalRotationSpeed = 0.012;
 	float horizontalTranslationSpeed = 50;
 	float verticalTranslationSpeed = 50;
-	float scrollSpeed = 5;
+	float scrollSpeed = 50;
 
 	float generalSpeed = 0.15f;
 

@@ -10,26 +10,16 @@
 #include "material.hpp"
 #include "transform.hpp"
 #include "texture.hpp"
+#include "utility.hpp"
+#include "math.hpp"
 
 #include "perlinnoise/perlinnoise.hpp"
 
 class Camera;
 
 using namespace Material;
-//
-//struct vec8 {
-//
-//	float a;
-//	float b;
-//
-//	vec8() {}
-//
-//	vec8(float a, float b) {
-//
-//		this->a = a;
-//		this->b = b;
-//	}
-//};
+
+#define PI 3.1415
 
 struct TerrainVertex {
 
@@ -49,6 +39,13 @@ struct TerrainVertex {
 	}
 };
 
+struct HeightAndGradient {
+
+	float height;
+	float gradientX;
+	float gradientZ;
+};
+
 struct TerrainChunk {
 
 	std::vector<std::vector<TerrainVertex>> lods;
@@ -63,21 +60,58 @@ private:
 
 public:
 
-	unsigned int clipmaps = 4;
+	const unsigned int NUM_PATCH_PTS = 4;
+	unsigned rez = 20;
+
+	unsigned int programID;
+	unsigned int terrainVAO;
+	unsigned int elevationMapTexture;
+
+	unsigned int clipmaps = 8;
 
 	std::vector<std::vector<unsigned int>> DebugNormalVAOs; // dim 0: clipmaps 1:lods
 	std::vector<std::vector<unsigned int>> VAOs; // dim 0: clipmaps 1:lods
 	//std::vector<TerrainChunk> chunks;
 	MaterialFile* mat;
 	File* heightmap;
-	unsigned int seed = 123456u;
+	unsigned int seed = 12456u;
 	unsigned int heighmapTextureID;
-	unsigned short viewportLevel_X = 10;
-	unsigned short viewportLevel_Z = 10;
-	float size_X = 1.f;
-	float size_Z = 1.f;
+	//unsigned short viewportLevel_X = 10;
+	//unsigned short viewportLevel_Z = 10;
+	//float size_X = 1.f;
+	//float size_Z = 1.f;
 	float height = 10.f;
 	float scale = 3.f;
+
+	float minHeight;
+	float maxHeight = 0.f;
+	float averageHeight;
+
+	int elevationMapSize = 1024;
+
+	//// erosion params
+	//std::vector<float> heights;
+	//int numIterations = 70000;
+	//float initialWaterVolume = 1;
+	//float initialSpeed = 1;
+	//int erosionRadius = 3;
+	//float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction. 
+	//float sedimentCapacityFactor = 4; // Multiplier for how much sediment a droplet can carry
+	//float minSedimentCapacity = .01f; // Used to prevent carry capacity getting too close to zero on flatter terrain
+	//float erodeSpeed = .3f;
+	//float depositSpeed = .3f;
+	//float evaporateSpeed = .01f;
+	//float gravity = 4;
+	//int maxDropletLifetime = 30;
+
+	// erosion params
+	std::vector<float> heights;
+	
+
+	// Indices and weights of erosion brush precomputed for every node
+	std::vector<std::vector<int>> erosionBrushIndices;
+	std::vector<std::vector<float>> erosionBrushWeights;
+
 
 	// temp
 	unsigned int debugNormalProgramID;
@@ -90,7 +124,23 @@ public:
 
 	void recreateHeightField();
 
+	void erode();
+
+	void createHeightMap();
+
+	void filterElevationMap(int size, int iterations);
+
+	void scaleElevationMap(int scaleFactor);
+
+	//void smoothFilterCreation(double** GKernel, int size);
+
+	void gaussianFilterCreation(double** GKernel, int size);
+
 	void createTerrainMesh(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices);
+
+	HeightAndGradient calculateHeightAndGradient(float posX, float posZ);
+
+	void initializeBrushIndices(int radius);
 
 	glm::vec4 evaluateColor(float& slope);
 
@@ -107,33 +157,3 @@ public:
 	void draw(Camera* camera, std::vector<Transform*>& pointLightTransforms, std::vector<Transform*>& dirLightTransforms);
 
 };
-
-#define NOT_STUPID 1
-#define ENDIAN NOT_STUPID
-
-namespace Convert {
-	inline uint32_t UI4Set(char byte_0, char byte_1, char byte_2, char byte_3) {
-#if ENDIAN == NOT_STUPID
-		return byte_0 | ((uint32_t)byte_1) << 8 | ((uint32_t)byte_2) << 16 |
-			((uint32_t)byte_3) << 24;
-#else
-		return byte_3 | ((uint32_t)byte_2) << 8 | ((uint32_t)byte_1) << 16 |
-			((uint32_t)byte_0) << 24;
-#endif
-	}
-
-	inline float FLTSet(char byte_0, char byte_1, char byte_2, char byte_3) {
-		uint32_t flt = UI4Set(byte_0, byte_1, byte_2, byte_3);
-		return *reinterpret_cast<float*>(&flt);
-	}
-
-	/* Use this function to write directly to RAM and avoid the xmm
-	   registers. */
-	inline uint32_t FLTSet(char byte_0, char byte_1, char byte_2, char byte_3,
-		float* destination) {
-		uint32_t value = UI4Set(byte_0, byte_1, byte_2, byte_3);
-		*reinterpret_cast<uint32_t*>(destination) = value;
-		return value;
-	}
-
-}

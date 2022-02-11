@@ -14,3 +14,21 @@ std::string Utility::str_tolower(std::string s) {
     );
     return s;
 }
+
+float Utility::getRandomFloat(float min, float max) {
+
+    std::random_device rd;
+    std::default_random_engine eng(rd());
+    std::uniform_real_distribution<> distr(min, max);
+    std::setprecision(10);
+    return distr(eng);
+}
+
+int Utility::getRandomInt(int min, int max) {
+
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(min, max);
+
+    return dist6(rng);
+}
