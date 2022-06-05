@@ -65,6 +65,7 @@ glm::mat4 Transform::getLocalModelMatrix()
 		glm::scale(glm::mat4(1.0f), localScale);
 }
 
+// gizmo ile hareket ettirildiginde
 void Transform::updateSelfAndChildTransforms()
 {
 	Transform::setLocalTransformation();
@@ -74,6 +75,7 @@ void Transform::updateSelfAndChildTransforms()
 	Transform::updateSelfAndChildRecursively();
 }
 
+// input ile degistirildiginde
 void Transform::updateSelfAndChild()
 {
 	if (parent != NULL) {
@@ -81,6 +83,9 @@ void Transform::updateSelfAndChild()
 		model = parent->model * getLocalModelMatrix();
 		Transform::setGlobalTransformation();
 		Transform::updatePhysics();
+
+		if (GameCamera* cam = entity->getComponent<GameCamera>())
+			cam->setMatrices();
 	}
 	Transform::updateSelfAndChildRecursively();
 }
@@ -92,6 +97,10 @@ void Transform::updateSelfAndChildRecursively()
 		transform->model = model * transform->getLocalModelMatrix();
 		transform->setGlobalTransformation();
 		Transform::updatePhysics();
+
+		// test edilmedi henuz
+		if (GameCamera* cam = entity->getComponent<GameCamera>())
+			cam->setMatrices();
 
 		transform->updateSelfAndChildRecursively();
 	}

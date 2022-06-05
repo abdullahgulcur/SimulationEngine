@@ -8,6 +8,9 @@ void EditorGUI::init(Editor* editor) {
 
 	this->editor = editor;
 	EditorGUI::initImGui();
+
+	bcr = new BoxColliderRenderer();
+	scr = new SphereColliderRenderer();
 }
 
 void EditorGUI::initImGui() {
@@ -22,7 +25,7 @@ void EditorGUI::initImGui() {
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		EditorGUI::setTheme();
 
-	ImGui_ImplGlfw_InitForOpenGL(editor->window.GLFW_window, true);
+	ImGui_ImplGlfw_InitForOpenGL(editor->window->GLFW_window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	EditorGUI::loadTextures();
@@ -35,7 +38,7 @@ void EditorGUI::newFrameImGui() {
 	ImGui::NewFrame();
 	ImGuizmo::BeginFrame();
 
-	EditorGUI::setTransformOperation();
+	//EditorGUI::setTransformOperation();
 }
 
 void EditorGUI::renderImGui() {
@@ -173,7 +176,7 @@ void EditorGUI::loadTextures() {
 
 void EditorGUI::handleInputs() {
 
-	std::vector<FileNode>* files = &editor->fileSystem.files;
+	std::vector<FileNode>* files = &editor->fileSystem->files;
 
 	if (Input::mouseDoubleClicked(0)) {
 
@@ -199,30 +202,30 @@ void EditorGUI::handleInputs() {
 				
 				if (MeshRenderer* meshRendererComp = lastSelectedEntity->getComponent<MeshRenderer>()) {
 
-					editor->fileSystem.writeMaterialFile(editor->fileSystem.files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
+					editor->fileSystem->writeMaterialFile(editor->fileSystem->files[meshRendererComp->mat->fileAddr->id].path, *meshRendererComp->mat); //
 
 					meshRendererComp->mat->deleteProgram();
-					meshRendererComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
-						editor->fileSystem.getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
+					meshRendererComp->mat->compileShaders(editor->fileSystem->getVertShaderPath(meshRendererComp->mat->vertShaderFileAddr),
+						editor->fileSystem->getFragShaderPath(meshRendererComp->mat->fragShaderFileAddr),
 						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 				else if (TerrainGenerator* terrainComp = lastSelectedEntity->getComponent<TerrainGenerator>()) {
 
-					editor->fileSystem.writeMaterialFile(editor->fileSystem.files[terrainComp->mat->fileAddr->id].path, *terrainComp->mat); //
+					editor->fileSystem->writeMaterialFile(editor->fileSystem->files[terrainComp->mat->fileAddr->id].path, *terrainComp->mat); //
 
 					terrainComp->mat->deleteProgram();
-					terrainComp->mat->compileShaders(editor->fileSystem.getVertShaderPath(terrainComp->mat->vertShaderFileAddr),
-						editor->fileSystem.getFragShaderPath(terrainComp->mat->fragShaderFileAddr),
+					terrainComp->mat->compileShaders(editor->fileSystem->getVertShaderPath(terrainComp->mat->vertShaderFileAddr),
+						editor->fileSystem->getFragShaderPath(terrainComp->mat->fragShaderFileAddr),
 						editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 				}
 			}
 			else {
 				
-				Material::MaterialFile& mat = editor->fileSystem.getMaterialFile(fileSystemControlVars.lastSelectedItemID);
-				editor->fileSystem.writeMaterialFile(editor->fileSystem.files[mat.fileAddr->id].path, mat);
+				Material::MaterialFile& mat = editor->fileSystem->getMaterialFile(fileSystemControlVars.lastSelectedItemID);
+				editor->fileSystem->writeMaterialFile(editor->fileSystem->files[mat.fileAddr->id].path, mat);
 
 				mat.deleteProgram();
-				mat.compileShaders(editor->fileSystem.getVertShaderPath(mat.vertShaderFileAddr), editor->fileSystem.getFragShaderPath(mat.fragShaderFileAddr),
+				mat.compileShaders(editor->fileSystem->getVertShaderPath(mat.vertShaderFileAddr), editor->fileSystem->getFragShaderPath(mat.fragShaderFileAddr),
 					editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
 			}
 
@@ -238,8 +241,8 @@ void EditorGUI::handleInputs() {
 			}
 			else {
 
-				Material::PhysicMaterialFile& mat = editor->fileSystem.getPhysicMaterialFile(fileSystemControlVars.lastSelectedItemID);
-				editor->fileSystem.writePhysicMaterialFile(editor->fileSystem.files[mat.fileAddr->id].path, mat);
+				Material::PhysicMaterialFile& mat = editor->fileSystem->getPhysicMaterialFile(fileSystemControlVars.lastSelectedItemID);
+				editor->fileSystem->writePhysicMaterialFile(editor->fileSystem->files[mat.fileAddr->id].path, mat);
 			}
 
 			physicMaterialChanged = false;
@@ -274,6 +277,8 @@ void EditorGUI::handleInputs() {
 
 	if (Input::mouseClicked(0)) {
 
+		bool hasTerrain = lastSelectedEntity && lastSelectedEntity->getComponent<TerrainGenerator>() != NULL;
+
 		fileSystemControlVars.mouseLeftPressed = true;
 
 		if (!fileSystemControlVars.panelRightItemTab && !inspectorHovered)
@@ -281,24 +286,44 @@ void EditorGUI::handleInputs() {
 
 		fileSystemControlVars.panelRightItemTab = false;
 
-		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing())
-			lastSelectedEntity = NULL;
+		if (!entityClicked && !inspectorHovered && !ImGuizmo::IsUsing()) {
 
-		if (!ImGuizmo::IsUsing()) {
+			if (hasTerrain) {
 
-			ImVec2 mousePos = ImGui::GetMousePos();
+				TerrainGenerator* terrain = lastSelectedEntity->getComponent<TerrainGenerator>();
+				if(!terrain->brushIntersectionPoint || !terrain->canUseBrush)
+					lastSelectedEntity = NULL;
+				//else
+				//	terrain->bump();
+			}
+			else
+				lastSelectedEntity = NULL;
+		}
+		if (!hasTerrain) {
 
-			float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
-			float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
+			if (!ImGuizmo::IsUsing()) {
 
-			mX = (mX / sceneRegion.x) * 1920;
-			mY = (mY / sceneRegion.y) * 1080;
+				ImVec2 mousePos = ImGui::GetMousePos();
 
-			if(mX != 0 && mY != 0)
-				editor->scene->mousepick.detect(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
+				float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
+				float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
+
+				mX = (mX / sceneRegion.x) * 1920;
+				mY = (mY / sceneRegion.y) * 1080;
+
+				if (mX != 0 && mY != 0) {
+
+					int entId = editor->scene->mousepick.detectAndGetEntityId(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
+
+					if (entId == -1)
+						lastSelectedEntity = NULL;
+					else
+						lastSelectedEntity = editor->scene->entities[entId];
+				}
+			}
 		}
 	}
-
+	
 	if (ImGui::GetIO().KeyCtrl) {
 
 		if (ImGui::IsKeyPressed('D')) {
@@ -307,12 +332,43 @@ void EditorGUI::handleInputs() {
 				lastSelectedEntity = editor->scene->duplicateEntity(lastSelectedEntity);
 
 			if (fileSystemControlVars.lastSelectedItemID != -1)
-				fileSystemControlVars.lastSelectedItemID = editor->fileSystem.duplicateFile(fileSystemControlVars.lastSelectedItemID);
+				fileSystemControlVars.lastSelectedItemID = editor->fileSystem->duplicateFile(fileSystemControlVars.lastSelectedItemID);
 		}
 
 		if (ImGui::IsKeyPressed('S')) {
 
 			editor->scene->saveEditorProperties();
+		}
+
+		ImGuiIO& io = ImGui::GetIO();
+		float x = io.MouseWheel;
+		if (x != 0) {
+
+			if (lastSelectedEntity) {
+
+				if (TerrainGenerator* terrain = lastSelectedEntity->getComponent<TerrainGenerator>()) {
+
+					float brushIncDecSpeed = 2.5f;
+					terrain->setBrushRadius(x * brushIncDecSpeed);
+				}
+			}
+		}
+	}
+
+	if (ImGui::GetIO().KeyShift) {
+
+		ImGuiIO& io = ImGui::GetIO();
+		float x = io.MouseWheel;
+		if (x != 0) {
+
+			if (lastSelectedEntity) {
+
+				if (TerrainGenerator* terrain = lastSelectedEntity->getComponent<TerrainGenerator>()) {
+
+					float brushIncDecSpeed = 2.5f;
+					terrain->setBrushIntensity(x * brushIncDecSpeed);
+				}
+			}
 		}
 	}
 
@@ -326,7 +382,7 @@ void EditorGUI::handleInputs() {
 
 		if (fileSystemControlVars.lastSelectedItemID != -1) {
 
-			editor->fileSystem.deleteFileCompletely(fileSystemControlVars.lastSelectedItemID);
+			editor->fileSystem->deleteFileCompletely(fileSystemControlVars.lastSelectedItemID);
 			fileSystemControlVars.lastSelectedItemID = -1;
 		}
 	}
@@ -343,6 +399,34 @@ void EditorGUI::handleInputs() {
 
 		if (fileSystemControlVars.renameItemID != -1)
 			fileSystemControlVars.renameItemID = -1;
+	}
+
+	if (ImGui::IsMouseDown(0)) {
+
+		if (lastSelectedEntity) {
+
+			TerrainGenerator* terrain = lastSelectedEntity->getComponent<TerrainGenerator>();
+
+			if (terrain) {
+
+				if (terrain->brushIntersectionPoint && terrain->canUseBrush) {
+
+					terrain->bump();
+				}
+			}
+		}
+	}
+
+	if (!ImGui::GetIO().KeyCtrl) {
+
+		if (ImGui::IsKeyPressed('T'))
+			optype = ImGuizmo::OPERATION::TRANSLATE;
+
+		if (ImGui::IsKeyPressed('R'))
+			optype = ImGuizmo::OPERATION::ROTATE;
+
+		if (ImGui::IsKeyPressed('S'))
+			optype = ImGuizmo::OPERATION::SCALE;
 	}
 }
 
@@ -413,12 +497,8 @@ void EditorGUI::secondaryMenuBar()
 
 			if (!editor->gameStarted) {
 
-				if (ImGui::ImageButton((ImTextureID)editorIcons.startTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-
-					//editor->sceneTemp = new Scene();
-					//editor->scene->copyScene(editor->sceneTemp);
+				if (ImGui::ImageButton((ImTextureID)editorIcons.startTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
 					editor->gameStarted = true;
-				}
 			}
 			else {
 
@@ -426,8 +506,6 @@ void EditorGUI::secondaryMenuBar()
 
 					editor->scene->deleteScene();
 					editor->scene->initSceneGraph();
-					//editor->scene = editor->sceneTemp;
-					//editor->sceneTemp = NULL;
 					editor->gameStarted = false;
 				}
 			}
@@ -492,6 +570,7 @@ void EditorGUI::createPanels() {
 	EditorGUI::createFilesPanel();
 	EditorGUI::createScenePanel();
 	EditorGUI::createConsolePanel();
+	EditorGUI::createGamePanel();
 
 	EditorGUI::handleInputs();
 
@@ -508,12 +587,9 @@ void EditorGUI::createScenePanel() {
 	scenePos = ImGui::GetCursorScreenPos();
 	sceneRegion = ImGui::GetContentRegionAvail();
 
-	// TODO: Only change these values when resized
-	editor->editorCamera.aspectRatio = sceneRegion.x / sceneRegion.y;
-	editor->editorCamera.fovX = Math::getFOV_X(editor->editorCamera.fovY, editor->editorCamera.aspectRatio);
-	//std::cout << "FOV X: " << editor->editorCamera.fovX << std::endl;
+	editor->sceneCamera->aspectRatio = sceneRegion.x / sceneRegion.y;
 
-	ImGui::Image((ImTextureID)editor->window.textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((ImTextureID)editor->sceneCamera->textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
 
 	if (lastSelectedEntity) {
 
@@ -525,7 +601,11 @@ void EditorGUI::createScenePanel() {
 
 		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
 		glm::mat4& model = lastSelectedEntity->transform->model;
-		ImGuizmo::Manipulate(glm::value_ptr(editor->editorCamera.ViewMatrix), glm::value_ptr(editor->editorCamera.ProjectionMatrix),
+
+		if (GameCamera* cam = lastSelectedEntity->getComponent<GameCamera>())
+			cam->setMatrices();
+
+		ImGuizmo::Manipulate(glm::value_ptr(editor->sceneCamera->ViewMatrix), glm::value_ptr(editor->sceneCamera->ProjectionMatrix),
 			optype, ImGuizmo::LOCAL, glm::value_ptr(model));
 
 		if (ImGuizmo::IsUsing()) {
@@ -555,14 +635,7 @@ void EditorGUI::createScenePanel() {
 
 void EditorGUI::setTransformOperation() {
 
-	if(ImGui::IsKeyPressed('T'))
-		optype = ImGuizmo::OPERATION::TRANSLATE;
 
-	if (ImGui::IsKeyPressed('R'))
-		optype = ImGuizmo::OPERATION::ROTATE;
-
-	if (ImGui::IsKeyPressed('S'))
-		optype = ImGuizmo::OPERATION::SCALE;
 }
 
 //----- CONSOLE MENU -----
@@ -570,6 +643,16 @@ void EditorGUI::setTransformOperation() {
 void EditorGUI::createConsolePanel() {
 
 	ImGui::Begin("Console");
+
+	ImGui::End();
+}
+
+
+void EditorGUI::createGamePanel() {
+
+	ImGui::Begin("Game");
+
+	ImGui::Image((ImTextureID)editor->scene->primaryCamera->textureBuffer, ImVec2(1920, 1080), ImVec2(0, 1), ImVec2(1, 0));
 
 	ImGui::End();
 }
@@ -609,7 +692,7 @@ void EditorGUI::createInspectorPanel() {
 
 			MaterialFile& material = *terrainComp->mat;
 			EditorGUI::showTerrainGeneratorComponent(terrainComp, index++);
-			EditorGUI::showMaterialProperties(material, index++);
+			//EditorGUI::showMaterialProperties(material, index++);
 		}
 
 		if (Light* lightComp = lastSelectedEntity->getComponent<Light>())
@@ -638,16 +721,19 @@ void EditorGUI::createInspectorPanel() {
 		for (auto& comp : meshColliderCompList)
 			EditorGUI::showMeshColliderComponent(comp, index++, meshColliderCompIndex++);
 
+		if(GameCamera* gameCameraComp = lastSelectedEntity->getComponent<GameCamera>())
+			EditorGUI::showGameCameraComponent(gameCameraComp, index++);
+
 		ImGui::PopStyleColor(); // for the separator
 
 		EditorGUI::addComponentButton();
 	}
 
-	if (fileSystemControlVars.lastSelectedItemID != -1 && editor->fileSystem.files[fileSystemControlVars.lastSelectedItemID].type == FileType::material)
-		EditorGUI::showMaterialProperties(editor->fileSystem.getMaterialFile(fileSystemControlVars.lastSelectedItemID), 0);
+	if (fileSystemControlVars.lastSelectedItemID != -1 && editor->fileSystem->files[fileSystemControlVars.lastSelectedItemID].type == FileType::material)
+		EditorGUI::showMaterialProperties(editor->fileSystem->getMaterialFile(fileSystemControlVars.lastSelectedItemID), 0);
 
-	if (fileSystemControlVars.lastSelectedItemID != -1 && editor->fileSystem.files[fileSystemControlVars.lastSelectedItemID].type == FileType::physicmaterial)
-		EditorGUI::showPhysicMaterialProperties(editor->fileSystem.getPhysicMaterialFile(fileSystemControlVars.lastSelectedItemID));
+	if (fileSystemControlVars.lastSelectedItemID != -1 && editor->fileSystem->files[fileSystemControlVars.lastSelectedItemID].type == FileType::physicmaterial)
+		EditorGUI::showPhysicMaterialProperties(editor->fileSystem->getPhysicMaterialFile(fileSystemControlVars.lastSelectedItemID));
 
 	ImGui::Unindent(6);
 
@@ -674,7 +760,7 @@ void EditorGUI::addComponentButton() {
 	}
 	ImGui::Unindent((width - 120) / 2);
 
-	ImGui::SetNextWindowSize(ImVec2(180, 230));
+	ImGui::SetNextWindowSize(ImVec2(180, 260));
 
 	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 	if (ImGui::BeginPopupContextItem("add_component_popup"))
@@ -684,9 +770,17 @@ void EditorGUI::addComponentButton() {
 		}
 		//ImGui::Separator();
 
-		//if (ImGui::Selectable("   Animator")) {
+		//if (ImGui::Selectable("   Animator")) { // bir gun buraya gelinirse o zaman buyuk bir is yapilmis demektir ;)
 
 		//}
+
+		ImGui::Separator();
+
+		if (ImGui::Selectable("   Game Camera")) {
+
+			GameCamera* gameCamComp = lastSelectedEntity->addComponent<GameCamera>();
+		}
+
 		ImGui::Separator();
 
 		if (ImGui::Selectable("   Collider (Box)")) {
@@ -757,8 +851,8 @@ void EditorGUI::addComponentButton() {
 
 			if (MeshRenderer* meshRendererComp = lastSelectedEntity->addComponent<MeshRenderer>()) {
 
-				meshRendererComp->mesh = &editor->fileSystem.meshes["Null"];
-				meshRendererComp->mat = &editor->fileSystem.materials["Default"];
+				meshRendererComp->mesh = &editor->fileSystem->meshes["Null"];
+				meshRendererComp->mat = &editor->fileSystem->materials["Default"];
 			}
 			else
 				statusMessage = "There is existing component in the same type!";
@@ -774,9 +868,9 @@ void EditorGUI::addComponentButton() {
 					lastSelectedEntity->transform->globalPosition.z),
 					PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
 
-				rigidbodyComp->body = editor->physics.gPhysics->createRigidDynamic(tm);
+				rigidbodyComp->body = editor->physics->gPhysics->createRigidDynamic(tm);
 				rigidbodyComp->body->setMass(1.f);
-				editor->physics.gScene->addActor(*rigidbodyComp->body);
+				editor->physics->gScene->addActor(*rigidbodyComp->body);
 
 				for (auto& comp : lastSelectedEntity->getComponents<Collider>())
 					rigidbodyComp->body->attachShape(*comp->shape);
@@ -790,7 +884,7 @@ void EditorGUI::addComponentButton() {
 		if (ImGui::Selectable("   Terrain")) {
 
 			if (TerrainGenerator* terrainComp = lastSelectedEntity->addComponent<TerrainGenerator>())
-				terrainComp->init(&editor->fileSystem.materials["Default"]);
+				terrainComp->init(&editor->fileSystem->materials["Default"]);
 		}
 
 		//if (ImGui::Selectable("   Script")) {
@@ -843,6 +937,98 @@ void EditorGUI::showEntityName() {
 		if (strlen(str0) != 0)
 			editor->scene->renameEntity(lastSelectedEntity, str0);
 		renameEntity = NULL;
+	}
+
+	ImGui::Separator();
+}
+
+void EditorGUI::showGameCameraComponent(GameCamera* camComp, int index) {
+
+	float width = ImGui::GetContentRegionAvail().x;
+
+	ImGui::SetNextItemOpen(true);
+
+	char str[4] = { '#', '#', '0', '\0' };
+	char indexChar = '0' + index;
+	str[2] = indexChar;
+	bool treeNodeOpen = ImGui::TreeNode(str);
+
+	int frame_padding = 1;
+	ImVec2 size = ImVec2(16.0f, 16.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SameLine(25);
+	ImGui::Image((ImTextureID)editorIcons.meshrendererTextureID, size, uv0, uv1, tint_col, border_col);
+	ImGui::SameLine();
+	ImGui::Text("  Game Camera");
+
+	ImGui::SameLine();
+	ImVec2 pos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+	if (ImGui::ImageButton((ImTextureID)editorIcons.contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
+		ImGui::OpenPopup("context_menu_popup");
+
+	if (EditorGUI::contextMenuPopup(ComponentType::GameCamera, 0)) {
+
+		ImGui::TreePop();
+		return;
+	}
+
+	if (treeNodeOpen) {
+
+		ImVec2 pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+		const char** projectionTypes = new const char* [2];
+		projectionTypes[0] = "Perspective";
+		projectionTypes[1] = "Orthographic";
+
+		const char** fovAxis = new const char* [2];
+		fovAxis[0] = "Vertical";
+		fovAxis[1] = "Horizontal";
+
+		ImGui::Text("Projection    ");
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+		ImGui::SetNextItemWidth(width - 130);
+		if (ImGui::Combo("##0", &camComp->projectionType, projectionTypes, 2))
+			camComp->createEditorGizmos(true);
+
+		ImGui::Text("FOV Axis      ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 130);
+		int oldFovAxis = camComp->fovAxis;
+		if(ImGui::Combo("##1", &camComp->fovAxis, fovAxis, 2))
+			camComp->changeFovAxis(oldFovAxis);
+
+		ImGui::Text("FOV           ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 130);
+		if(ImGui::DragFloat("##2", &camComp->fov, 1.f, 1.f, 179.f, "%.1f"))
+			camComp->createEditorGizmos(true);
+
+		ImGui::Text("Near          ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 130);
+		if(ImGui::DragFloat("##3", &camComp->nearClip, 0.01f, 0.f, 10.f, "%.2f"))
+			camComp->createEditorGizmos(true);
+
+		ImGui::Text("Far           ");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(width - 130);
+		if(ImGui::DragFloat("##4", &camComp->farClip, 1.f, 100.f, 10000.f, "%.2f"))
+			camComp->createEditorGizmos(true);
+
+		delete[] projectionTypes;
+		delete[] fovAxis;
+
+		ImGui::PopStyleColor();
+		ImGui::TreePop();
 	}
 
 	ImGui::Separator();
@@ -979,8 +1165,8 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
-		int size_meshes = editor->fileSystem.meshes.size();
-		int size_mats = editor->fileSystem.materials.size();
+		int size_meshes = editor->fileSystem->meshes.size();
+		int size_mats = editor->fileSystem->materials.size();
 		const char** meshNames = new const char* [size_meshes];
 		const char** meshPaths = new const char* [size_meshes];
 		const char** matPaths = new const char* [size_mats];
@@ -996,13 +1182,13 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 		matNames[0] = "Default";
 
 		int i = 1;
-		for (auto& it : editor->fileSystem.meshes) {
+		for (auto& it : editor->fileSystem->meshes) {
 
 			if (it.second.fileAddr == NULL)
 				continue;
 
-			meshNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
-			meshPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+			meshNames[i] = editor->fileSystem->files[it.second.fileAddr->id].name.c_str();
+			meshPaths[i] = editor->fileSystem->files[it.second.fileAddr->id].path.c_str();
 
 			if (meshRendererComp->mesh->fileAddr == it.second.fileAddr)
 				meshIndex = i;
@@ -1017,18 +1203,18 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 		if (ImGui::Combo("##0", &meshIndex, meshNames, size_meshes)) {
 			meshRendererComp->mesh->meshRendererCompAddrs.erase(std::remove(meshRendererComp->mesh->meshRendererCompAddrs.begin(),
 				meshRendererComp->mesh->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mesh->meshRendererCompAddrs.end());
-			meshRendererComp->mesh = &editor->fileSystem.meshes[meshPaths[meshIndex]];
+			meshRendererComp->mesh = &editor->fileSystem->meshes[meshPaths[meshIndex]];
 			meshRendererComp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
 		}
 
 		i = 1;
-		for (auto& it : editor->fileSystem.materials) {
+		for (auto& it : editor->fileSystem->materials) {
 
 			if (it.second.fileAddr == NULL)
 				continue;
 
-			matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-			matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			matPaths[i] = editor->fileSystem->files[it.second.fileAddr->id].path.c_str();
+			matNames[i] = editor->fileSystem->files[it.second.fileAddr->id].name.c_str();
 
 			if (meshRendererComp->mat->fileAddr == it.second.fileAddr)
 				matIndex = i;
@@ -1042,7 +1228,7 @@ void EditorGUI::showMeshRendererComponent(MeshRenderer* meshRendererComp, int in
 		if (ImGui::Combo("##1", &matIndex, matNames, size_mats)) {
 			meshRendererComp->mat->meshRendererCompAddrs.erase(std::remove(meshRendererComp->mat->meshRendererCompAddrs.begin(),
 				meshRendererComp->mat->meshRendererCompAddrs.end(), meshRendererComp), meshRendererComp->mat->meshRendererCompAddrs.end());
-			meshRendererComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
+			meshRendererComp->mat = &editor->fileSystem->materials[matPaths[matIndex]];
 			meshRendererComp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
 		}
 		
@@ -1100,13 +1286,101 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		ImGui::Button("Load Heightmap", ImVec2(120, 18));
+		ImGui::SliderFloat("Brush Radius", &terrainComp->brushRadius, 1.0f, 100.0f);
+		ImGui::SliderFloat("Brush Intensity", &terrainComp->brushIntensity, 1.0f, 100.0f);
 
-		int size_mats = editor->fileSystem.materials.size();
-		const char** matPaths = new const char* [size_mats];
-		const char** matNames = new const char* [size_mats];
-		int matIndex = 0;
-		matPaths[0] = "Default";
-		matNames[0] = "Default";
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("Brushes");
+		if (treeNodeOpen) {
+
+			static char selectedIndex = 0;
+
+			/*ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.13f, 0.13f, 0.13f, 1.0f));
+
+			ImGui::PushID(0);
+			if (ImGui::Selectable("Bump", 0 == selectedIndex, 0, ImVec2(40, 40)))
+				selectedIndex = 0;
+			ImGui::PopID();
+
+			ImGui::SameLine();
+			ImGui::PushID(1);
+			if (ImGui::Selectable("Erode", 1 == selectedIndex, 0, ImVec2(40, 40)))
+				selectedIndex = 1;
+			ImGui::PopID();
+
+			ImGui::SameLine();
+			ImGui::PushID(2);
+			if (ImGui::Selectable("Smooth", 2 == selectedIndex, 0, ImVec2(40, 40)))
+				selectedIndex = 2;
+			ImGui::PopID();
+
+			ImGui::PopStyleColor();*/
+
+			static int e = 0;
+			ImGui::RadioButton("Bump", &e, 0); ImGui::SameLine();
+			ImGui::RadioButton("Hollow", &e, 1); ImGui::SameLine();
+			ImGui::RadioButton("Erode", &e, 2); ImGui::SameLine();
+			ImGui::RadioButton("Smooth", &e, 3);
+			//ImGui::RadioButton("Bump", &e, 4); ImGui::SameLine();
+			//ImGui::RadioButton("Hollow", &e, 5); ImGui::SameLine();
+			//ImGui::RadioButton("Erode", &e, 6); ImGui::SameLine();
+			//ImGui::RadioButton("Smooth", &e, 7);
+
+			
+
+
+			ImGui::TreePop();
+		}
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##1");
+		ImGui::SameLine();
+		ImGui::Text(" Textures");
+		if (treeNodeOpen) {
+
+			ImGui::TreePop();
+		}
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##2");
+		ImGui::SameLine();
+		ImGui::Text(" Trees");
+		if (treeNodeOpen) {
+
+			ImGui::TreePop();
+		}
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##3");
+		ImGui::SameLine();
+		ImGui::Text(" Bushes");
+		if (treeNodeOpen) {
+
+			ImGui::TreePop();
+		}
+
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##4");
+		ImGui::SameLine();
+		ImGui::Text(" Grasses");
+		if (treeNodeOpen) {
+
+			ImGui::TreePop();
+		}
+
+
+		//int size_mats = editor->fileSystem.materials.size();
+		//const char** matPaths = new const char* [size_mats];
+		//const char** matNames = new const char* [size_mats];
+		//int matIndex = 0;
+		//matPaths[0] = "Default";
+		//matNames[0] = "Default";
 
 		/*int size_textures = editor->fileSystem.textures.size();
 		const char** texPaths = new const char* [size_textures];
@@ -1115,23 +1389,23 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		texPaths[0] = "NULL";
 		texNames[0] = "NULL";*/
 
-		int i = 1;
+		//int i = 1;
 
-		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+		//ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
 
-		i = 1;
-		for (auto& it : editor->fileSystem.materials) {
+		//i = 1;
+		//for (auto& it : editor->fileSystem.materials) {
 
-			if (it.second.fileAddr == NULL)
-				continue;
+		//	if (it.second.fileAddr == NULL)
+		//		continue;
 
-			matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-			matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+		//	matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
+		//	matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
 
-			if (terrainComp->mat->fileAddr == it.second.fileAddr)
-				matIndex = i;
-			i++;
-		}
+		//	if (terrainComp->mat->fileAddr == it.second.fileAddr)
+		//		matIndex = i;
+		//	i++;
+		//}
 
 		/*i = 1;
 		for (auto& it : editor->fileSystem.textures) {
@@ -1147,15 +1421,15 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			i++;
 		}*/
 
-		ImGui::Text("Material    ");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(width - 115);
+		//ImGui::Text("Material    ");
+		//ImGui::SameLine();
+		//ImGui::SetNextItemWidth(width - 115);
 
-		if (ImGui::Combo("##1", &matIndex, matNames, size_mats))
-			terrainComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
+		//if (ImGui::Combo("##1", &matIndex, matNames, size_mats))
+		//	terrainComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
 
-		delete[] matPaths;
-		delete[] matNames;
+		//delete[] matPaths;
+		//delete[] matNames;
 
 		//ImGui::Text("Material    ");
 		//ImGui::SameLine();
@@ -1180,7 +1454,7 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 		//ImGui::PopID();
 		//ImGui::SameLine();
-		pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+		//pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 		//ImGui::Text(editor->fileSystem.files[terrainComp->heightmap->id].name.c_str());
 
 		/*ImGui::Text("Viewport Level X    "); ImGui::SameLine();
@@ -1205,33 +1479,33 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		if(ImGui::DragFloat("##5", &terrainComp->size_Z, 0.1f, 0, 0, "%.2f"))
 			terrainComp->recreateHeightField();*/
 
-		ImGui::Text("Seed    "); ImGui::SameLine();
-		int seed = terrainComp->seed;
-		if (ImGui::DragInt("##6", &seed, 1.f, 0, 2147483647, "%d")) {
-			terrainComp->seed = EditorGUI::dragUnitValueAssign(0, 2147483647, seed);
-			terrainComp->recreateHeightField();
-		}
+	//	ImGui::Text("Seed    "); ImGui::SameLine();
+	//	//int seed = terrainComp->seed;
+	//	if (ImGui::DragInt("##6", &seed, 1.f, 0, 2147483647, "%d")) {
+	//		//terrainComp->seed = EditorGUI::dragUnitValueAssign(0, 2147483647, seed);
+	//		//terrainComp->recreateHeightField();
+	//	}
 
-		ImGui::Text("Height    "); ImGui::SameLine();
-		float height = terrainComp->height;
-		if (ImGui::DragFloat("##7", &height, 0.01f, 0.f, 100.f, "%.2f")) {
-			terrainComp->height = EditorGUI::dragUnitValueAssign(0.f, 100.f, height);
-			terrainComp->recreateHeightField();
-		}
+	//	ImGui::Text("Height    "); ImGui::SameLine();
+	////	float height = terrainComp->height;
+	//	if (ImGui::DragFloat("##7", &height, 0.01f, 0.f, 100.f, "%.2f")) {
+	//		//terrainComp->height = EditorGUI::dragUnitValueAssign(0.f, 100.f, height);
+	//		//terrainComp->recreateHeightField();
+	//	}
 
-		ImGui::Text("Scale    "); ImGui::SameLine();
-		float scale = terrainComp->scale;
-		if (ImGui::DragFloat("##8", &scale, 0.01f, 0.f, 10.f, "%.2f")) {
-			terrainComp->scale = EditorGUI::dragUnitValueAssign(0.f, 10.f, scale);
-			terrainComp->recreateHeightField();
-		}
+	//	ImGui::Text("Scale    "); ImGui::SameLine();
+	//	//float scale = terrainComp->scale;
+	//	if (ImGui::DragFloat("##8", &scale, 0.01f, 0.f, 10.f, "%.2f")) {
+	//		//terrainComp->scale = EditorGUI::dragUnitValueAssign(0.f, 10.f, scale);
+	//		//terrainComp->recreateHeightField();
+	//	}
 
-		if (ImGui::Button("Erode", ImVec2(120, 18))) {
-			terrainComp->erode();
-			terrainComp->recreateHeightField();
-		}
+	//	if (ImGui::Button("Erode", ImVec2(120, 18))) {
+	//		//terrainComp->erode();
+	//		//terrainComp->recreateHeightField();
+	//	}
 
-		ImGui::PopStyleColor();
+		//ImGui::PopStyleColor();
 		ImGui::TreePop();
 	}
 
@@ -1410,13 +1684,13 @@ void EditorGUI::showMaterialProperties(MaterialFile& material, int index) {
 
 	if (treeNodeOpen) {
 
-		std::vector<FileNode>& files = editor->fileSystem.files;
+		std::vector<FileNode>& files = editor->fileSystem->files;
 
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 		{
-			std::unordered_map<std::string, ShaderFile>& vertShaders = editor->fileSystem.vertShaders;
+			std::unordered_map<std::string, ShaderFile>& vertShaders = editor->fileSystem->vertShaders;
 			ImGui::Text("Vert Shader");
 
 			int indiceSize = vertShaders.size();
@@ -1425,7 +1699,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material, int index) {
 			shaderNames[0] = "Default\0";
 			shaderPaths[0] = "source/shader/Default.vert\0";
 
-			const char* vertShaderPath = editor->fileSystem.getVertShaderPath(material.vertShaderFileAddr);
+			const char* vertShaderPath = editor->fileSystem->getVertShaderPath(material.vertShaderFileAddr);
 
 			int index = 0;
 			int i = 1;
@@ -1457,7 +1731,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material, int index) {
 		}
 
 		{
-			std::unordered_map<std::string, ShaderFile>& fragShaders = editor->fileSystem.fragShaders;
+			std::unordered_map<std::string, ShaderFile>& fragShaders = editor->fileSystem->fragShaders;
 			ImGui::Text("Frag Shader");
 
 			int indiceSize = fragShaders.size();
@@ -1466,7 +1740,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material, int index) {
 			shaderNames[0] = "Default";
 			shaderPaths[0] = "source/shader/Default.frag\0";
 
-			const char* fragShaderPath = editor->fileSystem.getFragShaderPath(material.fragShaderFileAddr);;
+			const char* fragShaderPath = editor->fileSystem->getFragShaderPath(material.fragShaderFileAddr);;
 
 			int index = 0;
 			int i = 1;
@@ -1507,7 +1781,7 @@ void EditorGUI::showMaterialProperties(MaterialFile& material, int index) {
 					material.floatUnits.clear();
 
 					for (int i = 0; i < sampler2DCount; i++) {
-						material.textureUnits.push_back(editor->fileSystem.textures["whitetexture"].textureID);
+						material.textureUnits.push_back(editor->fileSystem->textures["whitetexture"].textureID);
 						material.textureUnitFileAddrs.push_back(NULL);
 					}
 
@@ -1806,7 +2080,7 @@ void EditorGUI::showColliderPhysicMaterial(T* colliderComp, float windowWidth, i
 	ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 	ImGui::SameLine(); ImGui::SetNextItemWidth(windowWidth - 115);
 
-	std::unordered_map<std::string, PhysicMaterialFile>& physicmaterials = editor->fileSystem.physicmaterials;
+	std::unordered_map<std::string, PhysicMaterialFile>& physicmaterials = editor->fileSystem->physicmaterials;
 	int indiceSize = physicmaterials.size();
 	const char** pmatNames = new const char* [indiceSize];
 	const char** pmatPaths = new const char* [indiceSize];
@@ -1814,7 +2088,7 @@ void EditorGUI::showColliderPhysicMaterial(T* colliderComp, float windowWidth, i
 	pmatPaths[0] = "Default";
 
 	Collider* collider = dynamic_cast<Collider*>(colliderComp);
-	const char* pmatPath = editor->fileSystem.getPhysicMaterialPath(collider->pmat->fileAddr);
+	const char* pmatPath = editor->fileSystem->getPhysicMaterialPath(collider->pmat->fileAddr);
 
 	int index = 0;
 	int i = 1;
@@ -1824,8 +2098,8 @@ void EditorGUI::showColliderPhysicMaterial(T* colliderComp, float windowWidth, i
 		if (pmatFile.second.fileAddr == NULL)
 			continue;
 
-		pmatNames[i] = editor->fileSystem.files[pmatFile.second.fileAddr->id].name.c_str();
-		pmatPaths[i] = editor->fileSystem.files[pmatFile.second.fileAddr->id].path.c_str();
+		pmatNames[i] = editor->fileSystem->files[pmatFile.second.fileAddr->id].name.c_str();
+		pmatPaths[i] = editor->fileSystem->files[pmatFile.second.fileAddr->id].path.c_str();
 
 		if (pmatFile.second.fileAddr == collider->pmat->fileAddr)
 			index = i;
@@ -1942,8 +2216,8 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 
 						rb->body->detachShape(*meshColliderComp->shape);
 						PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),//should we delete afterwards??
-							editor->physics.gPhysics, editor->physics.gCooking);
-						meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+							editor->physics->gPhysics, editor->physics->gCooking);
+						meshColliderComp->shape = editor->physics->gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
 							PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
 							*meshColliderComp->pmat->pxmat, true);
 						rb->body->attachShape(*meshColliderComp->shape);
@@ -1954,8 +2228,8 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 
 					rb->body->detachShape(*meshColliderComp->shape);
 					PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
-						editor->physics.gPhysics, editor->physics.gCooking);
-					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+						editor->physics->gPhysics, editor->physics->gCooking);
+					meshColliderComp->shape = editor->physics->gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
 						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
 						*meshColliderComp->pmat->pxmat, true);
 					rb->body->attachShape(*meshColliderComp->shape);
@@ -1968,8 +2242,8 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 				
 					meshColliderComp->shape->release();
 					PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
-						editor->physics.gPhysics, editor->physics.gCooking);
-					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+						editor->physics->gPhysics, editor->physics->gCooking);
+					meshColliderComp->shape = editor->physics->gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
 						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
 						*meshColliderComp->pmat->pxmat, true);
 				}
@@ -1977,8 +2251,8 @@ void EditorGUI::showMeshColliderComponent(MeshCollider* meshColliderComp, int in
 
 					meshColliderComp->shape->release();
 					PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(meshColliderComp->transform->entity->getComponent<MeshRenderer>(),
-						editor->physics.gPhysics, editor->physics.gCooking);
-					meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+						editor->physics->gPhysics, editor->physics->gCooking);
+					meshColliderComp->shape = editor->physics->gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
 						PxVec3(lastSelectedEntity->transform->globalScale.x, lastSelectedEntity->transform->globalScale.y, lastSelectedEntity->transform->globalScale.z)),
 						*meshColliderComp->pmat->pxmat, true);
 				}
@@ -2298,7 +2572,7 @@ void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) 
 	if (ImGui::BeginPopup("texture_menu_popup"))
 	{
 		unsigned int iterateIndex = 0;
-		for (auto& it : editor->fileSystem.textures) {
+		for (auto& it : editor->fileSystem->textures) {
 
 			ImGui::BeginGroup();
 			{
@@ -2320,7 +2594,7 @@ void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) 
 
 				char name[32];
 				if (it.second.fileAddr != NULL)
-					strcpy(name, editor->fileSystem.files[it.second.fileAddr->id].name.c_str());
+					strcpy(name, editor->fileSystem->files[it.second.fileAddr->id].name.c_str());
 				else
 					strcpy(name, "White\0");
 
@@ -2541,7 +2815,7 @@ bool EditorGUI::contextMenuPopup(ComponentType type, int index) {
 				//for (auto& col : lastSelectedEntity->getComponents<Collider>()) WTF
 					//rb->body->detachShape(*col->shape);
 
-				editor->physics.gScene->removeActor(*rb->body);
+				editor->physics->gScene->removeActor(*rb->body);
 				lastSelectedEntity->removeComponent<Rigidbody>();
 				break;
 			}
@@ -2914,7 +3188,7 @@ void EditorGUI::createFilesPanel() {
 	if (ImGui::TreeNode("MyProject"))
 	{
 		ImGui::Unindent(ImGui::GetStyle().IndentSpacing);
-		EditorGUI::createFoldersRecursively(editor->fileSystem.rootFile);
+		EditorGUI::createFoldersRecursively(editor->fileSystem->rootFile);
 		ImGui::TreePop();
 	}
 
@@ -2967,7 +3241,7 @@ void EditorGUI::showCurrentDirectoryText() {
 	if (lastClickedItemID == -1)
 		return;
 
-	std::vector<FileNode>* files = &editor->fileSystem.files;
+	std::vector<FileNode>* files = &editor->fileSystem->files;
 
 	std::stack<File*>fileStack;
 	File* iter = (*files)[lastClickedItemID].addr;
@@ -3028,7 +3302,7 @@ void EditorGUI::showCurrentDirectoryText() {
 
 void EditorGUI::createFoldersRecursively(File* file) {
 
-	std::vector<FileNode>* files = &editor->fileSystem.files;
+	std::vector<FileNode>* files = &editor->fileSystem->files;
 
 	for (int i = 0; i < file->subfiles.size(); i++) {
 
@@ -3039,13 +3313,13 @@ void EditorGUI::createFoldersRecursively(File* file) {
 
 		ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-		bool hasSubFolder = editor->fileSystem.hasSubFolder(file->subfiles[i]);
+		bool hasSubFolder = editor->fileSystem->hasSubFolder(file->subfiles[i]);
 		if (!hasSubFolder)
 			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 		else
 			node_flags |= ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-		if (editor->fileSystem.subfolderCheck((*files)[lastClickedItemID].addr, file->subfiles[i])) {
+		if (editor->fileSystem->subfolderCheck((*files)[lastClickedItemID].addr, file->subfiles[i])) {
 
 			if (!fileSystemControlVars.subfolderCheckFlag)
 				ImGui::SetNextItemOpen(true);
@@ -3078,7 +3352,7 @@ void EditorGUI::createFoldersRecursively(File* file) {
 			{
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
-				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+				editor->fileSystem->moveFile(payload_n, file->subfiles[i]->id);
 				return;
 			}
 
@@ -3086,7 +3360,7 @@ void EditorGUI::createFoldersRecursively(File* file) {
 			{
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
-				editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+				editor->fileSystem->moveFile(payload_n, file->subfiles[i]->id);
 				return;
 			}
 			ImGui::EndDragDropTarget();
@@ -3126,7 +3400,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 		return;
 
 	File* file = NULL;
-	std::vector<FileNode>* files = &editor->fileSystem.files;
+	std::vector<FileNode>* files = &editor->fileSystem->files;
 
 	if ((*files)[lastClickedItemID].type == FileType::folder)
 		file = (*files)[lastClickedItemID].addr;
@@ -3199,7 +3473,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 
 				if (ImGui::Selectable("   Delete")) {
 
-					editor->fileSystem.deleteFileCompletely(fileSystemControlVars.lastSelectedItemID);
+					editor->fileSystem->deleteFileCompletely(fileSystemControlVars.lastSelectedItemID);
 					fileSystemControlVars.lastSelectedItemID = -1;
 
 					// include all the necessary end codes...
@@ -3212,7 +3486,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 
 				if (ImGui::Selectable("   Duplicate")) {
 
-					editor->fileSystem.duplicateFile(fileSystemControlVars.lastSelectedItemID);
+					editor->fileSystem->duplicateFile(fileSystemControlVars.lastSelectedItemID);
 
 					// include all the necessary end codes...
 					ImGui::PopStyleColor();
@@ -3257,7 +3531,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 				{
 					IM_ASSERT(payload->DataSize == sizeof(int));
 					int payload_n = *(const int*)payload->Data;
-					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+					editor->fileSystem->moveFile(payload_n, file->subfiles[i]->id);
 
 					// include all the necessary end codes...
 					ImGui::PopID();
@@ -3268,7 +3542,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 				{
 					IM_ASSERT(payload->DataSize == sizeof(int));
 					int payload_n = *(const int*)payload->Data;
-					editor->fileSystem.moveFile(payload_n, file->subfiles[i]->id);
+					editor->fileSystem->moveFile(payload_n, file->subfiles[i]->id);
 
 					// include all the necessary end codes...
 					ImGui::PopID();
@@ -3300,7 +3574,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 				if (ImGui::InputText(temp, str0, IM_ARRAYSIZE(str0), input_text_flags)) {
 
 					if (strlen(str0) != 0)
-						editor->fileSystem.rename(file->subfiles[i]->id, str0);
+						editor->fileSystem->rename(file->subfiles[i]->id, str0);
 				}
 			}
 			else {
@@ -3343,17 +3617,17 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.20f, 0.20f, 2.0f));
 
 		if (ImGui::Selectable("   New Folder"))
-			editor->fileSystem.newFolder(file->id, "Folder");
+			editor->fileSystem->newFolder(file->id, "Folder");
 
 		ImVec2 p = ImGui::GetCursorScreenPos();
 		ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 192, p.y + 1), ImGui::GetColorU32(ImVec4(0.7f, 0.7f, 0.7f, 1.0f)));
 		ImGui::Dummy(ImVec2(0, 1));
 
 		if (ImGui::Selectable("   New Material"))
-			editor->fileSystem.newMaterial(file->id, "Material");
+			editor->fileSystem->newMaterial(file->id, "Material");
 
 		if (ImGui::Selectable("   New Physics Material"))
-			editor->fileSystem.newPhysicMaterial(file->id, "PhysicsMaterial");
+			editor->fileSystem->newPhysicMaterial(file->id, "PhysicsMaterial");
 
 		ImGui::PopStyleColor();
 		ImGui::EndPopup();
@@ -3365,7 +3639,7 @@ void EditorGUI::createFilesPanelRightPart(ImVec2 area) {
 		{
 			IM_ASSERT(payload->DataSize == sizeof(int));
 			int payload_n = *(const int*)payload->Data;
-			editor->fileSystem.moveFile(payload_n, file->id);
+			editor->fileSystem->moveFile(payload_n, file->id);
 
 			// include all the necessary end codes...
 			return;

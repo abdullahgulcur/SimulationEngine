@@ -4,6 +4,8 @@
 
 #include "shader.hpp"
 #include "mesh.hpp"
+//#include "gamecamera.hpp"
+
 
 using namespace Mesh;
 
@@ -57,3 +59,12 @@ public:
 	void drawCollider(glm::mat4 MVP);
 
 };
+
+//class CameraRenderer : public ColliderRenderer {
+//
+//private:
+//
+//public:
+//
+//	CameraRenderer(GameCamera camera);
+//};

@@ -6,13 +6,12 @@
 #include "filesystem.hpp"
 #include "render.hpp"
 #include "window.hpp"
-#include "camera.hpp"
+#include "scenecamera.hpp"
 #include "editor_gui.hpp"
 #include "model.hpp"
 #include "texture.hpp"
 #include "input.hpp"
 #include "physics.hpp"
-#include "debugrenderer.hpp"
 
 
 class Editor {
@@ -21,23 +20,18 @@ private:
 
 public:
 
-	Window window;
-	Render render;
-	Camera editorCamera;
-	FileSystem fileSystem;
-	EditorGUI editorGUI;
+	Window* window = NULL;
+	Render* render = NULL;
+	SceneCamera* sceneCamera = NULL;
+	FileSystem* fileSystem = NULL;
+	EditorGUI* editorGUI = NULL;
 	Scene* scene = NULL;
-	Scene* sceneTemp = NULL;
-	Physics physics;
-	BoxColliderRenderer* bcr = NULL;
-	SphereColliderRenderer* scr = NULL;
+	Physics* physics = NULL;
 
 	float time = 0;
 	bool gameStarted = false;
 
 	Editor();
-
-	void startEditorScreen();
 
 	void run();
 

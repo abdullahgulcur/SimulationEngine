@@ -3,7 +3,7 @@
 
 Scene::Scene() {
 
-	name = "MyScene";	
+	name = "MyScene";
 }
 
 void Scene::init(Editor* editor) {
@@ -43,11 +43,20 @@ void Scene::update(float dt) {
 
 	if (editor->gameStarted)
 		Scene::simulateInGame(dt);
-	else
+	else {
 		Scene::simulateInEditor(dt);
+		Scene::renderPrimaryGameCamera(primaryCamera);
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Scene::simulateInEditor(float dt) {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->framebuffer);
+
+	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	for (auto& ent : entities)
 	{
@@ -55,9 +64,9 @@ void Scene::simulateInEditor(float dt) {
 
 			glUseProgram(meshRendererComp->mat->programID);
 			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &ent->transform->model[0][0]);
-			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
-			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->sceneCamera->ViewMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->sceneCamera->ProjectionMatrix[0][0]);
+			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->sceneCamera->position[0]);
 
 			int dlightCounter = 0;
 			int plightCounter = 0;
@@ -150,7 +159,7 @@ void Scene::simulateInEditor(float dt) {
 		}
 
 		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
-			terrain->draw(&editor->editorCamera, pointLightTransforms, dirLightTransforms);
+			terrain->drawInScene(editor->sceneCamera, primaryCamera);
 
 		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
 		for (auto& comp : boxColliderCompList) {
@@ -158,9 +167,9 @@ void Scene::simulateInEditor(float dt) {
 			glm::mat4 model = ent->transform->model;
 			model = glm::translate(model, comp->center);
 			model = glm::scale(model, comp->size);
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
 
-			editor->bcr->drawCollider(mvp);
+			editor->editorGUI->bcr->drawCollider(mvp);
 		}
 
 		std::vector<SphereCollider*> sphereColliderCompList = ent->getComponents<SphereCollider>();
@@ -169,8 +178,8 @@ void Scene::simulateInEditor(float dt) {
 			glm::mat4 model = ent->transform->model;
 			model = glm::translate(model, comp->center);
 			model = glm::scale(model, glm::vec3(comp->radius * 2 * 1.01f));
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 		}
 
 		std::vector<CapsuleCollider*> capsuleColliderCompList = ent->getComponents<CapsuleCollider>();
@@ -195,14 +204,46 @@ void Scene::simulateInEditor(float dt) {
 			objectModel = glm::translate(objectModel, ent->transform->globalPosition) * roationMatrix;
 			objectModel = glm::translate(objectModel, comp->center + glm::vec3(comp->axis) * (comp->height / 2));
 			glm::mat4 model = objectModel * localModel;
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 			objectModel = glm::translate(objectModel, glm::vec3(comp->axis) * (-comp->height));
 			model = objectModel * localModel;
-			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 		}
 
+		if (GameCamera* cameraComp = ent->getComponent<GameCamera>()) {
+
+			glm::mat4 model = ent->transform->model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			cameraComp->drawEditorGizmos(mvp);
+			primaryCamera = cameraComp;
+		}
+
+		// terrain raycasting
+
+		if (Entity* ent = editor->editorGUI->lastSelectedEntity) {
+
+			if (TerrainGenerator* comp = ent->getComponent<TerrainGenerator>()) {
+
+				ImVec2 mousePos = ImGui::GetMousePos();
+
+				if (mousePos.x > editor->editorGUI->scenePos.x && mousePos.x < editor->editorGUI->scenePos.x + editor->editorGUI->sceneRegion.x &&
+					mousePos.y > editor->editorGUI->scenePos.y && mousePos.y < editor->editorGUI->scenePos.y + editor->editorGUI->sceneRegion.y) {
+
+					float mX = mousePos.x - editor->editorGUI->scenePos.x;
+					float mY = mousePos.y - editor->editorGUI->scenePos.y;
+					mX = (2 * mX) / editor->editorGUI->sceneRegion.x - 1;
+					mY = 1 - (2 * mY) / editor->editorGUI->sceneRegion.y;
+					comp->brushControls(mX, mY, editor->sceneCamera);
+				}
+				else {
+					comp->canUseBrush = false;
+				}
+			}
+		}
+
+		
 		//std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
 		//for (auto& comp : meshColliderCompList) {
 
@@ -212,7 +253,12 @@ void Scene::simulateInEditor(float dt) {
 	}
 }
 
-void Scene::simulateInGame(float dt) {
+void Scene::renderPrimaryGameCamera(GameCamera* camera) {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, camera->FBO);
+
+	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	for (auto& ent : entities)
 	{
@@ -220,9 +266,9 @@ void Scene::simulateInGame(float dt) {
 
 			glUseProgram(meshRendererComp->mat->programID);
 			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &ent->transform->model[0][0]);
-			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
-			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->editorCamera.position[0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &camera->ViewMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &camera->ProjectionMatrix[0][0]);
+			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &camera->transform->globalPosition[0]);
 
 			int dlightCounter = 0;
 			int plightCounter = 0;
@@ -314,15 +360,130 @@ void Scene::simulateInGame(float dt) {
 
 		}
 
+		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
+			terrain->drawInGame(camera);
+	}
+}
+
+void Scene::simulateInGame(float dt) {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->framebuffer);
+
+	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	for (auto& ent : entities)
+	{
+		if (MeshRenderer* meshRendererComp = ent->getComponent<MeshRenderer>()) {
+
+			glUseProgram(meshRendererComp->mat->programID);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "M"), 1, GL_FALSE, &ent->transform->model[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "V"), 1, GL_FALSE, &editor->sceneCamera->ViewMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(meshRendererComp->mat->programID, "P"), 1, GL_FALSE, &editor->sceneCamera->ProjectionMatrix[0][0]);
+			glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, "camPos"), 1, &editor->sceneCamera->position[0]);
+
+			int dlightCounter = 0;
+			int plightCounter = 0;
+
+			for (auto const& transform : pointLightTransforms) {
+
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", plightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "pointLightPositions[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "pointLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "pointLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &transform->globalPosition[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				plightCounter++;
+			}
+
+			for (auto const& transform : dirLightTransforms) {
+
+				char lightCounterTxt[4];
+				sprintf(lightCounterTxt, "%d", dlightCounter);
+
+				char* tempLPos = new char[25];
+				strcpy(tempLPos, "dirLightDirections[");
+				strcat(tempLPos, lightCounterTxt);
+				strcat(tempLPos, "]\0");
+
+				char* tempLCol = new char[25];
+				strcpy(tempLCol, "dirLightColors[");
+				strcat(tempLCol, lightCounterTxt);
+				strcat(tempLCol, "]\0");
+
+				char* tempLPow = new char[25];
+				strcpy(tempLPow, "dirLightPowers[");
+				strcat(tempLPow, lightCounterTxt);
+				strcat(tempLPow, "]\0");
+
+				glm::vec3 direction(-cos(transform->localRotation.x / 180.f) * sin(transform->localRotation.y / 180.f), -sin(transform->localRotation.x / 180.f),
+					-cos(transform->localRotation.x / 180.f) * cos(transform->localRotation.y / 180.f));
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLPos), 1, &direction[0]);
+				glUniform3fv(glGetUniformLocation(meshRendererComp->mat->programID, tempLCol), 1, &transform->entity->getComponent<Light>()->color[0]);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, tempLPow), transform->entity->getComponent<Light>()->power);
+
+				delete tempLPos;
+				delete tempLCol;
+				delete tempLPow;
+
+				dlightCounter++;
+			}
+
+			for (int i = 0; i < meshRendererComp->mat->textureUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "texture%d\0", i);
+
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(GL_TEXTURE_2D, meshRendererComp->mat->textureUnits[i]);
+				glUniform1i(glGetUniformLocation(meshRendererComp->mat->programID, str), i);
+			}
+
+			for (int i = 0; i < meshRendererComp->mat->floatUnits.size(); i++) {
+
+				char str[16];
+				sprintf(str, "float%d\0", i);
+				glUniform1f(glGetUniformLocation(meshRendererComp->mat->programID, str), meshRendererComp->mat->floatUnits[i]);
+			}
+
+			glBindVertexArray(meshRendererComp->mesh->VAO);
+			glDrawElements(GL_TRIANGLES, meshRendererComp->mesh->indiceSize, GL_UNSIGNED_INT, (void*)0);
+			glBindVertexArray(0);
+
+		}
+
+		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
+			terrain->drawInScene(editor->sceneCamera, primaryCamera);
+
 		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
 		for (auto& comp : boxColliderCompList) {
 
 			glm::mat4 model = ent->transform->model;
 			model = glm::translate(model, comp->center);
 			model = glm::scale(model, comp->size);
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
 
-			editor->bcr->drawCollider(mvp);
+			editor->editorGUI->bcr->drawCollider(mvp);
 		}
 
 		std::vector<SphereCollider*> sphereColliderCompList = ent->getComponents<SphereCollider>();
@@ -331,8 +492,8 @@ void Scene::simulateInGame(float dt) {
 			glm::mat4 model = ent->transform->model;
 			model = glm::translate(model, comp->center);
 			model = glm::scale(model, glm::vec3(comp->radius * 2 * 1.01f));
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 		}
 
 		std::vector<CapsuleCollider*> capsuleColliderCompList = ent->getComponents<CapsuleCollider>();
@@ -357,18 +518,26 @@ void Scene::simulateInGame(float dt) {
 			objectModel = glm::translate(objectModel, ent->transform->globalPosition) * roationMatrix;
 			objectModel = glm::translate(objectModel, comp->center + glm::vec3(comp->axis) * (comp->height / 2));
 			glm::mat4 model = objectModel * localModel;
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 			objectModel = glm::translate(objectModel, glm::vec3(comp->axis) * (-comp->height));
 			model = objectModel * localModel;
-			mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * model;
-			editor->scr->drawCollider(mvp);
+			mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			editor->editorGUI->scr->drawCollider(mvp);
 		}
 
 		std::vector<MeshCollider*> meshColliderCompList = ent->getComponents<MeshCollider>();
 		for (auto& comp : meshColliderCompList) {
 
-			glm::mat4 mvp = editor->editorCamera.ProjectionMatrix * editor->editorCamera.ViewMatrix * ent->transform->model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * ent->transform->model;
+		}
+
+		if (GameCamera* cameraComp = ent->getComponent<GameCamera>()) {
+
+			glm::mat4 model = ent->transform->model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			cameraComp->drawEditorGizmos(mvp);
+			primaryCamera = cameraComp;
 		}
 
 		if (Rigidbody* rigidbodyComp = ent->getComponent<Rigidbody>()) {
@@ -406,8 +575,8 @@ void Scene::simulateInGame(float dt) {
 		}
 	}
 
-	editor->physics.gScene->simulate(dt);
-	editor->physics.gScene->fetchResults(true);
+	editor->physics->gScene->simulate(dt);
+	editor->physics->gScene->fetchResults(true);
 }
 
 void Scene::deleteScene() {
@@ -420,9 +589,9 @@ void Scene::deleteScene() {
 
 void Scene::recompileAllMaterials() {
 
-	for (auto& val : editor->fileSystem.materials)
-		val.second.compileShaders(editor->fileSystem.getVertShaderPath(val.second.vertShaderFileAddr),
-			editor->fileSystem.getFragShaderPath(val.second.fragShaderFileAddr), dirLightTransforms.size(), pointLightTransforms.size());
+	for (auto& val : editor->fileSystem->materials)
+		val.second.compileShaders(editor->fileSystem->getVertShaderPath(val.second.vertShaderFileAddr),
+			editor->fileSystem->getFragShaderPath(val.second.fragShaderFileAddr), dirLightTransforms.size(), pointLightTransforms.size());
 }
 
 bool Scene::subEntityCheck(Transform* child, Transform* parent) {

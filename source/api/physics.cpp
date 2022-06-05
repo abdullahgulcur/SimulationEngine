@@ -2,11 +2,8 @@
 
 Physics::Physics() {
 
-}
-
-void Physics::init() {
-
 	Physics::initPhysics();
+
 }
 
 void Physics::addConvexMesh(MeshRenderer* mRenderer, Transform* transform, Rigidbody* rb) {

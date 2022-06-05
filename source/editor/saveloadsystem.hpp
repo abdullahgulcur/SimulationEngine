@@ -19,6 +19,7 @@
 #include "rigidbody.hpp"
 #include "collider.hpp"
 #include "terrain.hpp"
+#include "gamecamera.hpp"
 
 using namespace Mesh;
 using namespace Material;
@@ -42,6 +43,10 @@ namespace SaveLoadSystem {
 	bool saveTransformComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Transform* transform);
 
 	bool loadTransformComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+
+	bool saveGameCameraComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, GameCamera* camera);
+
+	bool loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
 	bool saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light);
 

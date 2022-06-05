@@ -32,8 +32,6 @@ public:
 
 	Physics();
 
-	void init();
-
 	void initPhysics();
 
 	void addConvexMesh(MeshRenderer* mRenderer, Transform* transform, Rigidbody* rb);

@@ -24,6 +24,8 @@ namespace TextureNS {
 
 	unsigned char* loadPNG(const char* imagepath, unsigned& width, unsigned& height);
 
+	unsigned short* loadPNG16(const char* imagepath, unsigned& width, unsigned& height);
+
 	void deleteTexture(unsigned int textureID);
 
 	class TextureFile {

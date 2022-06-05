@@ -2,6 +2,7 @@
 
 #include <GL/glew.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/intersect.hpp>
 #include <vector>
 #include <math.h>
 
@@ -12,32 +13,18 @@
 #include "texture.hpp"
 #include "utility.hpp"
 #include "math.hpp"
+#include "gamecamera.hpp"
 
 #include "perlinnoise/perlinnoise.hpp"
 
-class Camera;
+#define PI 3.14159
+#define BRUSH_RESOLUTION 32
+#define GFILTER_SIZE 201
+
+
+class SceneCamera;
 
 using namespace Material;
-
-#define PI 3.1415
-
-struct TerrainVertex {
-
-	glm::vec3 position;
-	glm::vec3 normal;
-	glm::vec2 texCoord;
-	glm::vec4 color;
-
-	TerrainVertex() {}
-
-	TerrainVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texCoord, glm::vec4 color) {
-
-		this->position = position;
-		this->normal = normal;
-		this->texCoord = texCoord;
-		this->color = color;
-	}
-};
 
 struct HeightAndGradient {
 
@@ -46,114 +33,88 @@ struct HeightAndGradient {
 	float gradientZ;
 };
 
-struct TerrainChunk {
-
-	std::vector<std::vector<TerrainVertex>> lods;
-};
-
 class TerrainGenerator : public Component {
 
 private:
 
-	// 390150
-	//int indiceCount;
-
 public:
 
-	const unsigned int NUM_PATCH_PTS = 4;
-	unsigned rez = 20;
+	int patchSize = 8;
 
 	unsigned int programID;
-	unsigned int terrainVAO;
 	unsigned int elevationMapTexture;
 
-	unsigned int clipmaps = 8;
+	unsigned int grass_a_tex;
+	unsigned int grass_ao_tex;
+	unsigned int grass_n_tex;
+	unsigned int grass_r_tex;
 
-	std::vector<std::vector<unsigned int>> DebugNormalVAOs; // dim 0: clipmaps 1:lods
-	std::vector<std::vector<unsigned int>> VAOs; // dim 0: clipmaps 1:lods
-	//std::vector<TerrainChunk> chunks;
+	std::vector<unsigned int> blockIndices;
+	unsigned int blockVAO;
+
+	unsigned int ringFixUpHorizontalVAO;
+	std::vector<unsigned int> ringFixUpHorizontalIndices;
+
+	unsigned int ringFixUpVerticalVAO;
+	std::vector<unsigned int> ringFixUpVerticalIndices;
+
+	unsigned int smallSquareVAO;
+	std::vector<unsigned int> smallSquareIndices;
+
+	unsigned int outerDegenerateVAO;
+	std::vector<unsigned int> outerDegenerateIndices;
+
 	MaterialFile* mat;
 	File* heightmap;
-	unsigned int seed = 12456u;
 	unsigned int heighmapTextureID;
-	//unsigned short viewportLevel_X = 10;
-	//unsigned short viewportLevel_Z = 10;
-	//float size_X = 1.f;
-	//float size_Z = 1.f;
-	float height = 10.f;
-	float scale = 3.f;
 
-	float minHeight;
-	float maxHeight = 0.f;
-	float averageHeight;
+	int elevationMapSize = 2048;
 
-	int elevationMapSize = 1024;
+	glm::vec3* brushIntersectionPoint = NULL;
+	bool canUseBrush = false;
 
-	//// erosion params
+	// Gizmos
+	unsigned int gizmoVAO;
+	unsigned int gizmoShaderProgramID;
+	float brushRadius = 15.f;
+	float brushIntensity = 50.f;
 	//std::vector<float> heights;
-	//int numIterations = 70000;
-	//float initialWaterVolume = 1;
-	//float initialSpeed = 1;
-	//int erosionRadius = 3;
-	//float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction. 
-	//float sedimentCapacityFactor = 4; // Multiplier for how much sediment a droplet can carry
-	//float minSedimentCapacity = .01f; // Used to prevent carry capacity getting too close to zero on flatter terrain
-	//float erodeSpeed = .3f;
-	//float depositSpeed = .3f;
-	//float evaporateSpeed = .01f;
-	//float gravity = 4;
-	//int maxDropletLifetime = 30;
+	float* heights;
 
-	// erosion params
-	std::vector<float> heights;
-	
-
-	// Indices and weights of erosion brush precomputed for every node
-	std::vector<std::vector<int>> erosionBrushIndices;
-	std::vector<std::vector<float>> erosionBrushWeights;
-
-
-	// temp
-	unsigned int debugNormalProgramID;
+	float GKernel[GFILTER_SIZE][GFILTER_SIZE];
 
 	TerrainGenerator();
+
+	glm::vec3* findIntersectionPoint(glm::vec3 upperPoint, glm::vec3 lowerPoint, int counter);
 
 	void init();
 
 	void init(MaterialFile* mat);
 
-	void recreateHeightField();
+	float* getFlatHeightmap(int size);
 
-	void erode();
+	float* getElevationData(int size);
+
+	void brushControls(float mousePosX, float mousePosY, SceneCamera* camera);
+
+	void drawBrush(glm::mat4 MVP);
+
+	void setBrushRadius(float step);
+
+	void setBrushIntensity(float step);
+
+	void gaussianFilterCreation();
+
+	void bump();
+
+	void recreateHeightMap();
 
 	void createHeightMap();
 
-	void filterElevationMap(int size, int iterations);
+	void drawInScene(SceneCamera* camera, GameCamera* gc);
 
-	void scaleElevationMap(int scaleFactor);
+	void drawInGame(GameCamera* camera);
 
-	//void smoothFilterCreation(double** GKernel, int size);
-
-	void gaussianFilterCreation(double** GKernel, int size);
-
-	void createTerrainMesh(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices);
-
-	HeightAndGradient calculateHeightAndGradient(float posX, float posZ);
-
-	void initializeBrushIndices(int radius);
-
-	glm::vec4 evaluateColor(float& slope);
-
-	float angleBetweenTwoVectors(glm::vec3 v0, glm::vec3 v1);
-
-	void recalculateNormals(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices);
-
-	void initDebugNormalLines(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices);
-
-	int getLODLevel(glm::vec2 camPos, int chunkIndex);
-
-	void createHeightField(std::vector<TerrainChunk>& chunks, std::vector<std::vector<unsigned short>>& indices);
-
-	void draw(Camera* camera, std::vector<Transform*>& pointLightTransforms, std::vector<Transform*>& dirLightTransforms);
+	void createBrushGizmo();
 
 };

@@ -1,23 +1,19 @@
 #include "editor.hpp"
 
 Editor::Editor() {
-}
 
-void Editor::startEditorScreen() {
-
-	physics.init();
-	window.init();
-	render.init();
-
+	physics = new Physics();
+	window = new Window(this);
+	render = new Render(this);
+	sceneCamera = new SceneCamera();
+	fileSystem = new FileSystem();
 	scene = new Scene();
-	fileSystem.init(this);
-	scene->init(this);
+	editorGUI = new EditorGUI();
 
+	fileSystem->init(this);
+	scene->init(this);
 	SaveLoadSystem::loadSceneCamera(this);
-	editorGUI.init(this);
-	window.frameBufferForSceneViewport();
-	bcr = new BoxColliderRenderer();
-	scr = new SphereColliderRenderer();
+	editorGUI->init(this);
 }
 
 void Editor::run() {
@@ -26,22 +22,11 @@ void Editor::run() {
 	float dt = currentTime - time;
 	time = currentTime;
 
-	window.handleCallBacks(this);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, window.framebuffer);
-
-	window.clear();
-
-	editorGUI.newFrameImGui();
-
+	window->handleCallBacks(this);
+	editorGUI->newFrameImGui();
 	scene->update(dt);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	editorGUI.createPanels();
-	editorGUI.renderImGui();
-
-	window.end();
-
-	editorCamera.computeMatricesFromInputs(this);
+	editorGUI->createPanels();
+	editorGUI->renderImGui();
+	window->end();
+	sceneCamera->onUpdate(this);
 }

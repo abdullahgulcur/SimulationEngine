@@ -159,6 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\api\camera.cpp" />
     <ClCompile Include="source\api\component.cpp" />
     <ClCompile Include="source\api\material.cpp" />
     <ClCompile Include="source\api\math.cpp" />
@@ -169,6 +170,7 @@
     <ClCompile Include="source\api\physics.cpp" />
     <ClCompile Include="source\api\scene.cpp" />
     <ClCompile Include="source\api\shader.cpp" />
+    <ClCompile Include="source\component\gamecamera.cpp" />
     <ClCompile Include="source\component\terrain.cpp" />
     <ClCompile Include="source\api\texture.cpp" />
     <ClCompile Include="source\api\transform.cpp" />
@@ -181,7 +183,7 @@
     <ClCompile Include="source\component\rigidbody.cpp" />
     <ClCompile Include="source\editor\debugrenderer.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
-    <ClCompile Include="source\editor\camera.cpp" />
+    <ClCompile Include="source\editor\scenecamera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
     <ClCompile Include="source\editor\input.cpp" />
@@ -206,6 +208,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="source\api\camera.hpp" />
     <ClInclude Include="source\api\component.hpp" />
     <ClInclude Include="source\api\material.hpp" />
     <ClInclude Include="source\api\math.hpp" />
@@ -216,6 +219,7 @@
     <ClInclude Include="source\api\physics.hpp" />
     <ClInclude Include="source\api\scene.hpp" />
     <ClInclude Include="source\api\shader.hpp" />
+    <ClInclude Include="source\component\gamecamera.hpp" />
     <ClInclude Include="source\component\terrain.hpp" />
     <ClInclude Include="source\api\texture.hpp" />
     <ClInclude Include="source\api\transform.hpp" />
@@ -231,7 +235,7 @@
     <ClInclude Include="source\component\rigidbody.hpp" />
     <ClInclude Include="source\editor\debugrenderer.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
-    <ClInclude Include="source\editor\camera.hpp" />
+    <ClInclude Include="source\editor\scenecamera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />
     <ClInclude Include="source\editor\input.hpp" />
@@ -1023,8 +1027,12 @@
     <None Include="source\include\GLM\gtx\vector_angle.inl" />
     <None Include="source\include\GLM\gtx\vector_query.inl" />
     <None Include="source\include\GLM\gtx\wrap.inl" />
+    <None Include="source\shader\brush.frag" />
+    <None Include="source\shader\brush.vert" />
     <None Include="source\shader\Circle.frag" />
     <None Include="source\shader\Circle.vert" />
+    <None Include="source\shader\clipmap.frag" />
+    <None Include="source\shader\clipmap.vert" />
     <None Include="source\shader\Default.frag" />
     <None Include="source\shader\Default.vert" />
     <None Include="source\shader\gpuheight.frag" />

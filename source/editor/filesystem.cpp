@@ -690,7 +690,7 @@ void FileSystem::newPhysicMaterial(int currentDirID, const char* fileName) {
 		FileSystem::insertFileToParentsSubfolders(subFile);
 	}
 
-	PhysicMaterialFile mat(subFile, editor->physics.gPhysics);
+	PhysicMaterialFile mat(subFile, editor->physics->gPhysics);
 	physicmaterials.insert({ files[subFile->id].path, mat });
 	FileSystem::writePhysicMaterialFile(files[subFile->id].path, mat);
 	files[subFile->id].textureID = editorTextures.physicmaterialTextureID;
@@ -815,7 +815,7 @@ void FileSystem::readPhysicMaterialFile(File* filePtr, std::string path) {
 
 	root_node = doc.first_node("PhysicMaterial");
 
-	PhysicMaterialFile mat(filePtr, editor->physics.gPhysics);
+	PhysicMaterialFile mat(filePtr, editor->physics->gPhysics);
 
 	mat.pxmat->setDynamicFriction(atof(root_node->first_attribute("DynamicFriction")->value()));
 	mat.pxmat->setStaticFriction(atof(root_node->first_attribute("StaticFriction")->value()));
@@ -1214,7 +1214,7 @@ void FileSystem::loadDefaultAssets() {
 	MaterialFile mat("source/shader/Default.vert", "source/shader/Default.frag");
 	materials.insert({ "Default", mat });
 
-	PhysicMaterialFile pmat(editor->physics.gPhysics);
+	PhysicMaterialFile pmat(editor->physics->gPhysics);
 	physicmaterials.insert({ "Default", pmat });
 
 	TextureFile textureWhite("resource/textures/empty_texture_map.DDS");

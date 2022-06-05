@@ -2,11 +2,13 @@
 
 #include <GL/glew.h>
 
+class Editor;
+
 class Render {
 
 public:
 
-	Render();
+	Render(Editor* editor);
 
 	int init();
 };

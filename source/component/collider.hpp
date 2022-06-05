@@ -9,6 +9,7 @@
 #include "debugrenderer.hpp"
 #include "rigidbody.hpp"
 #include "meshrenderer.hpp"
+//#include <gamecamera.hpp>
 
 using namespace physx;
 using namespace Material;

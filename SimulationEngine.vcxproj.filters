@@ -30,7 +30,7 @@
     <ClCompile Include="source\editor\window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\editor\camera.cpp">
+    <ClCompile Include="source\editor\scenecamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\api\transform.cpp">
@@ -147,6 +147,12 @@
     <ClCompile Include="source\component\terrain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\component\gamecamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\api\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -170,7 +176,7 @@
     <ClInclude Include="source\editor\window.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\editor\camera.hpp">
+    <ClInclude Include="source\editor\scenecamera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\mesh.hpp">
@@ -2177,6 +2183,12 @@
     <ClInclude Include="source\include\perlinnoise\perlinnoise.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\component\gamecamera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\api\camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\include\GLM\detail\func_common.inl">
@@ -2609,6 +2621,10 @@
     <None Include="source\shader\gpuheight.tesc" />
     <None Include="source\shader\gpuheight.tese" />
     <None Include="source\shader\gpuheight.vert" />
+    <None Include="source\shader\clipmap.vert" />
+    <None Include="source\shader\clipmap.frag" />
+    <None Include="source\shader\brush.frag" />
+    <None Include="source\shader\brush.vert" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

@@ -6,7 +6,10 @@
 bool Window::dragAndDropFromOutside;
 std::vector<std::string> Window::dragAndDropFiles;
 
-Window::Window() {}
+Window::Window(Editor* editor) {
+
+	Window::init();
+}
 
 void Window::init() {
 
@@ -47,11 +50,6 @@ void Window::startGLOptions() {
 
 	glfwPollEvents();
 	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
-	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glEnable(GL_CULL_FACE);
-	glViewport(0, 0, mode->width, mode->height);
 }
 
 void Window::loadTitleBarIcon() {
@@ -66,12 +64,6 @@ void Window::loadTitleBarIcon() {
 	delete image.pixels;
 }
 
-void Window::clear() {
-
-	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-
 void Window::end() {
 
 	glfwSwapBuffers(GLFW_window);
@@ -82,7 +74,7 @@ void Window::handleCallBacks(Editor* editor) {
 
 	if (dragAndDropFromOutside) {
 
-		editor->fileSystem.importFiles(dragAndDropFiles, editor->editorGUI.lastClickedItemID);
+		editor->fileSystem->importFiles(dragAndDropFiles, editor->editorGUI->lastClickedItemID);
 		dragAndDropFiles.clear();
 		dragAndDropFromOutside = false;
 	}
@@ -103,32 +95,6 @@ bool Window::getOpen(Editor* editor) {
 void Window::terminateGLFW() {
 
 	glfwTerminate();
-}
-
-void Window::frameBufferForSceneViewport() {
-
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-	glGenTextures(1, &textureColorbuffer);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, mode->width, mode->height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
-
-	unsigned int rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, mode->width, mode->height);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Window::drop_callback(GLFWwindow* window, int count, const char** paths)

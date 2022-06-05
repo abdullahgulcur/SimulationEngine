@@ -1,7 +1,7 @@
 #pragma once
 
 #include "shader.hpp"
-#include "camera.hpp"
+#include "scenecamera.hpp"
 
 #include <GLFW/glfw3.h>
 
@@ -20,5 +20,5 @@ public:
 
 	void init();
 
-	void detect(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY);
+	int detectAndGetEntityId(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY);
 };

@@ -171,20 +171,7 @@ unsigned int ShaderNS::loadShaders(const char* vertex_file_path, const char* fra
 		return 0;
 	}
 
-	// Read the Fragment Shader code from the file
-	std::string FragmentShaderCode;
-	std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
-	if (FragmentShaderStream.is_open()) {
-		std::stringstream sstr;
-		sstr << FragmentShaderStream.rdbuf();
-		FragmentShaderCode = sstr.str();
-		FragmentShaderStream.close();
-	}
-	else {
-		printf("Impossible to open %s.\n", fragment_file_path);
-		getchar();
-		return 0;
-	}
+
 
 	//if (geom_file_path) {
 
@@ -234,6 +221,21 @@ unsigned int ShaderNS::loadShaders(const char* vertex_file_path, const char* fra
 		return 0;
 	}
 
+	// Read the Fragment Shader code from the file
+	std::string FragmentShaderCode;
+	std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
+	if (FragmentShaderStream.is_open()) {
+		std::stringstream sstr;
+		sstr << FragmentShaderStream.rdbuf();
+		FragmentShaderCode = sstr.str();
+		FragmentShaderStream.close();
+	}
+	else {
+		printf("Impossible to open %s.\n", fragment_file_path);
+		getchar();
+		return 0;
+	}
+
 	int Result = GL_FALSE;
 	int InfoLogLength;
 
@@ -250,6 +252,36 @@ unsigned int ShaderNS::loadShaders(const char* vertex_file_path, const char* fra
 		std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
 		glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
 		printf("%s\n", &VertexShaderErrorMessage[0]);
+	}
+
+	// Compile Tessellation Control Shader
+	printf("Compiling shader : %s\n", tess_control_file_path);
+	char const* TessControlSourcePointer = TessControlShaderCode.c_str();
+	glShaderSource(TessControlShaderID, 1, &TessControlSourcePointer, NULL);
+	glCompileShader(TessControlShaderID);
+
+	// Check Tessellation Control Shader
+	glGetShaderiv(TessControlShaderID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(TessControlShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0) {
+		std::vector<char> TessControlShaderErrorMessage(InfoLogLength + 1);
+		glGetShaderInfoLog(TessControlShaderID, InfoLogLength, NULL, &TessControlShaderErrorMessage[0]);
+		printf("%s\n", &TessControlShaderErrorMessage[0]);
+	}
+
+	// Compile Tessellation Evaluation Shader
+	printf("Compiling shader : %s\n", tess_evaluation_file_path);
+	char const* TessEvaSourcePointer = TessEvaShaderCode.c_str();
+	glShaderSource(TessEvaluationShaderID, 1, &TessEvaSourcePointer, NULL);
+	glCompileShader(TessEvaluationShaderID);
+
+	// Check Tessellation Evaluation Shader
+	glGetShaderiv(TessEvaluationShaderID, GL_COMPILE_STATUS, &Result);
+	glGetShaderiv(TessEvaluationShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+	if (InfoLogLength > 0) {
+		std::vector<char> TessEvaShaderErrorMessage(InfoLogLength + 1);
+		glGetShaderInfoLog(TessEvaluationShaderID, InfoLogLength, NULL, &TessEvaShaderErrorMessage[0]);
+		printf("%s\n", &TessEvaShaderErrorMessage[0]);
 	}
 
 	// Compile Fragment Shader
@@ -285,43 +317,15 @@ unsigned int ShaderNS::loadShaders(const char* vertex_file_path, const char* fra
 	//	}
 	//}
 
-	// Compile Tessellation Control Shader
-	printf("Compiling shader : %s\n", tess_control_file_path);
-	char const* TessControlSourcePointer = TessControlShaderCode.c_str();
-	glShaderSource(TessControlShaderID, 1, &TessControlSourcePointer, NULL);
-	glCompileShader(TessControlShaderID);
 
-	// Check Tessellation Control Shader
-	glGetShaderiv(TessControlShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(TessControlShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0) {
-		std::vector<char> TessControlShaderErrorMessage(InfoLogLength + 1);
-		glGetShaderInfoLog(TessControlShaderID, InfoLogLength, NULL, &TessControlShaderErrorMessage[0]);
-		printf("%s\n", &TessControlShaderErrorMessage[0]);
-	}
-
-	// Compile Tessellation Evaluation Shader
-	printf("Compiling shader : %s\n", tess_evaluation_file_path);
-	char const* TessEvaSourcePointer = TessEvaShaderCode.c_str();
-	glShaderSource(TessEvaluationShaderID, 1, &TessEvaSourcePointer, NULL);
-	glCompileShader(TessEvaluationShaderID);
-
-	// Check Tessellation Evaluation Shader
-	glGetShaderiv(TessEvaluationShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(TessEvaluationShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0) {
-		std::vector<char> TessEvaShaderErrorMessage(InfoLogLength + 1);
-		glGetShaderInfoLog(TessEvaluationShaderID, InfoLogLength, NULL, &TessEvaShaderErrorMessage[0]);
-		printf("%s\n", &TessEvaShaderErrorMessage[0]);
-	}
 
 	// Link the program
 	printf("Linking program\n");
 	unsigned int ProgramID = glCreateProgram();
 	glAttachShader(ProgramID, VertexShaderID);
-	glAttachShader(ProgramID, FragmentShaderID);
 	glAttachShader(ProgramID, TessControlShaderID);
 	glAttachShader(ProgramID, TessEvaluationShaderID);
+	glAttachShader(ProgramID, FragmentShaderID);
 	glLinkProgram(ProgramID);
 
 	// Check the program
@@ -335,14 +339,14 @@ unsigned int ShaderNS::loadShaders(const char* vertex_file_path, const char* fra
 
 
 	glDetachShader(ProgramID, VertexShaderID);
-	glDetachShader(ProgramID, FragmentShaderID);
 	glDetachShader(ProgramID, TessControlShaderID);
 	glDetachShader(ProgramID, TessEvaluationShaderID);
+	glDetachShader(ProgramID, FragmentShaderID);
 
 	glDeleteShader(VertexShaderID);
-	glDeleteShader(FragmentShaderID);
 	glDeleteShader(TessControlShaderID);
 	glDeleteShader(TessEvaluationShaderID);
+	glDeleteShader(FragmentShaderID);
 
 	return ProgramID;
 }

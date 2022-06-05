@@ -10,7 +10,7 @@ void MousePick::init() {
 	projectionMatrixID = glGetUniformLocation(pickingProgramID, "P");
 }
 
-void MousePick::detect(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY) {
+int MousePick::detectAndGetEntityId(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY) {
 
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -24,8 +24,8 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		if (meshRendererComp != nullptr) {
 
 			glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &transform->model[0][0]);
-			glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &editor->editorCamera.ViewMatrix[0][0]);
-			glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &editor->editorCamera.ProjectionMatrix[0][0]);
+			glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &editor->sceneCamera->ViewMatrix[0][0]);
+			glUniformMatrix4fv(projectionMatrixID, 1, GL_FALSE, &editor->sceneCamera->ProjectionMatrix[0][0]);
 
 			int r = (i & 0x000000FF) >> 0;
 			int g = (i & 0x0000FF00) >> 8;
@@ -61,8 +61,14 @@ void MousePick::detect(Editor* editor, float x, float y, float width, float heig
 		data[1] * 256 +
 		data[2] * 256 * 256;
 
+	//if (pickedID == 0x00ffffff || pickedID >= editor->scene->entities.size())
+	//	editor->editorGUI.lastSelectedEntity = NULL;
+	//else
+	//	editor->editorGUI.lastSelectedEntity = editor->scene->entities[pickedID];
+
+
 	if (pickedID == 0x00ffffff || pickedID >= editor->scene->entities.size())
-		editor->editorGUI.lastSelectedEntity = NULL;
+		return -1;
 	else
-		editor->editorGUI.lastSelectedEntity = editor->scene->entities[pickedID];
+		return pickedID;
 }

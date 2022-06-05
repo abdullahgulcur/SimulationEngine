@@ -182,6 +182,25 @@ namespace TextureNS {
 		return data;
 	}
 
+	unsigned short* TextureNS::loadPNG16(const char* imagepath, unsigned& width, unsigned& height) {
+
+		std::vector<unsigned char> image;
+		unsigned error = lodepng::decode(image, width, height, imagepath, LodePNGColorType::LCT_GREY, 16);
+
+		//unsigned short* data = new unsigned short[(width * height) / 2];
+		//for (int i = 0; i < image.size();) {
+		//	data[i] = image[i] * 4096 + image[i+1] * 256 + image[i + 2] * 16 + image[i + 3];
+		//	i+=4;
+		//}
+
+		unsigned short* data = new unsigned short[(width * height) / 2];
+		for (int i = 0; i < image.size(); i +=2) {
+			data[i] = image[i] * 256 + image[i + 1];
+		}
+
+		return data;
+	}
+
 	void TextureNS::deleteTexture(unsigned int textureID) {
 
 		glDeleteTextures(1, &textureID);

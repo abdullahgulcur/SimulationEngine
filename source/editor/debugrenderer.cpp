@@ -179,3 +179,55 @@ void MeshColliderRenderer::drawCollider(glm::mat4 MVP) {
 	glDrawElements(GL_LINES, count, GL_UNSIGNED_INT, (void*)0);
 	glBindVertexArray(0);
 }
+//
+//CameraRenderer::CameraRenderer(GameCamera camera) {
+//
+//	color = glm::vec3(1.f, 1.f, 1.f);
+//
+//	std::vector<glm::vec3> points;
+//
+//	points.push_back(glm::vec3(-0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, -0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, 0.5f));
+//	points.push_back(glm::vec3(-0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, -0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, 0.5f));
+//
+//	points.push_back(glm::vec3(-0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, 0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, 0.5f));
+//	points.push_back(glm::vec3(-0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, 0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, 0.5f));
+//
+//	points.push_back(glm::vec3(-0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, -0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, -0.5f));
+//	points.push_back(glm::vec3(-0.5f, -0.5f, 0.5f));
+//	points.push_back(glm::vec3(-0.5f, 0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, -0.5f, 0.5f));
+//	points.push_back(glm::vec3(0.5f, 0.5f, 0.5f));
+//
+//	count = points.size();
+//
+//	shaderProgramID = ShaderNS::loadShaders("source/shader/Line.vert", "source/shader/Line.frag");
+//
+//	glGenVertexArrays(1, &VAO);
+//	unsigned int VBO;
+//	glGenBuffers(1, &VBO);
+//	glBindVertexArray(VAO);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+//	glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(glm::vec3), &points[0], GL_STATIC_DRAW);
+//
+//	glEnableVertexAttribArray(0);
+//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//	glBindVertexArray(0);
+//}

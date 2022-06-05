@@ -5,10 +5,8 @@ Application::Application() {}
 
 void Application::start() {
 
-	editor.startEditorScreen();
-
 	do {
 		editor.run();
-	} while (editor.window.getOpen(&editor));
+	} while (editor.window->getOpen(&editor));
 }
 

@@ -8,7 +8,9 @@ namespace Math {
 
 	bool decompose(glm::mat4& ModelMatrix, glm::vec3& Translation, glm::vec3& Scale);
 
-	float getFOV_X(float fovY, float aspectRatio);
+	float getHorizontalFOV(float fovY, float aspectRatio);
+
+	float getVerticalFOV(float fovX, float aspectRatio);
 
 	template <typename T>
 	T getMax(T x, T y) {

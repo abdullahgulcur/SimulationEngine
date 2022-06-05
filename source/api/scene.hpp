@@ -34,7 +34,7 @@ public:
 	Editor* editor;
 
 	std::string name;
-
+	GameCamera* primaryCamera;
 	std::vector<Entity*> entities;
 	std::vector<Transform*> pointLightTransforms;
 	std::vector<Transform*> dirLightTransforms;
@@ -56,6 +56,8 @@ public:
 	void update(float dt);
 
 	void simulateInEditor(float dt);
+
+	void renderPrimaryGameCamera(GameCamera* camera);
 
 	void simulateInGame(float dt);
 

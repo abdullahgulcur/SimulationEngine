@@ -16,6 +16,9 @@
 
 #include <imguizmo/imguizmo.h>
 
+#include <gamecamera.hpp>
+#include "debugrenderer.hpp"
+
 using namespace Material;
 
 class Editor;
@@ -136,7 +139,9 @@ public:
 
 	ImGuizmo::OPERATION optype = ImGuizmo::OPERATION::TRANSLATE;
 
-
+	BoxColliderRenderer* bcr = NULL;
+	SphereColliderRenderer* scr = NULL;
+	//CameraRenderer* camRenderer = NULL;
 
 	EditorGUI();
 
@@ -168,11 +173,15 @@ public:
 
 	void createConsolePanel();
 
+	void createGamePanel();
+
 	void createInspectorPanel();
 
 	void addComponentButton();
 
 	void showEntityName();
+
+	void showGameCameraComponent(GameCamera* camComp, int index);
 
 	void showTransformComponent(int index);
 

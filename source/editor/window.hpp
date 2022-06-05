@@ -14,12 +14,10 @@ public:
 	const GLFWvidmode* mode;
 	GLFWmonitor* monitor;
 
-	unsigned int framebuffer;
-	unsigned int textureColorbuffer;
 	static bool dragAndDropFromOutside;
 	static std::vector<std::string> dragAndDropFiles;
 
-	Window();
+	Window(Editor* editor);
 
 	void init();
 
@@ -29,8 +27,6 @@ public:
 
 	void loadTitleBarIcon();
 
-	void clear();
-
 	void end();
 
 	void handleCallBacks(Editor* editor);
@@ -38,8 +34,6 @@ public:
 	bool getOpen(Editor* editor);
 
 	void terminateGLFW();
-
-	void frameBufferForSceneViewport();
 
 	void setTitle(const char* title);
 

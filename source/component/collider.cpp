@@ -27,10 +27,10 @@ BoxCollider::BoxCollider() {
 
 void BoxCollider::init(Editor* editor) {
 
-	pmat = &editor->fileSystem.physicmaterials["Default"];
+	pmat = &editor->fileSystem->physicmaterials["Default"];
 	pmat->colliderCompAddrs.push_back(this);
 	glm::vec3 size = transform->globalScale * this->size / 2.f;
-	shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *pmat->pxmat, true);
+	shape = editor->physics->gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *pmat->pxmat, true);
 	shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
 	glm::vec3 center = transform->globalScale * center;
 	shape->setLocalPose(PxTransform(center.x, center.y, center.z));
@@ -68,8 +68,8 @@ SphereCollider::SphereCollider() {
 
 void SphereCollider::init(Editor* editor) {
 
-	pmat = &editor->fileSystem.physicmaterials["Default"];
-	shape = editor->physics.gPhysics->createShape(PxSphereGeometry(0.5f), *pmat->pxmat, true);
+	pmat = &editor->fileSystem->physicmaterials["Default"];
+	shape = editor->physics->gPhysics->createShape(PxSphereGeometry(0.5f), *pmat->pxmat, true);
 	shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
 	glm::vec3 center = transform->globalScale * center;
 	shape->setLocalPose(PxTransform(center.x, center.y, center.z));
@@ -107,8 +107,8 @@ CapsuleCollider::CapsuleCollider() {
 
 void CapsuleCollider::init(Editor* editor) {
 
-	pmat = &editor->fileSystem.physicmaterials["Default"];
-	shape = editor->physics.gPhysics->createShape(PxCapsuleGeometry(radius, height / 2), *pmat->pxmat, true);
+	pmat = &editor->fileSystem->physicmaterials["Default"];
+	shape = editor->physics->gPhysics->createShape(PxCapsuleGeometry(radius, height / 2), *pmat->pxmat, true);
 	shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
 	PxTransform relativePose(PxVec3(center.x, center.y, center.z), PxQuat(PxHalfPi, PxVec3(0, 0, 1)));
 	shape->setLocalPose(relativePose);
@@ -167,13 +167,13 @@ MeshCollider::MeshCollider() {
 
 void MeshCollider::init(Editor* editor, Rigidbody* rb, MeshRenderer* mr, bool convex) {
 
-	pmat = &editor->fileSystem.physicmaterials["Default"];
+	pmat = &editor->fileSystem->physicmaterials["Default"];
 	pmat->colliderCompAddrs.push_back(this);
 
 	if (convex) {
 
-		PxConvexMesh* convexMesh = createConvexMesh(mr, editor->physics.gPhysics, editor->physics.gCooking);
-		shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+		PxConvexMesh* convexMesh = createConvexMesh(mr, editor->physics->gPhysics, editor->physics->gCooking);
+		shape = editor->physics->gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
 			PxVec3(transform->globalScale.x, transform->globalScale.y,
 				transform->globalScale.z)), *pmat->pxmat, true);
 		shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
@@ -185,8 +185,8 @@ void MeshCollider::init(Editor* editor, Rigidbody* rb, MeshRenderer* mr, bool co
 	}
 	else {
 
-		PxTriangleMesh* triangleMesh = createTriangleMesh(mr, editor->physics.gPhysics, editor->physics.gCooking);
-		shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+		PxTriangleMesh* triangleMesh = createTriangleMesh(mr, editor->physics->gPhysics, editor->physics->gCooking);
+		shape = editor->physics->gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
 			PxVec3(transform->globalScale.x, transform->globalScale.y,
 				transform->globalScale.z)), *pmat->pxmat, true);
 		shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);

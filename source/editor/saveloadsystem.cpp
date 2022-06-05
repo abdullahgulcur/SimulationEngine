@@ -22,7 +22,7 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\entity.xml");
+	std::ofstream file_stored(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\entity.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -50,6 +50,9 @@ void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, 
 		if (Rigidbody* rigidbodyComp = child->entity->getComponent<Rigidbody>())
 			saveRigidbodyComponent(doc, entity, rigidbodyComp);
 
+		if (GameCamera* cameraComp = child->entity->getComponent<GameCamera>())
+			saveGameCameraComponent(doc, entity, cameraComp);
+
 		for (auto& comp : child->entity->getComponents<BoxCollider>())
 			saveBoxColliderComponent(editor, doc, entity, comp);
 
@@ -70,7 +73,7 @@ void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, 
 
 void SaveLoadSystem::loadEntities(Editor* editor) {
 
-	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\entity.xml");
+	std::ifstream file(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\entity.xml");
 
 	if (file.fail()) {
 
@@ -112,6 +115,7 @@ void SaveLoadSystem::loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<
 		SaveLoadSystem::loadCapsuleColliderComponents(editor, ent, entityNode);
 		SaveLoadSystem::loadMeshColliderComponents(editor, ent, entityNode);
 		SaveLoadSystem::loadRigidbodyComponent(editor, ent, entityNode);
+		SaveLoadSystem::loadGameCameraComponent(ent, entityNode);
 
 		SaveLoadSystem::loadEntitiesRecursively(editor, entityNode, ent);
 	}
@@ -129,20 +133,20 @@ bool SaveLoadSystem::saveSceneCamera(Editor* editor) {
 	doc.append_node(cameraNode);
 
 	rapidxml::xml_node<>* positionNode = doc.allocate_node(rapidxml::node_element, "Position");
-	positionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(editor->editorCamera.position.x).c_str())));
-	positionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(editor->editorCamera.position.y).c_str())));
-	positionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(editor->editorCamera.position.z).c_str())));
+	positionNode->append_attribute(doc.allocate_attribute("X", doc.allocate_string(std::to_string(editor->sceneCamera->position.x).c_str())));
+	positionNode->append_attribute(doc.allocate_attribute("Y", doc.allocate_string(std::to_string(editor->sceneCamera->position.y).c_str())));
+	positionNode->append_attribute(doc.allocate_attribute("Z", doc.allocate_string(std::to_string(editor->sceneCamera->position.z).c_str())));
 	cameraNode->append_node(positionNode);
 
 	rapidxml::xml_node<>* angleNode = doc.allocate_node(rapidxml::node_element, "Angle");
-	angleNode->append_attribute(doc.allocate_attribute("Horizontal", doc.allocate_string(std::to_string(editor->editorCamera.horizontalAngle).c_str())));
-	angleNode->append_attribute(doc.allocate_attribute("Vertical", doc.allocate_string(std::to_string(editor->editorCamera.verticalAngle).c_str())));
+	angleNode->append_attribute(doc.allocate_attribute("Horizontal", doc.allocate_string(std::to_string(editor->sceneCamera->horizontalAngle).c_str())));
+	angleNode->append_attribute(doc.allocate_attribute("Vertical", doc.allocate_string(std::to_string(editor->sceneCamera->verticalAngle).c_str())));
 	cameraNode->append_node(angleNode);
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
 
-	std::ofstream file_stored(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenecamera_db.xml");
+	std::ofstream file_stored(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\scenecamera_db.xml");
 	file_stored << doc;
 	file_stored.close();
 	doc.clear();
@@ -151,7 +155,7 @@ bool SaveLoadSystem::saveSceneCamera(Editor* editor) {
 
 bool SaveLoadSystem::loadSceneCamera(Editor* editor) {
 
-	std::ifstream file(editor->fileSystem.assetsPathExternal + "\\MyProject\\Database\\scenecamera_db.xml");
+	std::ifstream file(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\scenecamera_db.xml");
 
 	if (file.fail())
 		return false;
@@ -166,12 +170,12 @@ bool SaveLoadSystem::loadSceneCamera(Editor* editor) {
 
 	root_node = doc.first_node("SceneCamera");
 
-	editor->editorCamera.position.x = atof(root_node->first_node("Position")->first_attribute("X")->value());
-	editor->editorCamera.position.y = atof(root_node->first_node("Position")->first_attribute("Y")->value());
-	editor->editorCamera.position.z = atof(root_node->first_node("Position")->first_attribute("Z")->value());
+	editor->sceneCamera->position.x = atof(root_node->first_node("Position")->first_attribute("X")->value());
+	editor->sceneCamera->position.y = atof(root_node->first_node("Position")->first_attribute("Y")->value());
+	editor->sceneCamera->position.z = atof(root_node->first_node("Position")->first_attribute("Z")->value());
 
-	editor->editorCamera.horizontalAngle = atof(root_node->first_node("Angle")->first_attribute("Horizontal")->value());
-	editor->editorCamera.verticalAngle = atof(root_node->first_node("Angle")->first_attribute("Vertical")->value());
+	editor->sceneCamera->horizontalAngle = atof(root_node->first_node("Angle")->first_attribute("Horizontal")->value());
+	editor->sceneCamera->verticalAngle = atof(root_node->first_node("Angle")->first_attribute("Vertical")->value());
 
 	file.close();
 	return true;
@@ -225,6 +229,37 @@ bool SaveLoadSystem::loadTransformComponent(Entity* ent, rapidxml::xml_node<>* e
 	return true;
 }
 
+bool SaveLoadSystem::saveGameCameraComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, GameCamera* camera) {
+
+	rapidxml::xml_node<>* camNode = doc.allocate_node(rapidxml::node_element, "GameCamera");
+	camNode->append_attribute(doc.allocate_attribute("Projection", doc.allocate_string(std::to_string(camera->projectionType).c_str())));
+	camNode->append_attribute(doc.allocate_attribute("FovAxis", doc.allocate_string(std::to_string(camera->fovAxis).c_str())));
+	camNode->append_attribute(doc.allocate_attribute("Near", doc.allocate_string(std::to_string(camera->nearClip).c_str())));
+	camNode->append_attribute(doc.allocate_attribute("Far", doc.allocate_string(std::to_string(camera->farClip).c_str())));
+	camNode->append_attribute(doc.allocate_attribute("FOV", doc.allocate_string(std::to_string(camera->fov).c_str())));
+	entNode->append_node(camNode);
+
+	return true;
+}
+
+bool SaveLoadSystem::loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+	rapidxml::xml_node<>* cameraNode = entNode->first_node("GameCamera");
+
+	if (cameraNode == NULL)
+		return false;
+
+	GameCamera* cameraComp = ent->addComponent<GameCamera>();
+	cameraComp->projectionType = atoi(cameraNode->first_attribute("Projection")->value());
+	cameraComp->fovAxis = atoi(cameraNode->first_attribute("FovAxis")->value());
+	cameraComp->nearClip = atof(cameraNode->first_attribute("Near")->value());
+	cameraComp->farClip = atof(cameraNode->first_attribute("Far")->value());
+	cameraComp->fov = atof(cameraNode->first_attribute("FOV")->value());
+	cameraComp->setMatrices();
+
+	return true;
+}
+
 bool SaveLoadSystem::saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light) {
 
 	rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
@@ -271,12 +306,12 @@ bool SaveLoadSystem::saveMeshRendererComponent(Editor* editor, rapidxml::xml_doc
 	if(meshRenderer->mesh->fileAddr == NULL)
 		meshRendererNode->append_attribute(doc.allocate_attribute("MeshPath", doc.allocate_string("NULL")));
 	else
-		meshRendererNode->append_attribute(doc.allocate_attribute("MeshPath", doc.allocate_string(editor->fileSystem.files[meshRenderer->mesh->fileAddr->id].path.c_str())));
+		meshRendererNode->append_attribute(doc.allocate_attribute("MeshPath", doc.allocate_string(editor->fileSystem->files[meshRenderer->mesh->fileAddr->id].path.c_str())));
 
 	if (meshRenderer->mat->fileAddr == NULL)
 		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string("Default")));
 	else
-		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[meshRenderer->mat->fileAddr->id].path.c_str())));
+		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem->files[meshRenderer->mat->fileAddr->id].path.c_str())));
 
 	entNode->append_node(meshRendererNode);
 
@@ -292,21 +327,21 @@ bool SaveLoadSystem::loadTerrainGeneratorComponent(Editor* editor, Entity* ent, 
 
 	TerrainGenerator* terrainComp = ent->addComponent<TerrainGenerator>();
 
-	auto matFound = editor->fileSystem.materials.find(terrainNode->first_attribute("MaterialPath")->value());
+	/*auto matFound = editor->fileSystem.materials.find(terrainNode->first_attribute("MaterialPath")->value());
 	if (matFound != editor->fileSystem.materials.end())
 		terrainComp->mat = &matFound->second;
 	else
-		terrainComp->mat = &editor->fileSystem.materials["Default"];
+		terrainComp->mat = &editor->fileSystem.materials["Default"];*/
 
 	//terrainComp->mat->meshRendererCompAddrs.push_back(terrainComp);
 
-	terrainComp->seed = atoi(terrainNode->first_attribute("Seed")->value());
+	//terrainComp->seed = atoi(terrainNode->first_attribute("Seed")->value());
 	//terrainComp->viewportLevel_X = atoi(terrainNode->first_attribute("Viewport_X")->value());
 	//terrainComp->viewportLevel_Z = atoi(terrainNode->first_attribute("Viewport_Z")->value());
 	//terrainComp->size_X = atof(terrainNode->first_attribute("Size_X")->value());
 	//terrainComp->size_Z = atof(terrainNode->first_attribute("Size_Z")->value());
-	terrainComp->height = atof(terrainNode->first_attribute("Height")->value());
-	terrainComp->scale = atof(terrainNode->first_attribute("Scale")->value());
+	//terrainComp->height = atof(terrainNode->first_attribute("Height")->value());
+	//terrainComp->scale = atof(terrainNode->first_attribute("Scale")->value());
 
 	terrainComp->init();
 
@@ -317,18 +352,18 @@ bool SaveLoadSystem::saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml
 
 	rapidxml::xml_node<>* meshRendererNode = doc.allocate_node(rapidxml::node_element, "Terrain");
 
-	if (terrain->mat->fileAddr == NULL)
+	/*if (terrain->mat->fileAddr == NULL)
 		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string("Default")));
 	else
-		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[terrain->mat->fileAddr->id].path.c_str())));
+		meshRendererNode->append_attribute(doc.allocate_attribute("MaterialPath", doc.allocate_string(editor->fileSystem.files[terrain->mat->fileAddr->id].path.c_str())));*/
 
-	meshRendererNode->append_attribute(doc.allocate_attribute("Seed", doc.allocate_string(std::to_string(terrain->seed).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Seed", doc.allocate_string(std::to_string(terrain->seed).c_str())));
 	//meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_X", doc.allocate_string(std::to_string(terrain->viewportLevel_X).c_str())));
 	//meshRendererNode->append_attribute(doc.allocate_attribute("Viewport_Z", doc.allocate_string(std::to_string(terrain->viewportLevel_Z).c_str())));
 	//meshRendererNode->append_attribute(doc.allocate_attribute("Size_X", doc.allocate_string(std::to_string(terrain->size_X).c_str())));
 	//meshRendererNode->append_attribute(doc.allocate_attribute("Size_Z", doc.allocate_string(std::to_string(terrain->size_Z).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(terrain->height).c_str())));
-	meshRendererNode->append_attribute(doc.allocate_attribute("Scale", doc.allocate_string(std::to_string(terrain->scale).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(terrain->height).c_str())));
+	//meshRendererNode->append_attribute(doc.allocate_attribute("Scale", doc.allocate_string(std::to_string(terrain->scale).c_str())));
 
 	entNode->append_node(meshRendererNode);
 
@@ -344,21 +379,21 @@ bool SaveLoadSystem::loadMeshRendererComponent(Editor* editor, Entity* ent, rapi
 
 	MeshRenderer* meshRendererComp = ent->addComponent<MeshRenderer>();
 
-	auto meshFound = editor->fileSystem.meshes.find(meshRendererNode->first_attribute("MeshPath")->value());
+	auto meshFound = editor->fileSystem->meshes.find(meshRendererNode->first_attribute("MeshPath")->value());
 
-	if (meshFound != editor->fileSystem.meshes.end())
+	if (meshFound != editor->fileSystem->meshes.end())
 		meshRendererComp->mesh = &meshFound->second;
 	else
-		meshRendererComp->mesh = &editor->fileSystem.meshes["Null"];
+		meshRendererComp->mesh = &editor->fileSystem->meshes["Null"];
 
 	meshRendererComp->mesh->meshRendererCompAddrs.push_back(meshRendererComp);
 
 
-	auto matFound = editor->fileSystem.materials.find(meshRendererNode->first_attribute("MaterialPath")->value());
-	if (matFound != editor->fileSystem.materials.end())
+	auto matFound = editor->fileSystem->materials.find(meshRendererNode->first_attribute("MaterialPath")->value());
+	if (matFound != editor->fileSystem->materials.end())
 		meshRendererComp->mat = &matFound->second;
 	else
-		meshRendererComp->mat = &editor->fileSystem.materials["Default"];
+		meshRendererComp->mat = &editor->fileSystem->materials["Default"];
 
 	meshRendererComp->mat->meshRendererCompAddrs.push_back(meshRendererComp);
 
@@ -408,7 +443,7 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 		PxQuat(myquaternion.x, myquaternion.y, myquaternion.z, myquaternion.w));
 
 	Rigidbody* rigidbodyComp = ent->addComponent<Rigidbody>();
-	rigidbodyComp->body = editor->physics.gPhysics->createRigidDynamic(tm);
+	rigidbodyComp->body = editor->physics->gPhysics->createRigidDynamic(tm);
 	rigidbodyComp->body->setMass(atof(rigidbodyNode->first_attribute("Mass")->value()));
 	rigidbodyComp->body->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, !(atoi(rigidbodyNode->first_attribute("UseGravity")->value()) == 1 ? true : false));
 	rigidbodyComp->body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, atoi(rigidbodyNode->first_attribute("IsKinematic")->value()) == 1 ? true : false);
@@ -423,7 +458,7 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y, atoi(lockRotationNode->first_attribute("Y")->value()) == 1 ? true : false);
 	rigidbodyComp->body->setRigidDynamicLockFlag(PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z, atoi(lockRotationNode->first_attribute("Z")->value()) == 1 ? true : false);
 
-	editor->physics.gScene->addActor(*rigidbodyComp->body);
+	editor->physics->gScene->addActor(*rigidbodyComp->body);
 
 	for (auto& comp : ent->getComponents<Collider>()) {
 		rigidbodyComp->body->attachShape(*comp->shape);
@@ -443,7 +478,7 @@ bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_doc
 	meshColliderNode->append_attribute(doc.allocate_attribute("Trigger", doc.allocate_string(std::to_string(trigger).c_str())));
 
 	rapidxml::xml_node<>* physicMatNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
-	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem.getPhysicMaterialPath(meshCollider->pmat->fileAddr)))));
+	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem->getPhysicMaterialPath(meshCollider->pmat->fileAddr)))));
 
 	meshColliderNode->append_node(physicMatNode);
 
@@ -466,12 +501,12 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 		MeshCollider* meshColliderComp = ent->addComponent<MeshCollider>();
 
 		const char* pmatFilePath = meshColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
-		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
+		File* pmatFileAddr = editor->fileSystem->getPhysicMaterialAddr(pmatFilePath);
 
 		if (pmatFileAddr == NULL)
 			pmatFilePath = "Default";
 
-		meshColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
+		meshColliderComp->pmat = &editor->fileSystem->physicmaterials[pmatFilePath];
 		meshColliderComp->pmat->colliderCompAddrs.push_back(meshColliderComp);
 
 		bool convex = atoi(meshColliderNode->first_attribute("Convex")->value()) == 1;
@@ -479,15 +514,15 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 		if (convex) {
 
 			PxConvexMesh* convexMesh = meshColliderComp->createConvexMesh(ent->getComponent<MeshRenderer>(),
-				editor->physics.gPhysics, editor->physics.gCooking);
-			meshColliderComp->shape = editor->physics.gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
+				editor->physics->gPhysics, editor->physics->gCooking);
+			meshColliderComp->shape = editor->physics->gPhysics->createShape(PxConvexMeshGeometry(convexMesh,
 				PxVec3(ent->transform->globalScale.x, ent->transform->globalScale.y, ent->transform->globalScale.z)), *meshColliderComp->pmat->pxmat, true);
 		}
 		else {
 
 			PxTriangleMesh* triangleMesh = meshColliderComp->createTriangleMesh(ent->getComponent<MeshRenderer>(),
-				editor->physics.gPhysics, editor->physics.gCooking);
-			meshColliderComp->shape = editor->physics.gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
+				editor->physics->gPhysics, editor->physics->gCooking);
+			meshColliderComp->shape = editor->physics->gPhysics->createShape(PxTriangleMeshGeometry(triangleMesh,
 				PxVec3(ent->transform->globalScale.x, ent->transform->globalScale.y, ent->transform->globalScale.z)), *meshColliderComp->pmat->pxmat, true);
 		}
 
@@ -519,7 +554,7 @@ bool SaveLoadSystem::saveBoxColliderComponent(Editor* editor, rapidxml::xml_docu
 	boxColliderNode->append_node(sizeNode);
 
 	rapidxml::xml_node<>* physicMatNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
-	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem.getPhysicMaterialPath(boxCollider->pmat->fileAddr)))));
+	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem->getPhysicMaterialPath(boxCollider->pmat->fileAddr)))));
 
 	boxColliderNode->append_node(physicMatNode);
 
@@ -538,12 +573,12 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 		BoxCollider* boxColliderComp = ent->addComponent<BoxCollider>();
 
 		const char* pmatFilePath = boxColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
-		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
+		File* pmatFileAddr = editor->fileSystem->getPhysicMaterialAddr(pmatFilePath);
 
 		if (pmatFileAddr == NULL)
 			pmatFilePath = "Default";
 
-		boxColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
+		boxColliderComp->pmat = &editor->fileSystem->physicmaterials[pmatFilePath];
 		boxColliderComp->pmat->colliderCompAddrs.push_back(boxColliderComp);
 
 		bool isTrigger = atoi(boxColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
@@ -557,7 +592,7 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 		boxColliderComp->size.z = atof(boxColliderNode->first_node("Size")->first_attribute("Z")->value());
 
 		glm::vec3 size = ent->transform->globalScale * boxColliderComp->size / 2.f;
-		boxColliderComp->shape = editor->physics.gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
+		boxColliderComp->shape = editor->physics->gPhysics->createShape(PxBoxGeometry(size.x, size.y, size.z), *boxColliderComp->pmat->pxmat, true);
 		boxColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
 		boxColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 		glm::vec3 center = boxColliderComp->transform->globalScale * boxColliderComp->center;
@@ -581,7 +616,7 @@ bool SaveLoadSystem::saveSphereColliderComponent(Editor* editor, rapidxml::xml_d
 	sphereColliderNode->append_node(centerNode);
 
 	rapidxml::xml_node<>* physicMatNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
-	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem.getPhysicMaterialPath(sphereCollider->pmat->fileAddr)))));
+	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem->getPhysicMaterialPath(sphereCollider->pmat->fileAddr)))));
 
 	sphereColliderNode->append_node(physicMatNode);
 	entNode->append_node(sphereColliderNode);
@@ -599,12 +634,12 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 		SphereCollider* sphereColliderComp = ent->addComponent<SphereCollider>();
 
 		const char* pmatFilePath = sphereColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
-		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
+		File* pmatFileAddr = editor->fileSystem->getPhysicMaterialAddr(pmatFilePath);
 
 		if (pmatFileAddr == NULL)
 			pmatFilePath = "Default";
 
-		sphereColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
+		sphereColliderComp->pmat = &editor->fileSystem->physicmaterials[pmatFilePath];
 		sphereColliderComp->pmat->colliderCompAddrs.push_back(sphereColliderComp);
 
 		bool isTrigger = atoi(sphereColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
@@ -618,7 +653,7 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 		float max = ent->transform->globalScale.x > ent->transform->globalScale.y ? ent->transform->globalScale.x : ent->transform->globalScale.y;
 		max = max > ent->transform->globalScale.z ? max : ent->transform->globalScale.z;
 
-		sphereColliderComp->shape = editor->physics.gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius * max), *sphereColliderComp->pmat->pxmat, true);
+		sphereColliderComp->shape = editor->physics->gPhysics->createShape(PxSphereGeometry(sphereColliderComp->radius * max), *sphereColliderComp->pmat->pxmat, true);
 		sphereColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
 		sphereColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
 		glm::vec3 center = sphereColliderComp->transform->globalScale * sphereColliderComp->center;
@@ -644,7 +679,7 @@ bool SaveLoadSystem::saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_
 	capsuleColliderNode->append_node(centerNode);
 
 	rapidxml::xml_node<>* physicMatNode = doc.allocate_node(rapidxml::node_element, "PhysicMaterial");
-	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem.getPhysicMaterialPath(capsuleCollider->pmat->fileAddr)))));
+	physicMatNode->append_attribute(doc.allocate_attribute("Path", doc.allocate_string((editor->fileSystem->getPhysicMaterialPath(capsuleCollider->pmat->fileAddr)))));
 
 	capsuleColliderNode->append_node(physicMatNode);
 	entNode->append_node(capsuleColliderNode);
@@ -662,12 +697,12 @@ bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, 
 		CapsuleCollider* capsuleColliderComp = ent->addComponent<CapsuleCollider>();
 
 		const char* pmatFilePath = capsuleColliderNode->first_node("PhysicMaterial")->first_attribute("Path")->value();
-		File* pmatFileAddr = editor->fileSystem.getPhysicMaterialAddr(pmatFilePath);
+		File* pmatFileAddr = editor->fileSystem->getPhysicMaterialAddr(pmatFilePath);
 
 		if (pmatFileAddr == NULL)
 			pmatFilePath = "Default";
 
-		capsuleColliderComp->pmat = &editor->fileSystem.physicmaterials[pmatFilePath];
+		capsuleColliderComp->pmat = &editor->fileSystem->physicmaterials[pmatFilePath];
 		capsuleColliderComp->pmat->colliderCompAddrs.push_back(capsuleColliderComp);
 
 		bool isTrigger = atoi(capsuleColliderNode->first_attribute("Trigger")->value()) == 1 ? true : false;
@@ -680,7 +715,7 @@ bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, 
 		capsuleColliderComp->center.y = atof(capsuleColliderNode->first_node("Center")->first_attribute("Y")->value());
 		capsuleColliderComp->center.z = atof(capsuleColliderNode->first_node("Center")->first_attribute("Z")->value());
 
-		capsuleColliderComp->shape = editor->physics.gPhysics->createShape(PxCapsuleGeometry(capsuleColliderComp->radius,
+		capsuleColliderComp->shape = editor->physics->gPhysics->createShape(PxCapsuleGeometry(capsuleColliderComp->radius,
 			capsuleColliderComp->height / 2), *capsuleColliderComp->pmat->pxmat, true);
 		capsuleColliderComp->shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, !isTrigger);
 		capsuleColliderComp->shape->setFlag(PxShapeFlag::eTRIGGER_SHAPE, isTrigger);
