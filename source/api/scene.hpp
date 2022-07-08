@@ -41,9 +41,9 @@ public:
 
 	MousePick mousepick;
 
-	Scene();
+	Scene(Editor* editor);
 
-	void init(Editor* editor);
+	void init();
 
 	void initSceneGraph();
 

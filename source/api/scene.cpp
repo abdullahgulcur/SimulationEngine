@@ -1,21 +1,21 @@
 #include "editor.hpp"
 #include "scene.hpp"
 
-Scene::Scene() {
+Scene::Scene(Editor* editor) {
 
+	this->editor = editor;
 	name = "MyScene";
 }
 
-void Scene::init(Editor* editor) {
+void Scene::init() {
 
-	this->editor = editor;
 	mousepick.init();
 	Scene::initSceneGraph();
 }
 
 void Scene::initSceneGraph() {
 
-	SaveLoadSystem::loadEntities(editor);
+	editor->saveLoadSystem->loadEntities();
 	Scene::loadLights();
 }
 
@@ -53,7 +53,9 @@ void Scene::update(float dt) {
 
 void Scene::simulateInEditor(float dt) {
 
-	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->FBO);
+
+	glViewport(0, 0, editor->editorGUI->sceneRegion.x, editor->editorGUI->sceneRegion.y);
 
 	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -257,6 +259,8 @@ void Scene::renderPrimaryGameCamera(GameCamera* camera) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, camera->FBO);
 
+	glViewport(0, 0, editor->editorGUI->gameCameraRegion.x, editor->editorGUI->gameCameraRegion.y);
+
 	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -367,7 +371,9 @@ void Scene::renderPrimaryGameCamera(GameCamera* camera) {
 
 void Scene::simulateInGame(float dt) {
 
-	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->FBO);
+
+	glViewport(0, 0, editor->editorGUI->sceneRegion.x, editor->editorGUI->sceneRegion.y);
 
 	glClearColor(0.4f, 0.65f, 0.8f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -728,7 +734,7 @@ void Scene::renameEntity(Entity* ent, char* newName) {
 
 void Scene::saveEditorProperties() {
 
-	SaveLoadSystem::saveEntities(editor);
+	editor->saveLoadSystem->saveEntities();
 } 
 
 std::string Scene::getLightType(LightType type) {

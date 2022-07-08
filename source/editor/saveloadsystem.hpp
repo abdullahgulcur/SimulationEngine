@@ -26,19 +26,27 @@ using namespace Material;
 
 class Editor;
 
-namespace SaveLoadSystem {
+class SaveLoadSystem {
 
-	void saveEntitiesRecursively(Editor* editor, Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode);
+private:
 
-	void loadEntities(Editor* editor);
+	Editor* editor;
 
-	void loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<>* parentNode, Entity* parent);
+public:
 
-	bool saveEntities(Editor* editor);
-	
-	bool saveSceneCamera(Editor* editor);
+	SaveLoadSystem(Editor* editor);
 
-	bool loadSceneCamera(Editor* editor);
+	void saveEntitiesRecursively(Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode);
+
+	void loadEntities();
+
+	void loadEntitiesRecursively(rapidxml::xml_node<>* parentNode, Entity* parent);
+
+	bool saveEntities();
+
+	bool saveSceneCamera();
+
+	bool loadSceneCamera();
 
 	bool saveTransformComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Transform* transform);
 
@@ -48,35 +56,35 @@ namespace SaveLoadSystem {
 
 	bool loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light);
+	bool saveLightComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light);
 
-	bool loadLightComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadLightComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveMeshRendererComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer);
+	bool saveMeshRendererComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer);
 
-	bool loadTerrainGeneratorComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadTerrainGeneratorComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain);
+	bool saveTerrainGeneratorComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain);
 
-	bool loadMeshRendererComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadMeshRendererComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
 	bool saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Rigidbody* rigidbody);
 
-	bool loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadRigidbodyComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveMeshColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
+	bool saveMeshColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider);
 
-	bool loadMeshColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadMeshColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveBoxColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider);
+	bool saveBoxColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider);
 
-	bool loadBoxColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadBoxColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveSphereColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider);
+	bool saveSphereColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider);
 
-	bool loadSphereColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
+	bool loadSphereColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode);
 
-	bool saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider);
+	bool saveCapsuleColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider);
 
-	bool loadCapsuleColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode);
-}
+	bool loadCapsuleColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode);
+};

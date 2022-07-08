@@ -3,7 +3,6 @@
 #include "GLfW/glfw3.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <imgui/imgui.h>
 
 #include "input.hpp"
 #include "saveloadsystem.hpp"
@@ -14,6 +13,8 @@ class Editor;
 class SceneCamera: public Camera {
 
 private:
+
+	Editor* editor;
 
 	float horizontalRotationSpeed = 0.012;
 	float verticalRotationSpeed = 0.012;
@@ -31,22 +32,25 @@ private:
 
 public:
 
-	unsigned int framebuffer;
-	unsigned int textureColorbuffer;
-
 	float horizontalAngle = 0.f;
 	float verticalAngle = 0.f;
 	glm::vec3 position = glm::vec3(0, 0, -5);
 
-	SceneCamera();
+	SceneCamera(Editor* editor);
 
-	void createFBO();
+	void init(int sizeX, int sizeY);
 
-	void onUpdate(Editor* editor);
+	void createFBO(int sizeX, int sizeY);
+
+	void update();
+
+	void recreateFBO(int sizeX, int sizeY);
+
+	void updateProjectionMatrix(int sizeX, int sizeY);
 
 	void setMatrices();
 
-	void computeMatricesFromInputs(Editor* editor);
+	void computeMatricesFromInputs();
 
 	void teleportMouse(glm::vec2& mousePos, float& scenePosX, float& scenePosY, float& sceneRegionX,
 		float& sceneRegionY, float& offset, GLFWwindow*& window, static bool& mouseTeleport);

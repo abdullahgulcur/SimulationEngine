@@ -1,12 +1,14 @@
 #include "application.hpp"
 #include <iostream>
 
-Application::Application() {}
+Application::Application() {
+	editor = new Editor;
+}
 
 void Application::start() {
 
 	do {
-		editor.run();
-	} while (editor.window->getOpen(&editor));
+		editor->run();
+	} while (editor->window->getOpen(editor));
 }
 

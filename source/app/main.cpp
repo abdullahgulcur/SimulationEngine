@@ -2,7 +2,7 @@
 
 int main() {
 
-	Application app;
-	app.start();
+	Application* app = new Application;
+	app->start();
 	return 0;
 }

@@ -1,17 +1,16 @@
 #include "editor.hpp"
 #include "filesystem.hpp"
 
-FileSystem::FileSystem() {
+FileSystem::FileSystem(Editor* editor) {
 
+	this->editor = editor;
 }
 
 FileSystem::~FileSystem() {
 
 }
 
-void FileSystem::init(Editor* editor) {
-
-	FileSystem::setEditor(editor);
+void FileSystem::init() {
 
 	FileSystem::checkProjectFolder();
 	FileSystem::loadDefaultAssets();
@@ -1255,9 +1254,4 @@ ShaderFile& FileSystem::getVertShaderFile(int id) {
 MeshFile& FileSystem::getMeshFile(int id) {
 
 	return meshes.find(files[id].path)->second;
-}
-
-void FileSystem::setEditor(Editor* editor) { 
-
-	this->editor = editor; 
 }

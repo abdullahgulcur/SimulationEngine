@@ -99,13 +99,13 @@ public:
 
 	EditorTextures editorTextures;
 
-	FileSystem();
+	FileSystem(Editor* editor);
 
 	~FileSystem();
 
 	void checkProjectFolder();
 
-	void init(Editor* editor);
+	void init();
 
 	void updateChildrenPathRecursively(File* file);
 
@@ -180,6 +180,4 @@ public:
 	ShaderFile& getVertShaderFile(int id);
 
 	MeshFile& getMeshFile(int id);
-
-	void setEditor(Editor* editor);
 };

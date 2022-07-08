@@ -12,6 +12,9 @@ void MousePick::init() {
 
 int MousePick::detectAndGetEntityId(Editor* editor, float x, float y, float width, float height, float mouseX, float mouseY) {
 
+	glBindFramebuffer(GL_FRAMEBUFFER, editor->sceneCamera->FBO);
+	glViewport(0, 0, editor->editorGUI->sceneRegion.x, editor->editorGUI->sceneRegion.y);
+
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(pickingProgramID);
@@ -65,7 +68,6 @@ int MousePick::detectAndGetEntityId(Editor* editor, float x, float y, float widt
 	//	editor->editorGUI.lastSelectedEntity = NULL;
 	//else
 	//	editor->editorGUI.lastSelectedEntity = editor->scene->entities[pickedID];
-
 
 	if (pickedID == 0x00ffffff || pickedID >= editor->scene->entities.size())
 		return -1;

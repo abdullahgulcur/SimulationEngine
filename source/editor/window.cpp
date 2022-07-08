@@ -49,7 +49,6 @@ void Window::startGLOptions() {
 	Window::loadTitleBarIcon();
 
 	glfwPollEvents();
-	glfwSetCursorPos(GLFW_window, mode->width / 2, mode->height / 2);
 }
 
 void Window::loadTitleBarIcon() {
@@ -86,7 +85,7 @@ bool Window::getOpen(Editor* editor) {
 
 	if (!open) {
 
-		SaveLoadSystem::saveSceneCamera(editor);
+		editor->saveLoadSystem->saveSceneCamera();
 	}
 
 	return open;

@@ -1,7 +1,12 @@
 #include "saveloadsystem.hpp"
 #include "editor.hpp"
 
-bool SaveLoadSystem::saveEntities(Editor* editor) {
+SaveLoadSystem::SaveLoadSystem(Editor* editor) {
+
+	this->editor = editor;
+}
+
+bool SaveLoadSystem::saveEntities() {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -17,7 +22,7 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	saveTransformComponent(doc, entity, editor->scene->entities[0]->transform);
 	entitiesNode->append_node(entity);
 
-	SaveLoadSystem::saveEntitiesRecursively(editor, editor->scene->entities[0]->transform, doc, entity);
+	SaveLoadSystem::saveEntitiesRecursively(editor->scene->entities[0]->transform, doc, entity);
 
 	std::string xml_as_string;
 	rapidxml::print(std::back_inserter(xml_as_string), doc);
@@ -29,7 +34,7 @@ bool SaveLoadSystem::saveEntities(Editor* editor) {
 	return true;
 }
 
-void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode) {
+void SaveLoadSystem::saveEntitiesRecursively(Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode) {
 
 	for (auto& child : parent->children) {
 
@@ -39,13 +44,13 @@ void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, 
 		saveTransformComponent(doc, entity, child);
 
 		if (Light* lightComp = child->entity->getComponent<Light>())
-			saveLightComponent(editor, doc, entity, lightComp);
+			saveLightComponent( doc, entity, lightComp);
 
 		if (MeshRenderer* meshRendererComp = child->entity->getComponent<MeshRenderer>())
-			saveMeshRendererComponent(editor, doc, entity, meshRendererComp);
+			saveMeshRendererComponent( doc, entity, meshRendererComp);
 
 		if (TerrainGenerator* terrainComp = child->entity->getComponent<TerrainGenerator>())
-			saveTerrainGeneratorComponent(editor, doc, entity, terrainComp);
+			saveTerrainGeneratorComponent( doc, entity, terrainComp);
 
 		if (Rigidbody* rigidbodyComp = child->entity->getComponent<Rigidbody>())
 			saveRigidbodyComponent(doc, entity, rigidbodyComp);
@@ -54,31 +59,31 @@ void SaveLoadSystem::saveEntitiesRecursively(Editor* editor, Transform* parent, 
 			saveGameCameraComponent(doc, entity, cameraComp);
 
 		for (auto& comp : child->entity->getComponents<BoxCollider>())
-			saveBoxColliderComponent(editor, doc, entity, comp);
+			saveBoxColliderComponent( doc, entity, comp);
 
 		for (auto& comp : child->entity->getComponents<SphereCollider>())
-			saveSphereColliderComponent(editor, doc, entity, comp);
+			saveSphereColliderComponent( doc, entity, comp);
 
 		for (auto& comp : child->entity->getComponents<CapsuleCollider>())
-			saveCapsuleColliderComponent(editor, doc, entity, comp);
+			saveCapsuleColliderComponent( doc, entity, comp);
 
 		for (auto& comp : child->entity->getComponents<MeshCollider>())
-			saveMeshColliderComponent(editor, doc, entity, comp);
+			saveMeshColliderComponent( doc, entity, comp);
 
 		entityNode->append_node(entity);
 
-		SaveLoadSystem::saveEntitiesRecursively(editor, child, doc, entity);
+		SaveLoadSystem::saveEntitiesRecursively( child, doc, entity);
 	}
 }
 
-void SaveLoadSystem::loadEntities(Editor* editor) {
+void SaveLoadSystem::loadEntities() {
 
 	std::ifstream file(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\entity.xml");
 
 	if (file.fail()) {
 
 		Entity* ent = new Entity("Root", editor->scene);
-		SaveLoadSystem::saveEntities(editor);
+		SaveLoadSystem::saveEntities();
 		return;
 	}
 
@@ -95,33 +100,33 @@ void SaveLoadSystem::loadEntities(Editor* editor) {
 	Entity* ent = new Entity("Root", editor->scene);
 	ent->transform->updateSelfAndChild();
 
-	SaveLoadSystem::loadEntitiesRecursively(editor, root_node->first_node("Entity"), ent);
+	SaveLoadSystem::loadEntitiesRecursively( root_node->first_node("Entity"), ent);
 
 	file.close();
 }
 
-void SaveLoadSystem::loadEntitiesRecursively(Editor* editor, rapidxml::xml_node<>* parentNode, Entity* parent) {
+void SaveLoadSystem::loadEntitiesRecursively(rapidxml::xml_node<>* parentNode, Entity* parent) {
 
 	for (rapidxml::xml_node<>* entityNode = parentNode->first_node("Entity"); entityNode; entityNode = entityNode->next_sibling()) {
 
 		Entity* ent = new Entity(entityNode->first_attribute("Name")->value(), parent->transform, editor->scene);
 
 		SaveLoadSystem::loadTransformComponent(ent, entityNode);
-		SaveLoadSystem::loadLightComponent(editor, ent, entityNode);
-		SaveLoadSystem::loadMeshRendererComponent(editor, ent, entityNode);
-		SaveLoadSystem::loadTerrainGeneratorComponent(editor, ent, entityNode);
-		SaveLoadSystem::loadBoxColliderComponents(editor, ent, entityNode);
-		SaveLoadSystem::loadSphereColliderComponents(editor, ent, entityNode);
-		SaveLoadSystem::loadCapsuleColliderComponents(editor, ent, entityNode);
-		SaveLoadSystem::loadMeshColliderComponents(editor, ent, entityNode);
-		SaveLoadSystem::loadRigidbodyComponent(editor, ent, entityNode);
+		SaveLoadSystem::loadLightComponent( ent, entityNode);
+		SaveLoadSystem::loadMeshRendererComponent( ent, entityNode);
+		SaveLoadSystem::loadTerrainGeneratorComponent( ent, entityNode);
+		SaveLoadSystem::loadBoxColliderComponents( ent, entityNode);
+		SaveLoadSystem::loadSphereColliderComponents( ent, entityNode);
+		SaveLoadSystem::loadCapsuleColliderComponents( ent, entityNode);
+		SaveLoadSystem::loadMeshColliderComponents( ent, entityNode);
+		SaveLoadSystem::loadRigidbodyComponent( ent, entityNode);
 		SaveLoadSystem::loadGameCameraComponent(ent, entityNode);
 
-		SaveLoadSystem::loadEntitiesRecursively(editor, entityNode, ent);
+		SaveLoadSystem::loadEntitiesRecursively( entityNode, ent);
 	}
 }
 
-bool SaveLoadSystem::saveSceneCamera(Editor* editor) {
+bool SaveLoadSystem::saveSceneCamera() {
 
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -153,7 +158,7 @@ bool SaveLoadSystem::saveSceneCamera(Editor* editor) {
 	return true;
 }
 
-bool SaveLoadSystem::loadSceneCamera(Editor* editor) {
+bool SaveLoadSystem::loadSceneCamera() {
 
 	std::ifstream file(editor->fileSystem->assetsPathExternal + "\\MyProject\\Database\\scenecamera_db.xml");
 
@@ -260,7 +265,7 @@ bool SaveLoadSystem::loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* 
 	return true;
 }
 
-bool SaveLoadSystem::saveLightComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light) {
+bool SaveLoadSystem::saveLightComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Light* light) {
 
 	rapidxml::xml_node<>* lightNode = doc.allocate_node(rapidxml::node_element, "Light");
 	lightNode->append_attribute(doc.allocate_attribute("Type", doc.allocate_string(editor->scene->getLightType(light->lightType).c_str())));
@@ -277,7 +282,7 @@ bool SaveLoadSystem::saveLightComponent(Editor* editor, rapidxml::xml_document<>
 	return true;
 }
 
-bool SaveLoadSystem::loadLightComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadLightComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	rapidxml::xml_node<>* lightNode = entNode->first_node("Light");
 
@@ -299,7 +304,7 @@ bool SaveLoadSystem::loadLightComponent(Editor* editor, Entity* ent, rapidxml::x
 	return true;
 }
 
-bool SaveLoadSystem::saveMeshRendererComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer) {
+bool SaveLoadSystem::saveMeshRendererComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer) {
 
 	rapidxml::xml_node<>* meshRendererNode = doc.allocate_node(rapidxml::node_element, "MeshRenderer");
 
@@ -318,7 +323,7 @@ bool SaveLoadSystem::saveMeshRendererComponent(Editor* editor, rapidxml::xml_doc
 	return true;
 }
 
-bool SaveLoadSystem::loadTerrainGeneratorComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadTerrainGeneratorComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	rapidxml::xml_node<>* terrainNode = entNode->first_node("Terrain");
 
@@ -348,7 +353,7 @@ bool SaveLoadSystem::loadTerrainGeneratorComponent(Editor* editor, Entity* ent, 
 	return true;
 }
 
-bool SaveLoadSystem::saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain) {
+bool SaveLoadSystem::saveTerrainGeneratorComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, TerrainGenerator* terrain) {
 
 	rapidxml::xml_node<>* meshRendererNode = doc.allocate_node(rapidxml::node_element, "Terrain");
 
@@ -370,7 +375,7 @@ bool SaveLoadSystem::saveTerrainGeneratorComponent(Editor* editor, rapidxml::xml
 	return true;
 }
 
-bool SaveLoadSystem::loadMeshRendererComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadMeshRendererComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	rapidxml::xml_node<>* meshRendererNode = entNode->first_node("MeshRenderer");
 
@@ -430,7 +435,7 @@ bool SaveLoadSystem::saveRigidbodyComponent(rapidxml::xml_document<>& doc, rapid
 	return true;
 }
 
-bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadRigidbodyComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	rapidxml::xml_node<>* rigidbodyNode = entNode->first_node("Rigidbody");
 
@@ -468,7 +473,7 @@ bool SaveLoadSystem::loadRigidbodyComponent(Editor* editor, Entity* ent, rapidxm
 	return true;
 }
 
-bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider) {
+bool SaveLoadSystem::saveMeshColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshCollider* meshCollider) {
 
 	rapidxml::xml_node<>* meshColliderNode = doc.allocate_node(rapidxml::node_element, "MeshCollider");
 	meshColliderNode->append_attribute(doc.allocate_attribute("Convex", doc.allocate_string(
@@ -488,7 +493,7 @@ bool SaveLoadSystem::saveMeshColliderComponent(Editor* editor, rapidxml::xml_doc
 }
 
 //TODO:: if mesh is null then delete mesh collider and then save it
-bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadMeshColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	bool b = (5 & 1);
 	std::cout << "test et " << (5 & 5) << std::endl;
@@ -535,7 +540,7 @@ bool SaveLoadSystem::loadMeshColliderComponents(Editor* editor, Entity* ent, rap
 	return true;
 }
 
-bool SaveLoadSystem::saveBoxColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider) {
+bool SaveLoadSystem::saveBoxColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, BoxCollider* boxCollider) {
 
 	rapidxml::xml_node<>* boxColliderNode = doc.allocate_node(rapidxml::node_element, "BoxCollider");
 	int trigger = boxCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
@@ -563,7 +568,7 @@ bool SaveLoadSystem::saveBoxColliderComponent(Editor* editor, rapidxml::xml_docu
 	return true;
 }
 
-bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadBoxColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	for (rapidxml::xml_node<>* boxColliderNode = entNode->first_node("BoxCollider"); boxColliderNode; boxColliderNode = boxColliderNode->next_sibling()) {
 
@@ -602,7 +607,7 @@ bool SaveLoadSystem::loadBoxColliderComponents(Editor* editor, Entity* ent, rapi
 	return true;
 }
 
-bool SaveLoadSystem::saveSphereColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider) {
+bool SaveLoadSystem::saveSphereColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, SphereCollider* sphereCollider) {
 
 	rapidxml::xml_node<>* sphereColliderNode = doc.allocate_node(rapidxml::node_element, "SphereCollider");
 	int trigger = sphereCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
@@ -624,7 +629,7 @@ bool SaveLoadSystem::saveSphereColliderComponent(Editor* editor, rapidxml::xml_d
 	return true;
 }
 
-bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadSphereColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	for (rapidxml::xml_node<>* sphereColliderNode = entNode->first_node("SphereCollider"); sphereColliderNode; sphereColliderNode = sphereColliderNode->next_sibling()) {
 
@@ -663,7 +668,7 @@ bool SaveLoadSystem::loadSphereColliderComponents(Editor* editor, Entity* ent, r
 	return true;
 }
 
-bool SaveLoadSystem::saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider) {
+bool SaveLoadSystem::saveCapsuleColliderComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, CapsuleCollider* capsuleCollider) {
 
 	rapidxml::xml_node<>* capsuleColliderNode = doc.allocate_node(rapidxml::node_element, "CapsuleCollider");
 	int trigger = capsuleCollider->shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ? 1 : 0;
@@ -687,7 +692,7 @@ bool SaveLoadSystem::saveCapsuleColliderComponent(Editor* editor, rapidxml::xml_
 	return true;
 }
 
-bool SaveLoadSystem::loadCapsuleColliderComponents(Editor* editor, Entity* ent, rapidxml::xml_node<>* entNode) {
+bool SaveLoadSystem::loadCapsuleColliderComponents(Entity* ent, rapidxml::xml_node<>* entNode) {
 
 	for (rapidxml::xml_node<>* capsuleColliderNode = entNode->first_node("CapsuleCollider"); capsuleColliderNode; capsuleColliderNode = capsuleColliderNode->next_sibling()) {
 

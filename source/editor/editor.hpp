@@ -27,6 +27,7 @@ public:
 	EditorGUI* editorGUI = NULL;
 	Scene* scene = NULL;
 	Physics* physics = NULL;
+	SaveLoadSystem* saveLoadSystem = NULL;
 
 	float time = 0;
 	bool gameStarted = false;

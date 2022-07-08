@@ -25,18 +25,21 @@ TerrainGenerator::TerrainGenerator() {
 
 	TerrainGenerator::createBrushGizmo();
 	TerrainGenerator::gaussianFilterCreation();
-
 }
 
 void TerrainGenerator::init() {
 
+	TerrainGenerator::createColorMap();
 	TerrainGenerator::createHeightMap();
+	TerrainGenerator::createNormalMap();
+	TerrainGenerator::addNewPalette(grass_a_tex, grass_n_tex);
 }
 
 void TerrainGenerator::init(MaterialFile* mat) {
 
+	TerrainGenerator::createColorMap();
 	TerrainGenerator::createHeightMap();
-
+	TerrainGenerator::createNormalMap();
 }
 
 float* TerrainGenerator::getFlatHeightmap(int size) {
@@ -49,6 +52,44 @@ float* TerrainGenerator::getFlatHeightmap(int size) {
 
 	return data;
 }
+
+unsigned char* TerrainGenerator::getColorMap(int size) {
+
+	unsigned char counter = 0;
+	unsigned char* data = new unsigned char[size * size];
+
+	for (int i = 0; i < size; i++) {
+
+		for (int j = 0; j < size; j++) {
+			//data[i * size + j] = Utility::getRandomInt(0, 3);7
+			//data[i * size + j] = (counter++) % 16;
+			data[i * size + j] = 0;
+		}
+	}
+
+	return data;
+}
+
+char* TerrainGenerator::getNormalMap(int size) {
+
+	char* data = new char[size * size * 3];
+
+	/*for (int i = 0; i < size; i++)
+		for (int j = 0; j < size; j++)
+			for (int k = 0; k < 3; k++)
+				data[(i * size + j) * 3 + k] = 0;*/
+
+	for (int i = 0; i < size; i++)
+		for (int j = 0; j < size; j++) {
+
+			data[(i * size + j) * 3] = 0;
+			data[(i * size + j) * 3 + 1] = 127;
+			data[(i * size + j) * 3 + 2] = 0;
+		}
+
+	return data;
+}
+
 
 //float* TerrainGenerator::getElevationData(int size) {
 //
@@ -75,6 +116,33 @@ float* TerrainGenerator::getFlatHeightmap(int size) {
 //
 //	return data;
 //}
+
+void TerrainGenerator::addNewPalette(unsigned int albedoTexture, unsigned int normalTexture) {
+
+	albedoMaps.push_back(albedoTexture);
+	normalMaps.push_back(normalTexture);
+	paletteIndices.push_back(0);
+}
+
+void TerrainGenerator::removePalette(int index) {
+
+	if (index == texturePaletteIndex)
+		texturePaletteIndex = 0;
+
+	paletteIndices.erase(paletteIndices.begin() + index);
+	albedoMaps.erase(albedoMaps.begin() + index);
+	normalMaps.erase(normalMaps.begin() + index);
+}
+
+void TerrainGenerator::selectAllTexturesFromPalette(int index) {
+
+	paletteIndices[index] = 0;
+}
+
+void TerrainGenerator::disableAllTexturesFromPalette(int index) {
+
+	paletteIndices[index] = 65535;
+}
 
 float* TerrainGenerator::getElevationData(int size) {
 
@@ -226,59 +294,202 @@ void TerrainGenerator::bump() {
 			int x = i + brushRadius;
 			int z = j + brushRadius;
 
-			int _x = x * (float)GFILTER_SIZE / (brushRadius * 2);
-			int _z = z * (float)GFILTER_SIZE / (brushRadius * 2);
+			int x_inKernel = x * (float)GFILTER_SIZE / (brushRadius * 2);
+			int z_inKernel = z * (float)GFILTER_SIZE / (brushRadius * 2);
 
-			float elevation = GKernel[_x][_z] * 50 * brushIntensity;
+			float elevation = GKernel[x_inKernel][z_inKernel] * 50 * brushIntensity;
 
-			int index = (int)posInTex.z * elevationMapSize + (int)posInTex.x;
+			int x_denormalized = (int)posInTex.x;
+			int z_denormalized = (int)posInTex.z;
+			int index = z_denormalized * elevationMapSize + x_denormalized;
 
-			if(index > 0 && index < elevationMapSize * elevationMapSize)
+			if (index > 0 && index < elevationMapSize * elevationMapSize) {
 				heights[index] += elevation;
+				TerrainGenerator::recalculateNormal(x_denormalized, z_denormalized);
+			}
 		}
 	}
 
 	TerrainGenerator::recreateHeightMap();
+	TerrainGenerator::recreateNormalMap();
 }
+
+void TerrainGenerator::paint() {
+
+	std::vector<UINT8> indices;
+
+	for (int i = 0; i < 16; i++) {
+
+		unsigned short current = 1 << i;
+		int filled = (~paletteIndices[texturePaletteIndex]) & current;
+		if (filled) indices.push_back(i);
+	}
+
+	for (int i = -brushRadius; i < brushRadius; i++) {
+
+		for (int j = -brushRadius; j < brushRadius; j++) {
+
+			if (i * i + j * j < brushRadius * brushRadius) {
+
+				glm::vec3 posInTex(brushIntersectionPoint->x + i, 0, brushIntersectionPoint->z + j);
+				int index = (int)posInTex.z * elevationMapSize + (int)posInTex.x;
+
+				if (index > 0 && index < elevationMapSize * elevationMapSize) {
+
+					for (int k = 0; k < 16; k++) {
+
+						bool active = activeSlopes & (1 << k);
+						if (active) {
+
+							glm::vec3 normal(normals[index * 3], normals[index * 3 + 1], normals[index * 3 + 2]);
+							normal = glm::normalize(normal);
+							float angle = TerrainGenerator::angleBetweenTwoVectors(normal, glm::vec3(0, 1, 0));
+
+							if (angle >= slopeFilters[k].x && angle < slopeFilters[k].y) {
+
+								int randIndex = Utility::getRandomInt(0, indices.size() - 1);
+								int randColor = indices[randIndex];
+								colors[index] = randColor;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	TerrainGenerator::recreateColorMap();
+}
+
+float TerrainGenerator::angleBetweenTwoVectors(glm::vec3 v0, glm::vec3 v1) {
+
+	return glm::degrees(glm::acos(glm::dot(v0, v1)));
+}
+
+void TerrainGenerator::grass() {
+
+
+}
+
+void TerrainGenerator::tree() {
+
+
+}
+
+void TerrainGenerator::recalculateNormal(int x, int z) {
+
+	// easy way
+	int index0 = (z - 1) * elevationMapSize + x;
+	int index1 = z * elevationMapSize + x - 1;
+	int index2 = z * elevationMapSize + x + 1;
+	int index3 = (z + 1) * elevationMapSize + x;
+
+	float h0 = heights[index0];
+	float h1 = heights[index1];
+	float h2 = heights[index2];
+	float h3 = heights[index3];
+
+	glm::vec3 normal;
+	normal.z = h0 - h3;
+	normal.x = h1 - h2;
+	normal.y = 2;
+
+	normal = glm::normalize(normal);
+
+	normals[(z * elevationMapSize + x) * 3] = (char)(normal.x * 127);
+	normals[(z * elevationMapSize + x) * 3 + 1] = (char)(normal.y * 127);
+	normals[(z * elevationMapSize + x) * 3 + 2] = (char)(normal.z * 127);
+	
+	//// sobel
+	//float tl = heights[(z - 1) * elevationMapSize + (x - 1)]; // top left
+	//float l  = heights[z * elevationMapSize + (x - 1)]; // left
+	//float bl = heights[(z + 1) * elevationMapSize + (x - 1)]; // bottom left
+	//float t  = heights[(z - 1) * elevationMapSize + x]; // top
+	//float b  = heights[(z + 1) * elevationMapSize + x]; // bottom
+	//float tr = heights[(z - 1) * elevationMapSize + (x + 1)]; // top right
+	//float r  = heights[z * elevationMapSize + (x + 1)]; // right
+	//float br = heights[(z + 1) * elevationMapSize + (x + 1)]; // bottom right
+ 
+	//float dX = tr + 2 * r + br - tl - 2 * l - bl;   
+	//float dY = bl + 2 * b + br - tl - 2 * t - tr;
+
+	//float normalStrength = 1.f;
+	//glm::vec3 N = glm::normalize(glm::vec3(dX, 2.0 / normalStrength, dY));
+
+	//normals[(z * elevationMapSize + x) * 3] = (char)(N.x * 127);
+	//normals[(z * elevationMapSize + x) * 3 + 1] = (char)(N.y * 127);
+	//normals[(z * elevationMapSize + x) * 3 + 2] = (char)(N.z * 127);
+}
+
 
 void TerrainGenerator::recreateHeightMap() {
 
 	glDeleteTextures(1, &elevationMapTexture);
-
-	GLint Alignment = 0;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &Alignment);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &elevationMapTexture);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, elevationMapTexture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glBindTexture(GL_TEXTURE_2D, elevationMapTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	unsigned int width = elevationMapSize;
-	unsigned int height = elevationMapSize;
-	//float* data = TerrainGenerator::getElevationData(width);
-	elevationMapSize = height;
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, heights);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, Alignment);
-
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, elevationMapSize, elevationMapSize, 0, GL_RED, GL_FLOAT, heights);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	glUniform1i(glGetUniformLocation(programID, "heightMap"), 0);
-	//delete[] data;
+}
+
+void TerrainGenerator::recreateColorMap() {
+
+	glDeleteTextures(1, &colorMapTexture);
+	glGenTextures(1, &colorMapTexture);
+	glBindTexture(GL_TEXTURE_2D, colorMapTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, elevationMapSize, elevationMapSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, colors);
+	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+void TerrainGenerator::recreateNormalMap() {
+
+	glDeleteTextures(1, &normalMapTexture);
+	glGenTextures(1, &normalMapTexture);
+	glBindTexture(GL_TEXTURE_2D, normalMapTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, elevationMapSize, elevationMapSize, 0, GL_RGB, GL_BYTE, normals);
+	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+void TerrainGenerator::createNormalMap() {
+
+	glGenTextures(1, &normalMapTexture);
+	glBindTexture(GL_TEXTURE_2D, normalMapTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	normals = TerrainGenerator::getNormalMap(elevationMapSize);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, elevationMapSize, elevationMapSize, 0, GL_RGB, GL_BYTE, normals);
+	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+void TerrainGenerator::createColorMap() {
+
+	glGenTextures(1, &colorMapTexture);
+	glBindTexture(GL_TEXTURE_2D, colorMapTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	colors = TerrainGenerator::getColorMap(elevationMapSize);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, elevationMapSize, elevationMapSize, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, colors);
+	glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 void TerrainGenerator::createHeightMap() {
 
-	GLint Alignment = 0;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &Alignment);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &elevationMapTexture);
-	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, elevationMapTexture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
 	// set the texture wrapping parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
@@ -287,28 +498,13 @@ void TerrainGenerator::createHeightMap() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// load image, create texture and generate mipmaps
-	unsigned int width = elevationMapSize;
-	unsigned int height = elevationMapSize;
-	//unsigned char* data = TextureNS::loadPNG("resource/heightmaps/height.png", width, height);
-	heights = TerrainGenerator::getFlatHeightmap(width);
-	//unsigned char* data = TextureNS::loadPNG("resource/heightmaps/elevationmap.png", height, height);
-	elevationMapSize = height;
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, heights);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, Alignment);
-
+	heights = TerrainGenerator::getFlatHeightmap(elevationMapSize);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, elevationMapSize, elevationMapSize, 0, GL_RED, GL_FLOAT, heights);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	glUniform1i(glGetUniformLocation(programID, "heightMap"), 0);
 	//delete[] data;
 
-	//surfaceTexture = TextureNS::loadDDS("resource/textures/surface.DDS");
-	grass_a_tex = TextureNS::loadDDS("resource/textures/grass_a.DDS");
-	grass_ao_tex = TextureNS::loadDDS("resource/textures/grass_ao.DDS");
-	grass_n_tex = TextureNS::loadDDS("resource/textures/grass_n.DDS");
-	grass_r_tex = TextureNS::loadDDS("resource/textures/grass_r.DDS");
-	// 
-	//elevationMapTexture = TextureNS::loadDDS("resource/heightmaps/mountain_big.DDS");
+	grass_a_tex = TextureNS::loadDDS("resource/textures/atlas_a.DDS");
+	grass_n_tex = TextureNS::loadDDS("resource/textures/atlas_n.DDS");
 
 	programID = ShaderNS::loadShaders("source/shader/clipmap.vert", "source/shader/clipmap.frag");
 
@@ -317,7 +513,6 @@ void TerrainGenerator::createHeightMap() {
 	std::vector<glm::vec3> ringFixUpVerts1;
 	std::vector<glm::vec3> smallSquareVerts;
 	std::vector<glm::vec3> outerDegenerateVerts;
-
 
 	for (int i = 0; i < patchSize; i++)
 		for (int j = 0; j < patchSize; j++)
@@ -516,7 +711,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 	int count = 0;
 	int scale = 1;
-	int level = 6;
+	int level = 5;
 	int worldSize = patchSize * 2 * (2 << (level - 1));
 
 	GLCall(glUseProgram(programID));
@@ -540,31 +735,30 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 	GLCall(glBindTexture(GL_TEXTURE_2D, elevationMapTexture));
 	GLCall(glUniform1i(glGetUniformLocation(programID, "heightmap"), 0));
 
-
 	GLCall(glActiveTexture(GL_TEXTURE1));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_a_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_a_tex"), 1));
+	GLCall(glBindTexture(GL_TEXTURE_2D, colorMapTexture));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "colormap"), 1));
 
 	GLCall(glActiveTexture(GL_TEXTURE2));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_ao_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_ao_tex"), 2));
+	GLCall(glBindTexture(GL_TEXTURE_2D, normalMapTexture));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "normalmap"), 2));
 
 	GLCall(glActiveTexture(GL_TEXTURE3));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_n_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_n_tex"), 3));
+	GLCall(glBindTexture(GL_TEXTURE_2D, grass_a_tex));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_a_tex"), 3));
 
 	GLCall(glActiveTexture(GL_TEXTURE4));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_r_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_r_tex"), 4));
+	GLCall(glBindTexture(GL_TEXTURE_2D, grass_n_tex));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_n_tex"), 4));
 
 	for (int i = 0; i < level; i++) {
 
-		float ox = int((camera->position.x / 2) * (1 / (float)(1 << i))) * (2 / (float)(patchSize));
-		float oz = int((camera->position.z / 2) * (1 / (float)(1 << i))) * (2 / (float)(patchSize));
-		float x = -((int)(ox * 4) % 2) * 4;
-		float z = -((int)(oz * 4) % 2) * 4;
-		float ax = -((int)(ox * 4) % 2) * (2 / (float)patchSize);
-		float az = -((int)(oz * 4) % 2) * (2 / (float)patchSize);
+		float ox = int(camera->position.x / (2 << i)) * (2 / (float)(patchSize));
+		float oz = int(camera->position.z / (2 << i)) * (2 / (float)(patchSize));
+		float x = -((int)(ox * (patchSize / (float)2)) % 2) * 4;
+		float z = -((int)(oz * (patchSize / (float)2)) % 2) * 4;
+		float ax = -((int)(ox * (patchSize / (float)2)) % 2) * (2 / (float)patchSize);
+		float az = -((int)(oz * (patchSize / (float)2)) % 2) * (2 / (float)patchSize);
 
 		for (int j = -2; j < 2; j++) {
 
@@ -582,7 +776,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 				glm::vec3 off(blockOffset.x + ox, 0, blockOffset.z + oz);
 				glUniform1i(glGetUniformLocation(programID, "scale"), scale);
 				glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-				glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 0, 1)[0]);
+				glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
 				glBindVertexArray(blockVAO);
 				GLCall(glDrawElements(GL_TRIANGLES, blockIndices.size(), GL_UNSIGNED_INT, 0));
 				count++;
@@ -591,7 +785,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x - (float)2 / patchSize + ox, 0, blockOffset.z + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 0)[0]);
 					glBindVertexArray(ringFixUpHorizontalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpHorizontalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -609,7 +803,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x + 1 - 1 / (float)patchSize + ox + x, 0, blockOffset.z + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 					glBindVertexArray(ringFixUpHorizontalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpHorizontalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -628,7 +822,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x + ox, 0, blockOffset.z + 1 - 1 / (float)patchSize + oz + z);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 					glBindVertexArray(ringFixUpVerticalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpVerticalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -646,7 +840,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x + ox, 0, blockOffset.z - (float)2 / patchSize + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 0.5, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0.5, 0)[0]);
 					glBindVertexArray(ringFixUpVerticalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpVerticalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -656,7 +850,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x + 1 - 1 / (float)patchSize + ox + x, 0, blockOffset.z + 1 - 1 / (float)patchSize + oz + z);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
 					glBindVertexArray(smallSquareVAO);
 					glDrawElements(GL_TRIANGLES, smallSquareIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -666,7 +860,7 @@ void TerrainGenerator::drawInScene(SceneCamera* camera, GameCamera* gc) {
 
 					off = glm::vec3(blockOffset.x + ox + ax, 0, blockOffset.z + oz + az);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 0, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
 					glBindVertexArray(outerDegenerateVAO);
 					glDrawElements(GL_TRIANGLES, outerDegenerateIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -686,7 +880,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 	int count = 0;
 	int scale = 1;
-	int level = 6;
+	int level = 5;
 	int worldSize = patchSize * 2 * (2 << (level - 1));
 
 	GLCall(glUseProgram(programID));
@@ -710,31 +904,31 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 	GLCall(glBindTexture(GL_TEXTURE_2D, elevationMapTexture));
 	GLCall(glUniform1i(glGetUniformLocation(programID, "heightmap"), 0));
 
-
 	GLCall(glActiveTexture(GL_TEXTURE1));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_a_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_a_tex"), 1));
+	GLCall(glBindTexture(GL_TEXTURE_2D, colorMapTexture));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "colormap"), 1));
 
 	GLCall(glActiveTexture(GL_TEXTURE2));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_ao_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_ao_tex"), 2));
+	GLCall(glBindTexture(GL_TEXTURE_2D, normalMapTexture));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "normalmap"), 2));
 
 	GLCall(glActiveTexture(GL_TEXTURE3));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_n_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_n_tex"), 3));
+	GLCall(glBindTexture(GL_TEXTURE_2D, grass_a_tex));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_a_tex"), 3));
 
 	GLCall(glActiveTexture(GL_TEXTURE4));
-	GLCall(glBindTexture(GL_TEXTURE_2D, grass_r_tex));
-	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_r_tex"), 4));
+	GLCall(glBindTexture(GL_TEXTURE_2D, grass_n_tex));
+	GLCall(glUniform1i(glGetUniformLocation(programID, "grass_n_tex"), 4));
 
 	for (int i = 0; i < level; i++) {
 
-		float ox = int((camera->transform->globalPosition.x / 2) * (1 / (float)(1 << i))) * (2 / (float)(patchSize));
-		float oz = int((camera->transform->globalPosition.z / 2) * (1 / (float)(1 << i))) * (2 / (float)(patchSize));
-		float x = -((int)(ox * 4) % 2) * 4;
-		float z = -((int)(oz * 4) % 2) * 4;
-		float ax = -((int)(ox * 4) % 2) * (2 / (float)patchSize);
-		float az = -((int)(oz * 4) % 2) * (2 / (float)patchSize);
+		float ox = int(camera->transform->globalPosition.x / (2 << i)) * (2 / (float)(patchSize));
+		float oz = int(camera->transform->globalPosition.z / (2 << i)) * (2 / (float)(patchSize));
+		float x = -((int)(ox * (patchSize / (float)2)) % 2) * 4;
+		float z = -((int)(oz * (patchSize / (float)2)) % 2) * 4;
+		float ax = -((int)(ox * (patchSize / (float)2)) % 2) * (2 / (float)patchSize);
+		float az = -((int)(oz * (patchSize / (float)2)) % 2) * (2 / (float)patchSize);
+
 
 		for (int j = -2; j < 2; j++) {
 
@@ -752,7 +946,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 				glm::vec3 off(blockOffset.x + ox, 0, blockOffset.z + oz);
 				glUniform1i(glGetUniformLocation(programID, "scale"), scale);
 				glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-				glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 0, 1)[0]);
+				glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
 				glBindVertexArray(blockVAO);
 				GLCall(glDrawElements(GL_TRIANGLES, blockIndices.size(), GL_UNSIGNED_INT, 0));
 				count++;
@@ -761,7 +955,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x - (float)2 / patchSize + ox, 0, blockOffset.z + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 0)[0]);
 					glBindVertexArray(ringFixUpHorizontalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpHorizontalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -779,7 +973,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x + 1 - 1 / (float)patchSize + ox + x, 0, blockOffset.z + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 					glBindVertexArray(ringFixUpHorizontalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpHorizontalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -798,7 +992,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x + ox, 0, blockOffset.z + 1 - 1 / (float)patchSize + oz + z);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(0, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 					glBindVertexArray(ringFixUpVerticalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpVerticalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -816,7 +1010,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x + ox, 0, blockOffset.z - (float)2 / patchSize + oz);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 0.5, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0.5, 0)[0]);
 					glBindVertexArray(ringFixUpVerticalVAO);
 					glDrawElements(GL_TRIANGLES, ringFixUpVerticalIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -826,7 +1020,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x + 1 - 1 / (float)patchSize + ox + x, 0, blockOffset.z + 1 - 1 / (float)patchSize + oz + z);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 1, 1)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
 					glBindVertexArray(smallSquareVAO);
 					glDrawElements(GL_TRIANGLES, smallSquareIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -836,7 +1030,7 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 					off = glm::vec3(blockOffset.x + ox + ax, 0, blockOffset.z + oz + az);
 					glUniform3fv(glGetUniformLocation(programID, "offset"), 1, &off[0]);
-					glUniform3fv(glGetUniformLocation(programID, "color"), 1, &glm::vec3(1, 0, 0)[0]);
+					glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
 					glBindVertexArray(outerDegenerateVAO);
 					glDrawElements(GL_TRIANGLES, outerDegenerateIndices.size(), GL_UNSIGNED_INT, 0);
 					count++;
@@ -848,8 +1042,6 @@ void TerrainGenerator::drawInGame(GameCamera* camera) {
 
 	//std::cout << "Draw call count for the terrain: " << count << std::endl;
 	//std::cout << "Pos x: " << camPoint.x << "z: " << camPoint.z << std::endl;
-	//camPoint.x += 0.002;
-	//camPoint.z += 0.01;
 	glBindVertexArray(0);
 }
 
@@ -868,6 +1060,62 @@ void TerrainGenerator::setBrushIntensity(float step) {
 		brushIntensity += step;
 	}
 }
+
+void TerrainGenerator::setSlopeFilters(int size) {
+
+	if (size > 16 || size < 0)
+		return;
+
+	if (size > slopeFilters.size())
+		slopeFilters.push_back(glm::vec2(0, 0));
+	else if (size < slopeFilters.size()) {
+		slopeFilters.pop_back();
+		activeSlopes &= ~(1 << size);
+	}
+}
+
+void TerrainGenerator::setHeightFilters(int size) {
+
+	if (size > 16 || size < 0)
+		return;
+
+	if (size > heightFilters.size())
+		heightFilters.push_back(glm::vec2(0, 0));
+	else if (size < heightFilters.size()) {
+		heightFilters.pop_back();
+		activeHeights &= ~(1 << size);
+	}
+}
+
+void TerrainGenerator::setPerlinOctaves(int size) {
+
+	if (size > 8 || size < 0)
+		return;
+
+	perlinOctaves = (unsigned char)size;
+}
+
+void TerrainGenerator::applyPerlinNoise() {
+
+	const siv::PerlinNoise perlin{ perlinSeed };
+
+	for (int z = 0; z < elevationMapSize; z++) {
+
+		for (int x = 0; x < elevationMapSize; x++) {
+
+			float height = perlin.octave2D((double)x * perlinScale, (double)z * perlinScale, perlinOctaves, perlinPersistence) * heightScale;
+			heights[z * elevationMapSize + x] = height;
+		}
+	}
+
+	for (int z = 1; z < elevationMapSize - 1; z++)
+		for (int x = 1; x < elevationMapSize - 1; x++)
+			TerrainGenerator::recalculateNormal(x, z);
+
+	TerrainGenerator::recreateHeightMap();
+	TerrainGenerator::recreateNormalMap();
+}
+
 
 void TerrainGenerator::createBrushGizmo() {
 

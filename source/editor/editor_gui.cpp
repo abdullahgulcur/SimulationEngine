@@ -2,15 +2,20 @@
 #include "editor_gui.hpp"
 #include <source/include/imgui/imgui_internal.h>
 
-EditorGUI::EditorGUI() {}
-
-void EditorGUI::init(Editor* editor) {
+EditorGUI::EditorGUI(Editor* editor) {
 
 	this->editor = editor;
+}
+
+void EditorGUI::init() {
+
+	this->editor = editor;
+
 	EditorGUI::initImGui();
 
 	bcr = new BoxColliderRenderer();
 	scr = new SphereColliderRenderer();
+
 }
 
 void EditorGUI::initImGui() {
@@ -39,6 +44,19 @@ void EditorGUI::newFrameImGui() {
 	ImGuizmo::BeginFrame();
 
 	//EditorGUI::setTransformOperation();
+}
+
+void EditorGUI::update() {
+
+	EditorGUI::newFrameImGui();
+	EditorGUI::createPanels();
+	EditorGUI::renderImGui();
+
+	if (editor->time > 1.f && EditorGUI::firstCycle) {
+		editor->sceneCamera->init(sceneRegion.x, sceneRegion.y);
+		editor->scene->primaryCamera->init(gameCameraRegion.x, gameCameraRegion.y);
+		EditorGUI::firstCycle = false;
+	}
 }
 
 void EditorGUI::renderImGui() {
@@ -308,12 +326,12 @@ void EditorGUI::handleInputs() {
 				float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
 				float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
 
-				mX = (mX / sceneRegion.x) * 1920;
-				mY = (mY / sceneRegion.y) * 1080;
+				//mX = (mX / sceneRegion.x) * 1920;
+				//mY = (mY / sceneRegion.y) * 1080;
 
 				if (mX != 0 && mY != 0) {
 
-					int entId = editor->scene->mousepick.detectAndGetEntityId(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, 1080 - mY);
+					int entId = editor->scene->mousepick.detectAndGetEntityId(editor, scenePos.x, scenePos.y, sceneRegion.x, sceneRegion.y, mX, sceneRegion.y - mY);
 
 					if (entId == -1)
 						lastSelectedEntity = NULL;
@@ -411,7 +429,25 @@ void EditorGUI::handleInputs() {
 
 				if (terrain->brushIntersectionPoint && terrain->canUseBrush) {
 
-					terrain->bump();
+					switch (terrain->brushType) {
+
+					case BrushType::brush : {
+						terrain->bump();
+						break;
+					}
+					case BrushType::texture: {
+						terrain->paint();
+						break;
+					}
+					case BrushType::tree: {
+						terrain->tree();
+						break;
+					}
+					case BrushType::grass: {
+						terrain->grass();
+						break;
+					}
+					}
 				}
 			}
 		}
@@ -585,11 +621,18 @@ void EditorGUI::createScenePanel() {
 	ImGui::Begin("Scene");
 
 	scenePos = ImGui::GetCursorScreenPos();
-	sceneRegion = ImGui::GetContentRegionAvail();
+	ImVec2 content = ImGui::GetContentRegionAvail();
 
-	editor->sceneCamera->aspectRatio = sceneRegion.x / sceneRegion.y;
+	editor->sceneCamera->aspectRatio = content.x / content.y; // sadece hareket ettirdiginde
 
-	ImGui::Image((ImTextureID)editor->sceneCamera->textureColorbuffer, ImVec2(sceneRegion.x, sceneRegion.y), ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((ImTextureID)editor->sceneCamera->textureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
+
+	if ((content.x != sceneRegion.x || content.y != sceneRegion.y) && editor->time > 1.f) {
+
+		editor->sceneCamera->recreateFBO((int)sceneRegion.x, (int)sceneRegion.y);
+	}
+
+	sceneRegion = content;
 
 	if (lastSelectedEntity) {
 
@@ -650,11 +693,22 @@ void EditorGUI::createConsolePanel() {
 
 void EditorGUI::createGamePanel() {
 
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::Begin("Game");
 
-	ImGui::Image((ImTextureID)editor->scene->primaryCamera->textureBuffer, ImVec2(1920, 1080), ImVec2(0, 1), ImVec2(1, 0));
+	ImVec2 content = ImGui::GetContentRegionAvail();
+
+	ImGui::Image((ImTextureID)editor->scene->primaryCamera->textureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
+
+	if ((content.x != gameCameraRegion.x || content.y != gameCameraRegion.y) && editor->time > 1.f) {
+
+		editor->scene->primaryCamera->recreateFBO((int)gameCameraRegion.x, (int)gameCameraRegion.y);
+	}
+
+	gameCameraRegion = content;
 
 	ImGui::End();
+	ImGui::PopStyleVar();
 }
 
 //----- INSPECTOR MENU -----
@@ -1258,10 +1312,13 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 	int frame_padding = 1;
 	ImVec2 size = ImVec2(16.0f, 16.0f);
 	ImVec2 size64 = ImVec2(64.0f, 64.0f);
+	ImVec2 size128 = ImVec2(128.0f, 128.0f);
+	ImVec2 size192 = ImVec2(192.0f, 192.0f);
 	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
 	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
 	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 selected_border_col = ImVec4(0.2f, 0.72f, 0.95f, 1.f);
 	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
 
 	ImGui::SameLine(25);
@@ -1290,8 +1347,16 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 		ImGui::SliderFloat("Brush Radius", &terrainComp->brushRadius, 1.0f, 100.0f);
 		ImGui::SliderFloat("Brush Intensity", &terrainComp->brushIntensity, 1.0f, 100.0f);
 
+		int type = (int)terrainComp->brushType;
+		ImGui::RadioButton("Brush", &type, 0); ImGui::SameLine();
+		ImGui::RadioButton("Texture", &type, 1); ImGui::SameLine();
+		ImGui::RadioButton("Tree", &type, 2); ImGui::SameLine();
+		ImGui::RadioButton("Grass", &type, 3);
+		terrainComp->brushType = (BrushType)type;
+
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		ImGui::SetNextItemOpen(true);
 		treeNodeOpen = ImGui::TreeNode("Brushes");
 		if (treeNodeOpen) {
 
@@ -1336,13 +1401,86 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+
+		ImGui::SetNextItemOpen(true);
 		treeNodeOpen = ImGui::TreeNode("##1");
 		ImGui::SameLine();
 		ImGui::Text(" Textures");
+
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 		if (treeNodeOpen) {
+
+			static bool popupFlag = true;
+
+			for (int i = 0; i < terrainComp->albedoMaps.size(); i++) {
+
+				ImGui::PushID(i);
+
+				pos = ImGui::GetCursorPos();
+
+				if(i == terrainComp->texturePaletteIndex)
+					ImGui::Image((ImTextureID)terrainComp->albedoMaps[i], size192, uv0, uv1, tint_col, selected_border_col);
+				else
+					ImGui::Image((ImTextureID)terrainComp->albedoMaps[i], size192, uv0, uv1, tint_col, border_col);
+
+				ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
+				for (int y = 0; y < 4; y++) {
+
+					for (int x = 0; x < 4; x++)
+					{
+						char index = y * 4 + x;
+						if (x > 0) 
+							ImGui::SameLine();
+
+						if (x == 0) {
+							pos = ImGui::GetCursorPos();
+							ImGui::SetCursorPos(ImVec2(pos.x + 3, pos.y));
+						}
+						char selected = (terrainComp->paletteIndices[i] & (1 << index)) >> index;
+						ImGui::PushID(y * 4 + x);
+						if (ImGui::Selectable("", selected != 0, 0, ImVec2(42, 42))) {
+							terrainComp->paletteIndices[i] ^= (- (1 - selected) ^ terrainComp->paletteIndices[i]) & (1UL << index);
+						}
+						ImGui::PopID();
+					}
+				}
+
+				if (ImGui::Button("Use", ImVec2(35, 18)))
+					terrainComp->texturePaletteIndex = i;
+				
+				ImGui::SameLine();
+
+				if (ImGui::Button("All", ImVec2(35, 18)))
+					terrainComp->selectAllTexturesFromPalette(i);
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("None", ImVec2(40, 18)))
+					terrainComp->disableAllTexturesFromPalette(i);
+
+
+				if (i != 0) {
+
+					ImGui::SameLine();
+					if (ImGui::Button("Remove", ImVec2(55, 18)))
+						terrainComp->removePalette(i);
+				}
+
+				ImGui::PopID();
+			}
+
+			if (ImGui::ImageButton((ImTextureID)editorIcons.plusTextureID, size64, uv0, uv1, frame_padding, bg_col, ImVec4(1.0f, 1.0f, 1.0f, 1.0f))) {
+
+				orderForTerrainTexture = 0;
+				popupFlag = true;
+				ImGui::OpenPopup("texture_menu_popup_terrain");
+			}
+			EditorGUI::textureMenuPopupForTerrain(terrainComp, popupFlag, orderForTerrainTexture);
 
 			ImGui::TreePop();
 		}
+		ImGui::PopStyleColor();
 
 		pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
@@ -1374,74 +1512,98 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			ImGui::TreePop();
 		}
 
+		ImGui::SetNextItemOpen(true);
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##4");
+		ImGui::SameLine();
+		ImGui::Text(" Properties");
+		if (treeNodeOpen) {
 
-		//int size_mats = editor->fileSystem.materials.size();
-		//const char** matPaths = new const char* [size_mats];
-		//const char** matNames = new const char* [size_mats];
-		//int matIndex = 0;
-		//matPaths[0] = "Default";
-		//matNames[0] = "Default";
+			int slopeAmount = terrainComp->slopeFilters.size();
+			ImGui::Text("Slope Filters "); ImGui::SameLine();
+			ImGui::SetNextItemWidth(75);
+			if (ImGui::InputInt("##0", &slopeAmount))
+				terrainComp->setSlopeFilters(slopeAmount);
 
-		/*int size_textures = editor->fileSystem.textures.size();
-		const char** texPaths = new const char* [size_textures];
-		const char** texNames = new const char* [size_textures];
-		int texIndex = 0;
-		texPaths[0] = "NULL";
-		texNames[0] = "NULL";*/
+			ImGui::PushID(0);
+			for (int i = 0; i < terrainComp->slopeFilters.size(); i++) {
 
-		//int i = 1;
+				ImGui::PushID(i);
+				char slopeText[12];
+				sprintf(slopeText, "Slope %d   \0", i);
+				ImGui::Text(slopeText); ImGui::SameLine();
+				ImGui::DragFloatRange2("##0", &terrainComp->slopeFilters[i].x, &terrainComp->slopeFilters[i].y, 0.2f, 0.f, 90.f, "%.1f");
+				ImGui::SameLine();
+				bool active = terrainComp->activeSlopes & (1 << i);
+				if (ImGui::Checkbox("##1", &active)) {
+					int actv = active;
+					terrainComp->activeSlopes ^= (-actv ^ terrainComp->activeSlopes) & (1 << i);
+				}
+				ImGui::PopID();
+			}
+			ImGui::PopID();
 
-		//ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.0f));
+			int heightAmount = terrainComp->heightFilters.size();
+			ImGui::Text("Height Filters"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(75);
+			if (ImGui::InputInt("##1", &heightAmount))
+				terrainComp->setHeightFilters(heightAmount);
 
-		//i = 1;
-		//for (auto& it : editor->fileSystem.materials) {
+			ImGui::PushID(1);
+			for (int i = 0; i < terrainComp->heightFilters.size(); i++) {
 
-		//	if (it.second.fileAddr == NULL)
-		//		continue;
+				ImGui::PushID(i);
+				char heightText[12];
+				sprintf(heightText, "Height %d  \0", i);
+				ImGui::Text(heightText); ImGui::SameLine();
+				ImGui::DragFloatRange2("##0", &terrainComp->heightFilters[i].x, &terrainComp->heightFilters[i].y, 0.2f, 0.f, 90.f, "%.1f");
+				ImGui::SameLine();
+				bool active = terrainComp->activeHeights & (1 << i);
+				if (ImGui::Checkbox("##1", &active)) {
+					int actv = active;
+					terrainComp->activeHeights ^= (-actv ^ terrainComp->activeHeights) & (1 << i);
+				}
+				ImGui::PopID();
+			}
+			ImGui::PopID();
 
-		//	matPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-		//	matNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			ImGui::TreePop();
+		}
 
-		//	if (terrainComp->mat->fileAddr == it.second.fileAddr)
-		//		matIndex = i;
-		//	i++;
-		//}
+		ImGui::SetNextItemOpen(true);
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 6, pos.y));
+		treeNodeOpen = ImGui::TreeNode("##5");
+		ImGui::SameLine();
+		ImGui::Text(" Topology");
+		if (treeNodeOpen) {
 
-		/*i = 1;
-		for (auto& it : editor->fileSystem.textures) {
+			int octaves = (int)terrainComp->perlinOctaves;
+			ImGui::Text("Perlin Noise");
+			ImGui::Text("Octaves"); ImGui::SameLine();
+			if (ImGui::InputInt("##0", &octaves))
+				terrainComp->setPerlinOctaves(octaves);
 
-			if (it.second.fileAddr == NULL)
-				continue;
+			ImGui::SameLine();
+			ImGui::Text("Seed"); ImGui::SameLine();
+			int seed = (int)terrainComp->perlinSeed;
+			ImGui::DragInt("##1", &seed, 1, 0, 9999999);
+			terrainComp->perlinSeed = (unsigned int)seed;
+			ImGui::Text("Height"); ImGui::SameLine();
+			ImGui::DragFloat("##2", &terrainComp->heightScale, 1, 0, 500, "%.1f");
+			ImGui::SameLine();
+			ImGui::Text("Scale"); ImGui::SameLine();
+			ImGui::DragFloat("##3", &terrainComp->perlinScale, 0.1, 0, 100, "%.1f");
+			ImGui::Text("Persistence"); ImGui::SameLine();
+			ImGui::DragFloat("##4", &terrainComp->perlinPersistence, 0.01f, 0.f, 1.f, "%.1f");
+			if (ImGui::Button("Apply", ImVec2(55, 18)))
+				terrainComp->applyPerlinNoise();
 
-			texPaths[i] = editor->fileSystem.files[it.second.fileAddr->id].path.c_str();
-			texNames[i] = editor->fileSystem.files[it.second.fileAddr->id].name.c_str();
+			ImGui::TreePop();
+		}
 
-			if (terrainComp->heightmap == it.second.fileAddr)
-				texIndex = i;
-			i++;
-		}*/
-
-		//ImGui::Text("Material    ");
-		//ImGui::SameLine();
-		//ImGui::SetNextItemWidth(width - 115);
-
-		//if (ImGui::Combo("##1", &matIndex, matNames, size_mats))
-		//	terrainComp->mat = &editor->fileSystem.materials[matPaths[matIndex]];
-
-		//delete[] matPaths;
-		//delete[] matNames;
-
-		//ImGui::Text("Material    ");
-		//ImGui::SameLine();
-		//ImGui::SetNextItemWidth(width - 115);
-
-		//if (ImGui::Combo("##9", &texIndex, texNames, size_textures)) {
-		//	terrainComp->heightmap = editor->fileSystem.textures[texPaths[texIndex]].fileAddr;
-
-		//}
-
-		//delete[] texPaths;
-		//delete[] texNames;
+		
 
 		//ImGui::PushID(0);
 		//static bool popupFlag = true;
@@ -2554,6 +2716,84 @@ void EditorGUI::showCapsuleColliderComponent(CapsuleCollider* capsuleColliderCom
 	ImGui::Separator();
 }
 
+void EditorGUI::textureMenuPopupForTerrain(TerrainGenerator* terrain, bool& flag, int& order) {
+
+	if (!flag)
+		return;
+
+	int frame_padding = 2;
+	ImVec2 size = ImVec2(128.0f, 128.0f);
+	ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+	ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+	ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+	ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+	ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+	ImGui::SetNextWindowSize(ImVec2(300, 635));
+
+	if (ImGui::BeginPopup("texture_menu_popup_terrain"))
+	{
+		if (order)
+			ImGui::Text("Choose Normal Map !");
+		else
+			ImGui::Text("Choose Albedo Map !");
+
+		unsigned int iterateIndex = 0;
+		for (auto& it : editor->fileSystem->textures) {
+
+			ImGui::BeginGroup();
+			{
+				ImGui::PushID(iterateIndex);
+
+				if (ImGui::ImageButton((ImTextureID)it.second.textureID, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+
+					bool allSelected = false;
+					if (order) {
+						
+						terrain->addNewPalette(albedoTemp, it.second.textureID);
+						allSelected = true;
+					}
+					else {
+						albedoTemp = it.second.textureID;
+						order = 1;
+					}
+
+					if (allSelected) {
+
+						flag = false;
+						ImGui::PopID();
+						ImGui::EndGroup();
+						ImGui::EndPopup();
+						return;
+					}
+				}
+
+				char name[32];
+				if (it.second.fileAddr != NULL)
+					strcpy(name, editor->fileSystem->files[it.second.fileAddr->id].name.c_str());
+				else
+					strcpy(name, "White\0");
+
+				ImVec2 pos = ImGui::GetCursorPos();
+				ImVec2 textSize = ImGui::CalcTextSize(name);
+				ImGui::SetCursorPos(ImVec2(pos.x + (128.f - textSize.x) / 2, pos.y));
+
+				ImGui::Text(name);
+
+				ImGui::PopID();
+			}
+			ImGui::EndGroup();
+
+			if ((iterateIndex + 1) % 2 != 0)
+				ImGui::SameLine();
+
+			iterateIndex++;
+		}
+		ImGui::EndPopup();
+	}
+}
+
+
 void EditorGUI::textureMenuPopup(MaterialFile& material, int index, bool& flag) {
 
 	if (!flag)
@@ -2850,8 +3090,8 @@ void EditorGUI::createAppPanel() {
 	float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
 	float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
 	
-	mX = (mX / sceneRegion.x) * 1920;
-	mY = (mY / sceneRegion.y) * 1080;
+	//mX = (mX / sceneRegion.x) * 1920;
+	//mY = (mY / sceneRegion.y) * 1080;
 
 	ImGui::Text("Mouse (Scene) x: %.1f y: %.1f", mX, mY);
 

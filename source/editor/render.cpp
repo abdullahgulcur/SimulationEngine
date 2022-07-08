@@ -17,5 +17,4 @@ Render::Render(Editor* editor) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glEnable(GL_CULL_FACE);
-	glViewport(0, 0, editor->window->mode->width, editor->window->mode->height);
 }

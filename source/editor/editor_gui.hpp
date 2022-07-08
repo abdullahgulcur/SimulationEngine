@@ -113,7 +113,7 @@ private:
 	bool inspectorHovered = false;
 	bool materialChanged = false;
 	bool physicMaterialChanged = false;
-
+	bool firstCycle = true;
 	
 	bool gizmoClicked = false;
 
@@ -143,13 +143,21 @@ public:
 	SphereColliderRenderer* scr = NULL;
 	//CameraRenderer* camRenderer = NULL;
 
-	EditorGUI();
+	// terrain component vars
+	int orderForTerrainTexture;
+	unsigned int albedoTemp;
 
-	void init(Editor* editor);
+	ImVec2 gameCameraRegion;
+
+	EditorGUI(Editor* editor);
+
+	void init();
 
 	void initImGui();
 
 	void newFrameImGui();
+
+	void update();
 
 	void renderImGui();
 
@@ -212,6 +220,8 @@ public:
 	void showPhysicMaterialProperties(PhysicMaterialFile& mat);
 
 	void textureMenuPopup(MaterialFile& material, int index, bool& flag);
+
+	void textureMenuPopupForTerrain(TerrainGenerator* terrain, bool& flag, int& order);
 
 	//void heightMapPopup(TerrainGenerator* terrainComp);
 

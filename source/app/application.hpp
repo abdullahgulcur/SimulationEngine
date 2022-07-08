@@ -6,7 +6,7 @@ class Application {
 
 private:
 
-	Editor editor;
+	Editor* editor;
 
 public:
 

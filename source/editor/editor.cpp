@@ -5,15 +5,16 @@ Editor::Editor() {
 	physics = new Physics();
 	window = new Window(this);
 	render = new Render(this);
-	sceneCamera = new SceneCamera();
-	fileSystem = new FileSystem();
-	scene = new Scene();
-	editorGUI = new EditorGUI();
+	fileSystem = new FileSystem(this);
+	scene = new Scene(this);
+	editorGUI = new EditorGUI(this);
+	sceneCamera = new SceneCamera(this);
+	saveLoadSystem = new SaveLoadSystem(this);
 
-	fileSystem->init(this);
-	scene->init(this);
-	SaveLoadSystem::loadSceneCamera(this);
-	editorGUI->init(this);
+	fileSystem->init();
+	scene->init();
+	saveLoadSystem->loadSceneCamera();
+	editorGUI->init();
 }
 
 void Editor::run() {
@@ -23,10 +24,8 @@ void Editor::run() {
 	time = currentTime;
 
 	window->handleCallBacks(this);
-	editorGUI->newFrameImGui();
 	scene->update(dt);
-	editorGUI->createPanels();
-	editorGUI->renderImGui();
+	sceneCamera->update();
+	editorGUI->update();
 	window->end();
-	sceneCamera->onUpdate(this);
 }

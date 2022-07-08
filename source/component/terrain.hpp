@@ -5,6 +5,7 @@
 #include <glm/gtx/intersect.hpp>
 #include <vector>
 #include <math.h>
+#include <basetsd.h>
 
 #include "shader.hpp"
 #include "component.hpp"
@@ -26,6 +27,8 @@ class SceneCamera;
 
 using namespace Material;
 
+enum class BrushType { brush, texture, tree, grass };
+
 struct HeightAndGradient {
 
 	float height;
@@ -39,15 +42,22 @@ private:
 
 public:
 
-	int patchSize = 8;
+	BrushType brushType;
+
+	int patchSize = 24;
 
 	unsigned int programID;
 	unsigned int elevationMapTexture;
+	unsigned int colorMapTexture;
+	unsigned int normalMapTexture;
 
 	unsigned int grass_a_tex;
 	unsigned int grass_ao_tex;
 	unsigned int grass_n_tex;
 	unsigned int grass_r_tex;
+
+	std::vector<unsigned int> albedoMaps;
+	std::vector<unsigned int> normalMaps;
 
 	std::vector<unsigned int> blockIndices;
 	unsigned int blockVAO;
@@ -78,10 +88,30 @@ public:
 	unsigned int gizmoShaderProgramID;
 	float brushRadius = 15.f;
 	float brushIntensity = 50.f;
-	//std::vector<float> heights;
+
 	float* heights;
+	unsigned char* colors;
+	char* normals;
 
 	float GKernel[GFILTER_SIZE][GFILTER_SIZE];
+
+	// textures
+	unsigned int texturePaletteIndex = 0;
+	std::vector<unsigned short> paletteIndices;
+
+	// properties
+	std::vector<glm::vec2> slopeFilters;
+	std::vector<glm::vec2> heightFilters;
+	unsigned int activeSlopes;
+	unsigned int activeHeights;
+
+	// perlin noise
+	unsigned int perlinSeed = 6428;
+	unsigned char perlinOctaves = 3;
+	float perlinScale = 0.5f;
+	float heightScale = 100.f;
+	float perlinPersistence = 0.5f;
+
 
 	TerrainGenerator();
 
@@ -93,7 +123,19 @@ public:
 
 	float* getFlatHeightmap(int size);
 
+	unsigned char* getColorMap(int size);
+
+	char* getNormalMap(int size);
+
 	float* getElevationData(int size);
+
+	void addNewPalette(unsigned int albedoTexture, unsigned int normalTexture);
+
+	void removePalette(int index);
+
+	void selectAllTexturesFromPalette(int index);
+
+	void disableAllTexturesFromPalette(int index);
 
 	void brushControls(float mousePosX, float mousePosY, SceneCamera* camera);
 
@@ -103,11 +145,37 @@ public:
 
 	void setBrushIntensity(float step);
 
+	void setSlopeFilters(int size);
+
+	void setHeightFilters(int size);
+
+	void setPerlinOctaves(int size);
+
+	void applyPerlinNoise();
+
 	void gaussianFilterCreation();
 
 	void bump();
 
+	void paint();
+
+	float angleBetweenTwoVectors(glm::vec3 v0, glm::vec3 v1);
+
+	void grass();
+
+	void tree();
+
+	void recalculateNormal(int x, int z);
+
 	void recreateHeightMap();
+
+	void recreateColorMap();
+
+	void recreateNormalMap();
+
+	void createNormalMap();
+
+	void createColorMap();
 
 	void createHeightMap();
 

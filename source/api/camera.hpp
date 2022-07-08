@@ -13,10 +13,14 @@ public:
 	int projectionType = 0;
 	int fovAxis = 0;
 	float fov;
-	float aspectRatio = (float)1920 / 1080;
+	float aspectRatio = 1.77f;
 
 	glm::mat4 ViewMatrix;
 	glm::mat4 ProjectionMatrix;
+
+	unsigned int textureBuffer;
+	unsigned int FBO;
+	unsigned int RBO;
 
 	Camera();
 

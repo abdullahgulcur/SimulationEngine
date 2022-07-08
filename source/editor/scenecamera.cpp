@@ -1,9 +1,12 @@
 #include "editor.hpp"
 #include "scenecamera.hpp"
 
-SceneCamera::SceneCamera()
+SceneCamera::SceneCamera(Editor* editor)
 {
-	SceneCamera::createFBO();
+	this->editor = editor;
+}
+
+void SceneCamera::init(int sizeX, int sizeY) {
 
 	horizontalRotationSpeed *= generalSpeed;
 	verticalRotationSpeed *= generalSpeed;
@@ -17,25 +20,27 @@ SceneCamera::SceneCamera()
 	glm::vec3 up = glm::cross(right, direction);
 	ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100000.0f);
 	ViewMatrix = glm::lookAt(position, position + direction, up);
+
+	SceneCamera::createFBO(sizeX, sizeY);
 }
 
-void SceneCamera::createFBO() {
+void SceneCamera::createFBO(int sizeX, int sizeY) {
 
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-	glGenTextures(1, &textureColorbuffer);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1920, 1080, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glGenTextures(1, &textureBuffer);
+	glBindTexture(GL_TEXTURE_2D, textureBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureBuffer, 0);
 
 	unsigned int rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1920, 1080);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sizeX, sizeY);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
@@ -45,12 +50,51 @@ void SceneCamera::createFBO() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void SceneCamera::onUpdate(Editor* editor) {
+void SceneCamera::recreateFBO(int sizeX, int sizeY) {
 
-	SceneCamera::computeMatricesFromInputs(editor);
+	glDeleteRenderbuffers(1, &RBO);
+	glDeleteTextures(1, &textureBuffer);
+	glDeleteFramebuffers(1, &FBO);
+
+	glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+	//glViewport(0, 0, sizeX, sizeY);
+
+	glGenTextures(1, &textureBuffer);
+	glBindTexture(GL_TEXTURE_2D, textureBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureBuffer, 0);
+
+	glGenRenderbuffers(1, &RBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sizeX, sizeY);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	SceneCamera::updateProjectionMatrix(sizeX, sizeY);
 }
 
-void SceneCamera::computeMatricesFromInputs(Editor* editor) {
+void SceneCamera::updateProjectionMatrix(int sizeX, int sizeY) {
+
+	aspectRatio = editor->editorGUI->sceneRegion.x / editor->editorGUI->sceneRegion.y;
+	ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearClip, farClip);
+}
+
+void SceneCamera::update() {
+
+	SceneCamera::computeMatricesFromInputs();
+}
+
+void SceneCamera::computeMatricesFromInputs() {
 
 	float offset = 10;
 	GLFWwindow* window = editor->window->GLFW_window;
@@ -80,6 +124,12 @@ void SceneCamera::computeMatricesFromInputs(Editor* editor) {
 	if (insideSceneView && !ImGui::GetIO().KeyCtrl && !ImGui::GetIO().KeyShift) {
 		
 		mouseWheelDelta = Input::mouseScroolDelta();
+
+		if (mouseWheelDelta != 0) {
+
+			int x = 0;
+		}
+
 		position += direction * mouseWheelDelta * scrollSpeed;
 	}
 
@@ -116,7 +166,7 @@ void SceneCamera::computeMatricesFromInputs(Editor* editor) {
 
 	if (allow || mouseWheelDelta != 0) {
 
-		ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100000.0f);
+		//ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100000.0f);
 		ViewMatrix = glm::lookAt(position, position + direction, up);
 	}
 	

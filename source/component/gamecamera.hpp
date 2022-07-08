@@ -12,11 +12,6 @@ private:
 
 public:
 
-	glm::vec2 res;
-
-	unsigned int textureBuffer;
-	unsigned int FBO;
-
 	unsigned int gizmoVAO;
 	unsigned int gizmoShaderProgramID;
 
@@ -26,7 +21,13 @@ public:
 
 	glm::vec3 getPosition();
 
-	void createFBO();
+	void init(int sizeX, int sizeY);
+
+	void createFBO(int sizeX, int sizeY);
+
+	void recreateFBO(int sizeX, int sizeY);
+
+	void updateProjectionMatrix(int sizeX, int sizeY);
 
 	void createEditorGizmos(bool recreate);
 
