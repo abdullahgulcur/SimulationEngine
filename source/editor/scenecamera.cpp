@@ -20,6 +20,8 @@ void SceneCamera::init(int sizeX, int sizeY) {
 	glm::vec3 up = glm::cross(right, direction);
 	ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100000.0f);
 	ViewMatrix = glm::lookAt(position, position + direction, up);
+	projectionViewMatrix = ProjectionMatrix * ViewMatrix;
+	SceneCamera::frustum(projectionViewMatrix);
 
 	SceneCamera::createFBO(sizeX, sizeY);
 }
@@ -114,7 +116,7 @@ void SceneCamera::computeMatricesFromInputs() {
 
 	mouseTeleport = false;
 
-	glm::vec3 direction(cos(verticalAngle) * sin(horizontalAngle), sin(verticalAngle), cos(verticalAngle) * cos(horizontalAngle));
+	direction = glm::vec3(cos(verticalAngle) * sin(horizontalAngle), sin(verticalAngle), cos(verticalAngle) * cos(horizontalAngle));
 	glm::vec3 right = glm::vec3(sin(horizontalAngle - 3.14f / 2.0f), 0, cos(horizontalAngle - 3.14f / 2.0f));
 	glm::vec3 up = glm::cross(right, direction);
 
@@ -169,7 +171,10 @@ void SceneCamera::computeMatricesFromInputs() {
 		//ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100000.0f);
 		ViewMatrix = glm::lookAt(position, position + direction, up);
 	}
-	
+
+	projectionViewMatrix = ProjectionMatrix * ViewMatrix;
+	SceneCamera::frustum(projectionViewMatrix);
+
 	lastX = mousePos.x;
 	lastY = mousePos.y;
 	lastTime = currentTime;

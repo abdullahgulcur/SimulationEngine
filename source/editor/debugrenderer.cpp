@@ -176,7 +176,7 @@ void MeshColliderRenderer::drawCollider(glm::mat4 MVP) {
 	glUniform3fv(glGetUniformLocation(shaderProgramID, "color"), 1, &color[0]);
 
 	glBindVertexArray(VAO);
-	glDrawElements(GL_LINES, count, GL_UNSIGNED_INT, (void*)0);
+	glDrawElements(GL_LINES, count, GL_UNSIGNED_INT, (void*)0); // elementessss?????
 	glBindVertexArray(0);
 }
 //

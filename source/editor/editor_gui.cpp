@@ -52,7 +52,7 @@ void EditorGUI::update() {
 	EditorGUI::createPanels();
 	EditorGUI::renderImGui();
 
-	if (editor->time > 1.f && EditorGUI::firstCycle) {
+	if (editor->time > 3.f && EditorGUI::firstCycle) {
 		editor->sceneCamera->init(sceneRegion.x, sceneRegion.y);
 		editor->scene->primaryCamera->init(gameCameraRegion.x, gameCameraRegion.y);
 		EditorGUI::firstCycle = false;
@@ -627,7 +627,7 @@ void EditorGUI::createScenePanel() {
 
 	ImGui::Image((ImTextureID)editor->sceneCamera->textureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
 
-	if ((content.x != sceneRegion.x || content.y != sceneRegion.y) && editor->time > 1.f) {
+	if ((content.x != sceneRegion.x || content.y != sceneRegion.y) && editor->time > 3.f) {
 
 		editor->sceneCamera->recreateFBO((int)sceneRegion.x, (int)sceneRegion.y);
 	}
@@ -700,7 +700,7 @@ void EditorGUI::createGamePanel() {
 
 	ImGui::Image((ImTextureID)editor->scene->primaryCamera->textureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
 
-	if ((content.x != gameCameraRegion.x || content.y != gameCameraRegion.y) && editor->time > 1.f) {
+	if ((content.x != gameCameraRegion.x || content.y != gameCameraRegion.y) && editor->time > 3.f) {
 
 		editor->scene->primaryCamera->recreateFBO((int)gameCameraRegion.x, (int)gameCameraRegion.y);
 	}
@@ -1341,8 +1341,41 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 
 	if (treeNodeOpen) {
 
+		pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 3, pos.y));
+		ImGui::SetNextItemOpen(true);
+
+		treeNodeOpen = ImGui::TreeNode("Clipmap Properties");
+		if (treeNodeOpen) {
+
+			int clipmapLevel = (int)terrainComp->clipmapLevel;
+			ImGui::Text("Clipmap Level"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(75);
+			if (ImGui::InputInt("##0", &clipmapLevel))
+				terrainComp->setClipmapLevel(clipmapLevel);
+
+			int clipmapResolution = (int)terrainComp->clipmapResolution_temp;
+			ImGui::Text("Clipmap Size "); ImGui::SameLine();
+			ImGui::SetNextItemWidth(75);
+			if (ImGui::DragInt("##1", &clipmapResolution, 0.1, 4, 256))
+				terrainComp->setClipmapResolution(clipmapResolution);
+
+			ImGui::SameLine();
+			if (ImGui::Button("Apply", ImVec2(55, 18)))
+				terrainComp->applyClipmapProperties();
+
+			// not completed yet (tri size)...
+			static float triangleSize = 1.f;
+			ImGui::Text("Triangle Size"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(75);
+			ImGui::DragFloat("##2", &triangleSize, 0.01, 0.1, 1, "%.2f");
+
+			ImGui::TreePop();
+		}
+
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
 		ImGui::Button("Load Heightmap", ImVec2(120, 18));
 		ImGui::SliderFloat("Brush Radius", &terrainComp->brushRadius, 1.0f, 100.0f);
 		ImGui::SliderFloat("Brush Intensity", &terrainComp->brushIntensity, 1.0f, 100.0f);
@@ -1568,6 +1601,9 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			}
 			ImGui::PopID();
 
+			if (ImGui::Button("Apply", ImVec2(55, 18)))
+				terrainComp->applyFiltersInWholeMap();
+
 			ImGui::TreePop();
 		}
 
@@ -1603,71 +1639,6 @@ void EditorGUI::showTerrainGeneratorComponent(TerrainGenerator* terrainComp, int
 			ImGui::TreePop();
 		}
 
-		
-
-		//ImGui::PushID(0);
-		//static bool popupFlag = true;
-		//if (ImGui::ImageButton((ImTextureID)terrainComp->heighmapTextureID, size64, uv0, uv1, frame_padding, bg_col, tint_col)) {
-		//	ImGui::OpenPopup("texture_menu_popup");
-		//	popupFlag = true;
-		//}
-
-		//EditorGUI::heightMapPopup(terrainComp);
-
-		//ImGui::PopID();
-		//ImGui::SameLine();
-		//pos = ImGui::GetCursorPos(); ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
-		//ImGui::Text(editor->fileSystem.files[terrainComp->heightmap->id].name.c_str());
-
-		/*ImGui::Text("Viewport Level X    "); ImGui::SameLine();
-		int levelX = terrainComp->viewportLevel_X;
-		if (ImGui::DragInt("##2", &levelX, 1.f, 0, 256, "%d")) {
-			terrainComp->viewportLevel_X = EditorGUI::dragUnitValueAssign(0, 256, levelX);
-			terrainComp->recreateHeightField();
-		}
-
-		ImGui::Text("Viewport Level Z    "); ImGui::SameLine();
-		int levelZ = terrainComp->viewportLevel_Z;
-		if (ImGui::DragInt("##3", &levelZ, 1.f, 0, 256, "%d")) {
-			terrainComp->viewportLevel_Z = EditorGUI::dragUnitValueAssign(0, 256, levelZ);
-			terrainComp->recreateHeightField();
-		}
-
-		ImGui::Text("Size X    "); ImGui::SameLine();
-		if(ImGui::DragFloat("##4", &terrainComp->size_X, 0.1f, 0, 0, "%.2f"))
-			terrainComp->recreateHeightField();
-
-		ImGui::Text("Size Z    "); ImGui::SameLine();
-		if(ImGui::DragFloat("##5", &terrainComp->size_Z, 0.1f, 0, 0, "%.2f"))
-			terrainComp->recreateHeightField();*/
-
-	//	ImGui::Text("Seed    "); ImGui::SameLine();
-	//	//int seed = terrainComp->seed;
-	//	if (ImGui::DragInt("##6", &seed, 1.f, 0, 2147483647, "%d")) {
-	//		//terrainComp->seed = EditorGUI::dragUnitValueAssign(0, 2147483647, seed);
-	//		//terrainComp->recreateHeightField();
-	//	}
-
-	//	ImGui::Text("Height    "); ImGui::SameLine();
-	////	float height = terrainComp->height;
-	//	if (ImGui::DragFloat("##7", &height, 0.01f, 0.f, 100.f, "%.2f")) {
-	//		//terrainComp->height = EditorGUI::dragUnitValueAssign(0.f, 100.f, height);
-	//		//terrainComp->recreateHeightField();
-	//	}
-
-	//	ImGui::Text("Scale    "); ImGui::SameLine();
-	//	//float scale = terrainComp->scale;
-	//	if (ImGui::DragFloat("##8", &scale, 0.01f, 0.f, 10.f, "%.2f")) {
-	//		//terrainComp->scale = EditorGUI::dragUnitValueAssign(0.f, 10.f, scale);
-	//		//terrainComp->recreateHeightField();
-	//	}
-
-	//	if (ImGui::Button("Erode", ImVec2(120, 18))) {
-	//		//terrainComp->erode();
-	//		//terrainComp->recreateHeightField();
-	//	}
-
-		//ImGui::PopStyleColor();
 		ImGui::TreePop();
 	}
 

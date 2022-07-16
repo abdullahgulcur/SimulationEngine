@@ -12,6 +12,7 @@
 #include "texture.hpp"
 #include "input.hpp"
 #include "physics.hpp"
+#include "gizmo.hpp"
 
 
 class Editor {
@@ -28,6 +29,7 @@ public:
 	Scene* scene = NULL;
 	Physics* physics = NULL;
 	SaveLoadSystem* saveLoadSystem = NULL;
+	Gizmo* gizmo = NULL;
 
 	float time = 0;
 	bool gameStarted = false;

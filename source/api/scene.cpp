@@ -45,7 +45,7 @@ void Scene::update(float dt) {
 		Scene::simulateInGame(dt);
 	else {
 		Scene::simulateInEditor(dt);
-		Scene::renderPrimaryGameCamera(primaryCamera);
+		//Scene::renderPrimaryGameCamera(primaryCamera);
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -160,8 +160,19 @@ void Scene::simulateInEditor(float dt) {
 
 		}
 
-		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
-			terrain->drawInScene(editor->sceneCamera, primaryCamera);
+		if (GameCamera* cameraComp = ent->getComponent<GameCamera>()) {
+
+			glm::mat4 model = ent->transform->model;
+			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
+			cameraComp->drawEditorGizmos(mvp);
+			primaryCamera = cameraComp;
+		}
+
+		// lanetli kod
+		if (primaryCamera) {
+			if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
+				terrain->drawInScene(editor->sceneCamera, primaryCamera, editor);
+		}
 
 		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
 		for (auto& comp : boxColliderCompList) {
@@ -214,13 +225,7 @@ void Scene::simulateInEditor(float dt) {
 			editor->editorGUI->scr->drawCollider(mvp);
 		}
 
-		if (GameCamera* cameraComp = ent->getComponent<GameCamera>()) {
-
-			glm::mat4 model = ent->transform->model;
-			glm::mat4 mvp = editor->sceneCamera->ProjectionMatrix * editor->sceneCamera->ViewMatrix * model;
-			cameraComp->drawEditorGizmos(mvp);
-			primaryCamera = cameraComp;
-		}
+		
 
 		// terrain raycasting
 
@@ -479,7 +484,7 @@ void Scene::simulateInGame(float dt) {
 		}
 
 		if (TerrainGenerator* terrain = ent->getComponent<TerrainGenerator>())
-			terrain->drawInScene(editor->sceneCamera, primaryCamera);
+			terrain->drawInScene(editor->sceneCamera, primaryCamera, editor);
 
 		std::vector<BoxCollider*> boxColliderCompList = ent->getComponents<BoxCollider>();
 		for (auto& comp : boxColliderCompList) {

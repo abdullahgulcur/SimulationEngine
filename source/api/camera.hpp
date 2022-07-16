@@ -17,12 +17,20 @@ public:
 
 	glm::mat4 ViewMatrix;
 	glm::mat4 ProjectionMatrix;
+	glm::mat4 projectionViewMatrix;
+	glm::vec3 direction;
+
+	glm::vec4 planes[6];
 
 	unsigned int textureBuffer;
 	unsigned int FBO;
 	unsigned int RBO;
 
 	Camera();
+
+	void frustum(glm::mat4& view_projection);
+
+	bool intersectsAABB(glm::vec3 start, glm::vec3 end);
 
 	virtual glm::vec3 getPosition() = 0;
 

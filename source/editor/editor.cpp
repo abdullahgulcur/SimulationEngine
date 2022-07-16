@@ -5,12 +5,13 @@ Editor::Editor() {
 	physics = new Physics();
 	window = new Window(this);
 	render = new Render(this);
+	gizmo = new Gizmo(this);
 	fileSystem = new FileSystem(this);
 	scene = new Scene(this);
 	editorGUI = new EditorGUI(this);
 	sceneCamera = new SceneCamera(this);
 	saveLoadSystem = new SaveLoadSystem(this);
-
+	
 	fileSystem->init();
 	scene->init();
 	saveLoadSystem->loadSceneCamera();

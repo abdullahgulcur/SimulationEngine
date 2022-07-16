@@ -28,12 +28,14 @@ void GameCamera::setMatrices() {
 		verticalFOV = Math::getVerticalFOV(glm::radians(fov), aspectRatio);
 	}
 
-	glm::vec3 direction = transform->model * glm::vec4(0,0,1,0);
+	direction = transform->model * glm::vec4(0,0,1,0);
 	glm::vec3 right = transform->model * glm::vec4(-1, 0, 0, 0);
 	glm::vec3 up = glm::cross(right, direction);
 
 	ProjectionMatrix = glm::perspective(verticalFOV, aspectRatio, nearClip, farClip);
 	ViewMatrix = glm::lookAt(transform->globalPosition, transform->globalPosition + direction, up);
+	projectionViewMatrix = ProjectionMatrix * ViewMatrix;
+	GameCamera::frustum(projectionViewMatrix);
 }
 
 void GameCamera::createFBO(int sizeX, int sizeY) {
@@ -183,7 +185,7 @@ void GameCamera::drawEditorGizmos(glm::mat4 MVP) {
 
 	glUseProgram(gizmoShaderProgramID);
 	glUniformMatrix4fv(glGetUniformLocation(gizmoShaderProgramID, "MVP"), 1, GL_FALSE, &MVP[0][0]);
-	glUniform3fv(glGetUniformLocation(gizmoShaderProgramID, "color"), 1, &glm::vec3(1,1,1)[0]);
+	glUniform3fv(glGetUniformLocation(gizmoShaderProgramID, "color"), 1, &glm::vec3(0.2f,0.2f,1)[0]);
 
 	glBindVertexArray(gizmoVAO);
 	glDrawArrays(GL_LINES, 0, 24);

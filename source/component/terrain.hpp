@@ -21,9 +21,11 @@
 #define PI 3.14159
 #define BRUSH_RESOLUTION 32
 #define GFILTER_SIZE 201
+#define LEVEL 5
 
 
 class SceneCamera;
+class Editor;
 
 using namespace Material;
 
@@ -44,7 +46,10 @@ public:
 
 	BrushType brushType;
 
-	int patchSize = 24;
+	unsigned short clipmapResolution = 16;
+	unsigned short clipmapResolution_temp = 16;
+
+	unsigned short clipmapLevel = 5;
 
 	unsigned int programID;
 	unsigned int elevationMapTexture;
@@ -78,7 +83,7 @@ public:
 	File* heightmap;
 	unsigned int heighmapTextureID;
 
-	int elevationMapSize = 2048;
+	unsigned int elevationMapSize = 2048;
 
 	glm::vec3* brushIntersectionPoint = NULL;
 	bool canUseBrush = false;
@@ -89,7 +94,8 @@ public:
 	float brushRadius = 15.f;
 	float brushIntensity = 50.f;
 
-	float* heights;
+	//float* heights;
+	float** heightMipMaps;
 	unsigned char* colors;
 	char* normals;
 
@@ -108,7 +114,7 @@ public:
 	// perlin noise
 	unsigned int perlinSeed = 6428;
 	unsigned char perlinOctaves = 3;
-	float perlinScale = 0.5f;
+	float perlinScale = 0.005f;
 	float heightScale = 100.f;
 	float perlinPersistence = 0.5f;
 
@@ -121,13 +127,15 @@ public:
 
 	void init(MaterialFile* mat);
 
-	float* getFlatHeightmap(int size);
+	//float* getFlatHeightmap(int size);
+
+	float** getFlatHeightmap();
 
 	unsigned char* getColorMap(int size);
 
 	char* getNormalMap(int size);
 
-	float* getElevationData(int size);
+	//float* getElevationData(int size);
 
 	void addNewPalette(unsigned int albedoTexture, unsigned int normalTexture);
 
@@ -150,6 +158,12 @@ public:
 	void setHeightFilters(int size);
 
 	void setPerlinOctaves(int size);
+
+	void setClipmapResolution(int resolution);
+
+	void setClipmapLevel(int level);
+
+	void setBoundariesOfClipmap(const int& level, glm::vec3& start, glm::vec3& end);
 
 	void applyPerlinNoise();
 
@@ -179,9 +193,19 @@ public:
 
 	void createHeightMap();
 
-	void drawInScene(SceneCamera* camera, GameCamera* gc);
+	void getMaxAndMinHeights(glm::vec2& bounds, const int& level, const glm::vec3& start, const glm::vec3& end);
+
+	void drawTerrainClipmapAABB(const glm::vec3& start, const glm::vec3& end, const SceneCamera* camera, const Editor* editor);
+
+	void drawInScene(SceneCamera* camera, GameCamera* gc, Editor* editor);
 
 	void drawInGame(GameCamera* camera);
+
+	void applyFiltersInWholeMap();
+
+	void generateTerrainClipmapsVertexArrays();
+
+	void applyClipmapProperties();
 
 	void createBrushGizmo();
 

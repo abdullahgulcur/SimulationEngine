@@ -183,6 +183,7 @@
     <ClCompile Include="source\component\rigidbody.cpp" />
     <ClCompile Include="source\editor\debugrenderer.cpp" />
     <ClCompile Include="source\editor\editor.cpp" />
+    <ClCompile Include="source\editor\gizmo.cpp" />
     <ClCompile Include="source\editor\scenecamera.cpp" />
     <ClCompile Include="source\editor\editor_gui.cpp" />
     <ClCompile Include="source\editor\filesystem.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="source\component\rigidbody.hpp" />
     <ClInclude Include="source\editor\debugrenderer.hpp" />
     <ClInclude Include="source\editor\editor.hpp" />
+    <ClInclude Include="source\editor\gizmo.hpp" />
     <ClInclude Include="source\editor\scenecamera.hpp" />
     <ClInclude Include="source\editor\editor_gui.hpp" />
     <ClInclude Include="source\editor\filesystem.hpp" />

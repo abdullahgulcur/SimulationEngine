@@ -153,6 +153,9 @@
     <ClCompile Include="source\api\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\editor\gizmo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\application.hpp">
@@ -2187,6 +2190,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\api\camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\editor\gizmo.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
